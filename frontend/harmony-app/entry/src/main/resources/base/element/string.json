@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "Visitor Service"
+    },
+    {
+      "name": "module_desc",
+      "value": "Visitor service entry module"
+    },
+    {
+      "name": "entryability_desc",
+      "value": "Entry ability"
+    }
+  ]
+}

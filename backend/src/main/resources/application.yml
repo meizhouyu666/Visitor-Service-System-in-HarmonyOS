@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: tourist-service-backend
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/visitor_service_system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    issuer: visitor-service-system
+    secret: replace-this-with-at-least-32-characters-secret-key
+    expiration-minutes: 120
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

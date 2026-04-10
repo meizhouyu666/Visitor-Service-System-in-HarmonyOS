@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: Visitor Service System API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+paths:
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200": { description: OK }
+  /api/auth/me:
+    get:
+      summary: Current user
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/complaints:
+    get:
+      summary: List complaints
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Submit complaint
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/complaints/{id}:
+    get:
+      summary: Complaint detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200": { description: OK }
+  /api/complaints/{id}/rating:
+    post:
+      summary: Rate closed complaint
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200": { description: OK }
+  /api/complaints/admin/{id}/approve:
+    post:
+      summary: Approve complaint
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/complaints/admin/{id}/process:
+    post:
+      summary: Process complaint
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/complaints/admin/{id}/close:
+    post:
+      summary: Close complaint
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/emergency:
+    get:
+      summary: List published emergency info
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/emergency/admin:
+    get:
+      summary: List all emergency info
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Create emergency draft
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/emergency/admin/{id}:
+    put:
+      summary: Update emergency info
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+    delete:
+      summary: Delete emergency info
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/emergency/admin/{id}/submit:
+    post:
+      summary: Submit for approval
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/emergency/admin/{id}/approve:
+    post:
+      summary: Approve and publish
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/hotels/star:
+    get:
+      summary: Query star hotels
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/hotels/non-star:
+    get:
+      summary: Query non-star hotels
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/scenic-spots:
+    get:
+      summary: Query scenic spots
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/routes:
+    get:
+      summary: Query routes
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/dining-entertainment:
+    get:
+      summary: Query dining and entertainment
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/performances:
+    get:
+      summary: Query performances
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+  /api/query/weather-traffic:
+    get:
+      summary: Query weather and traffic
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }

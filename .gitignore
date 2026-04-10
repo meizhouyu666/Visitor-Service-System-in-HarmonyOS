@@ -1,0 +1,19 @@
+.idea/
+.vscode/
+*.iml
+*.log
+*.tmp
+
+# Java / Maven
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Harmony / DevEco
+frontend/harmony-app/.hvigor/
+frontend/harmony-app/.idea/
+frontend/harmony-app/entry/build/
+frontend/harmony-app/build/
+
+# OS
+Thumbs.db
+desktop.ini
