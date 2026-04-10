@@ -1,26 +1,26 @@
-# Visitor Service System in HarmonyOS
+# HarmonyOS 游客服务系统
 
-Monorepo for the Visitor Service System course project.
+本仓库是游客服务系统课程项目的单仓代码库（Monorepo）。
 
-## Repository Structure
+## 仓库结构
 
-- `backend/`: Spring Boot + MySQL + JWT + OpenAPI
-- `frontend/harmony-app/`: HarmonyOS ArkTS skeleton (Stage Model)
-- `docs/`: minimal API contract references
+- `backend/`：Spring Boot + MySQL + JWT + OpenAPI
+- `frontend/harmony-app/`：HarmonyOS ArkTS 前端骨架（Stage Model）
+- `docs/`：最小接口契约与测试运行文档
 
-## Quick Start
+## 快速开始
 
-1. Clone the repository.
-2. Create your own feature branch.
-3. Implement your module and push branch.
-4. Open a Pull Request to `main`.
+1. 克隆仓库。
+2. 创建自己的功能分支。
+3. 开发对应模块并推送分支。
+4. 发起合并到 `main` 的 Pull Request。
 
-## Branching Convention
+## 分支命名规范
 
-- Feature branch: `feature/<module>-<task>`
-- Fix branch: `fix/<module>-<issue>`
+- 功能分支：`feature/<module>-<task>`
+- 修复分支：`fix/<module>-<issue>`
 
-## Backend Start
+## 后端启动
 
 ```bash
 cd backend
@@ -28,13 +28,13 @@ docker compose up -d
 mvn spring-boot:run
 ```
 
-Swagger UI:
+Swagger 页面：
 
 - `http://localhost:8080/swagger-ui.html`
 
-## Frontend Notes
+## 前端说明
 
-- Open `frontend/harmony-app` in DevEco Studio.
-- Default login demo:
-  - visitor / visitor123
-  - admin / admin123
+- 在 DevEco Studio 中打开 `frontend/harmony-app`。
+- 默认演示账号：
+  - 游客：`visitor / visitor123`
+  - 管理员：`admin / admin123`
