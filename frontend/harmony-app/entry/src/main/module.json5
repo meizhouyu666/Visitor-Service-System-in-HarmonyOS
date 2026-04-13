@@ -9,6 +9,11 @@
     ],
     "deliveryWithInstall": true,
     "pages": "$profile:main_pages",
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      }
+    ],
     "abilities": [
       {
         "name": "EntryAbility",
@@ -17,7 +22,8 @@
         "icon": "$media:layered_image",
         "label": "$string:app_name",
         "startWindowIcon": "$media:layered_image",
-        "startWindowBackground": "$color:start_window_background"
+        "startWindowBackground": "$color:start_window_background",
+        "visible": true
       }
     ]
   }

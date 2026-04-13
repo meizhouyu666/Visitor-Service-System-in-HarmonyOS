@@ -14,9 +14,18 @@ export struct WeatherTrafficPage {
     traffic: ''
   }
 
-  async aboutToAppear(): Promise<void> {
-    const result: WeatherTrafficData = await apiClient.get<WeatherTrafficData>('/api/query/weather-traffic')
-    this.data = { ...result }
+  aboutToAppear() {
+    // 不要 async！不要 await！
+    this.loadData()
+  }
+
+  async loadData(): Promise<void> {
+    try {
+      const result: WeatherTrafficData = await apiClient.get<WeatherTrafficData>('/api/query/weather-traffic')
+      this.data = result; // 不要包 {}！！！
+    } catch (err) {
+      console.error("加载数据失败", err)
+    }
   }
 
   build() {

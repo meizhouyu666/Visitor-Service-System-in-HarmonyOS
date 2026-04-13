@@ -1,7 +1,7 @@
 import { http } from '@kit.NetworkKit'
 import { ApiResponse } from '../model/ApiModels'
 
-const API_BASE_URL: string = 'http://10.0.2.2:8080'
+const API_BASE_URL: string = 'http://26.115.23.160:8080'
 
 export class ApiClient {
   private token: string = ''
