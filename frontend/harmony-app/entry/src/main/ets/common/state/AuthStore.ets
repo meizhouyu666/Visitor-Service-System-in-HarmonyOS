@@ -17,7 +17,14 @@ export class AuthStore {
       apiClient.setToken(result.token)
       this.currentUser = await apiClient.get<CurrentUser>('/api/auth/me')
     } catch (error) {
-      this.errorMessage = `Login failed: ${JSON.stringify(error)}`
+      const errMsg = (error as Error)?.message || ''
+      if (errMsg.includes('user not found') || errMsg.includes('username not found')) {
+        this.errorMessage = '登录失败：账号不存在'
+      } else if (errMsg.includes('invalid password') || errMsg.includes('password error')) {
+        this.errorMessage = '登录失败：密码不正确'
+      } else {
+        this.errorMessage = '登录失败：账号或密码错误'
+      }
     } finally {
       this.loading = false
     }
