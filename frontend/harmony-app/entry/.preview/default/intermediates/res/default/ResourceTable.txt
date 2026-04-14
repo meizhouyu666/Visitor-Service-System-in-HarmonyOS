@@ -1,0 +1,6 @@
+string app_name 0x01000000
+string entryability_desc 0x01000001
+string module_desc 0x01000002
+color start_window_background 0x01000004
+media layered_image 0x01000005
+profile main_pages 0x01000003

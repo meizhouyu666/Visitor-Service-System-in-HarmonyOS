@@ -1,0 +1,15 @@
+import UIAbility from "@ohos:app.ability.UIAbility";
+import type Want from "@ohos:app.ability.Want";
+import type window from "@ohos:window";
+export default class EntryAbility extends UIAbility {
+    onCreate(want: Want): void {
+        console.info(`EntryAbility onCreate: ${JSON.stringify(want)}`);
+    }
+    onWindowStageCreate(windowStage: window.WindowStage): void {
+        windowStage.loadContent('pages/Index', (err) => {
+            if (err.code) {
+                console.error(`Failed to load page, code=${err.code}, message=${err.message}`);
+            }
+        });
+    }
+}
