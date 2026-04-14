@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/visitor_service_system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
-    password: Xin200502
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
