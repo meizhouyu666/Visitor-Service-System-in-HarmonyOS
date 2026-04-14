@@ -1,9 +1,7 @@
 import { http } from '@kit.NetworkKit'
 import { ApiResponse } from '../model/ApiModels'
 
-// Team default for emulator -> host machine.
-// For physical device testing, use developer's LAN IP locally (do not commit personal IPs).
-const API_BASE_URL: string = 'http://192.168.52.51:8080'
+const API_BASE_URL: string = 'http://26.115.23.160:8080'
 
 export class ApiClient {
   private token: string = ''
