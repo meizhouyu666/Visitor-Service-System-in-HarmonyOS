@@ -2,5 +2,6 @@ package com.visitor.service.user;
 
 public enum UserRole {
     VISITOR,
-    ADMIN
+    ADMIN,
+    EMERGENCY_WRITER
 }
