@@ -183,6 +183,90 @@ struct Index {
     .backgroundColor('#F5F5F5')
   }
 
+  @Builder
+  private AdminView(): void {
+      Column() {
+        //顶部欢迎栏
+        Row({ space: 12 }) {
+          Row({ space: 8 }) {
+            Image($r('app.media.layered_image'))
+              .width(32)
+              .height(32)
+              .borderRadius(16)
+              .backgroundColor(Color.White)
+              .padding(4)
+
+            Column({ space: 2 }) {
+              Text('管理员中心')
+                .fontSize(12)
+                .fontColor('rgba(255, 255, 255, 0.85)')
+                .fontWeight(FontWeight.Normal)
+
+              Text(`${this.authStore.currentUser?.displayName ?? 'Admin'}`)
+                .fontSize(16)
+                .fontColor(Color.White)
+                .fontWeight(FontWeight.Medium)
+            }.alignItems(HorizontalAlign.Start)
+          }
+
+          Blank()
+
+          Button('退出')
+            .height(32)
+            .padding({ left: 16, right: 16 })
+            .backgroundColor('rgba(255, 255, 255, 0.2)')
+            .fontColor(Color.White)
+            .fontSize(14)
+            .borderRadius(20)
+            .onClick(() => this.authStore.logout())
+        }
+        .padding({ left: 20, right: 20, top: 12, bottom: 12 })
+        .width('100%')
+        .backgroundColor('#4A90E2')
+        .shadow({ radius: 8, color: 'rgba(0, 0, 0, 0.1)', offsetY: 2 })
+
+        //自定义 Tab 栏
+        Scroll() {
+          Row({ space: 0 }) {
+            //使用TabBarBuilder构建每个选项
+            this.TabBarBuilder('投诉管理', 0)
+            this.TabBarBuilder('紧急求助管理', 1)
+            this.TabBarBuilder('酒店信息管理', 2)
+            this.TabBarBuilder('景点路线管理', 3)
+            this.TabBarBuilder('餐饮演出管理', 4)
+          }
+          .padding({ left: 8, right: 8 })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .width('100%')
+        .height(56)
+        .backgroundColor(Color.White)
+
+        //分割线
+        Divider()
+          .height(1)
+          .color('#E0E0E0')
+          .width('100%')
+
+        //内容区域（根据选中的Tab显示不同页面）
+        if (this.selectedTab === 0) {
+          ComplaintPage()
+        } else if (this.selectedTab === 1) {
+          EmergencyPage()
+        } else if (this.selectedTab === 2) {
+          HotelPage()
+        } else if (this.selectedTab === 3) {
+          ScenicRoutePage()
+        } else if (this.selectedTab === 4) {
+          DiningShowPage()
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#F5F5F5')
+  }
+
   //自定义 Tab 栏样式构建器
   @Builder
   TabBarBuilder(title: string, tabIndex: number): void {
@@ -216,6 +300,8 @@ struct Index {
   build() {
     if (this.authStore.currentUser === null) {
       this.LoginView()
+    } else if (this.authStore.hasRole('ADMIN')) {
+      this.AdminView()
     } else {
       this.HomeView()
     }

@@ -460,11 +460,233 @@ class Index extends ViewPU {
         If.pop();
         Column.pop();
     }
+    private AdminView(parent = null): void {
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create();
+            Column.debugLine("entry/src/main/ets/pages/Index.ets(188:7)", "entry");
+            Column.width('100%');
+            Column.height('100%');
+            Column.backgroundColor('#F5F5F5');
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            //顶部欢迎栏
+            Row.create({ space: 12 });
+            Row.debugLine("entry/src/main/ets/pages/Index.ets(190:9)", "entry");
+            //顶部欢迎栏
+            Row.padding({ left: 20, right: 20, top: 12, bottom: 12 });
+            //顶部欢迎栏
+            Row.width('100%');
+            //顶部欢迎栏
+            Row.backgroundColor('#4A90E2');
+            //顶部欢迎栏
+            Row.shadow({ radius: 8, color: 'rgba(0, 0, 0, 0.1)', offsetY: 2 });
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create({ space: 8 });
+            Row.debugLine("entry/src/main/ets/pages/Index.ets(191:11)", "entry");
+        }, Row);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Image.create({ "id": 16777221, "type": 20000, params: [], "bundleName": "com.visitor.servicesystem", "moduleName": "entry" });
+            Image.debugLine("entry/src/main/ets/pages/Index.ets(192:13)", "entry");
+            Image.width(32);
+            Image.height(32);
+            Image.borderRadius(16);
+            Image.backgroundColor(Color.White);
+            Image.padding(4);
+        }, Image);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Column.create({ space: 2 });
+            Column.debugLine("entry/src/main/ets/pages/Index.ets(199:13)", "entry");
+            Column.alignItems(HorizontalAlign.Start);
+        }, Column);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create('管理员中心');
+            Text.debugLine("entry/src/main/ets/pages/Index.ets(200:15)", "entry");
+            Text.fontSize(12);
+            Text.fontColor('rgba(255, 255, 255, 0.85)');
+            Text.fontWeight(FontWeight.Normal);
+        }, Text);
+        Text.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Text.create(`${this.authStore.currentUser?.displayName ?? 'Admin'}`);
+            Text.debugLine("entry/src/main/ets/pages/Index.ets(205:15)", "entry");
+            Text.fontSize(16);
+            Text.fontColor(Color.White);
+            Text.fontWeight(FontWeight.Medium);
+        }, Text);
+        Text.pop();
+        Column.pop();
+        Row.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Blank.create();
+            Blank.debugLine("entry/src/main/ets/pages/Index.ets(212:11)", "entry");
+        }, Blank);
+        Blank.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Button.createWithLabel('退出');
+            Button.debugLine("entry/src/main/ets/pages/Index.ets(214:11)", "entry");
+            Button.height(32);
+            Button.padding({ left: 16, right: 16 });
+            Button.backgroundColor('rgba(255, 255, 255, 0.2)');
+            Button.fontColor(Color.White);
+            Button.fontSize(14);
+            Button.borderRadius(20);
+            Button.onClick(() => this.authStore.logout());
+        }, Button);
+        Button.pop();
+        //顶部欢迎栏
+        Row.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            //自定义 Tab 栏
+            Scroll.create();
+            Scroll.debugLine("entry/src/main/ets/pages/Index.ets(229:9)", "entry");
+            //自定义 Tab 栏
+            Scroll.scrollable(ScrollDirection.Horizontal);
+            //自定义 Tab 栏
+            Scroll.scrollBar(BarState.Off);
+            //自定义 Tab 栏
+            Scroll.width('100%');
+            //自定义 Tab 栏
+            Scroll.height(56);
+            //自定义 Tab 栏
+            Scroll.backgroundColor(Color.White);
+        }, Scroll);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            Row.create({ space: 0 });
+            Row.debugLine("entry/src/main/ets/pages/Index.ets(230:11)", "entry");
+            Row.padding({ left: 8, right: 8 });
+        }, Row);
+        //使用TabBarBuilder构建每个选项
+        this.TabBarBuilder.bind(this)('投诉管理', 0);
+        this.TabBarBuilder.bind(this)('紧急求助管理', 1);
+        this.TabBarBuilder.bind(this)('酒店信息管理', 2);
+        this.TabBarBuilder.bind(this)('景点路线管理', 3);
+        this.TabBarBuilder.bind(this)('餐饮演出管理', 4);
+        Row.pop();
+        //自定义 Tab 栏
+        Scroll.pop();
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            //分割线
+            Divider.create();
+            Divider.debugLine("entry/src/main/ets/pages/Index.ets(247:9)", "entry");
+            //分割线
+            Divider.height(1);
+            //分割线
+            Divider.color('#E0E0E0');
+            //分割线
+            Divider.width('100%');
+        }, Divider);
+        this.observeComponentCreation2((elmtId, isInitialRender) => {
+            If.create();
+            //内容区域（根据选中的Tab显示不同页面）
+            if (this.selectedTab === 0) {
+                this.ifElseBranchUpdateFunction(0, () => {
+                    {
+                        this.observeComponentCreation2((elmtId, isInitialRender) => {
+                            if (isInitialRender) {
+                                let componentCall = new ComplaintPage(this, {}, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 254, col: 11 });
+                                ViewPU.create(componentCall);
+                                let paramsLambda = () => {
+                                    return {};
+                                };
+                                componentCall.paramsGenerator_ = paramsLambda;
+                            }
+                            else {
+                                this.updateStateVarsOfChildByElmtId(elmtId, {});
+                            }
+                        }, { name: "ComplaintPage" });
+                    }
+                });
+            }
+            else if (this.selectedTab === 1) {
+                this.ifElseBranchUpdateFunction(1, () => {
+                    {
+                        this.observeComponentCreation2((elmtId, isInitialRender) => {
+                            if (isInitialRender) {
+                                let componentCall = new EmergencyPage(this, {}, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 256, col: 11 });
+                                ViewPU.create(componentCall);
+                                let paramsLambda = () => {
+                                    return {};
+                                };
+                                componentCall.paramsGenerator_ = paramsLambda;
+                            }
+                            else {
+                                this.updateStateVarsOfChildByElmtId(elmtId, {});
+                            }
+                        }, { name: "EmergencyPage" });
+                    }
+                });
+            }
+            else if (this.selectedTab === 2) {
+                this.ifElseBranchUpdateFunction(2, () => {
+                    {
+                        this.observeComponentCreation2((elmtId, isInitialRender) => {
+                            if (isInitialRender) {
+                                let componentCall = new HotelPage(this, {}, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 258, col: 11 });
+                                ViewPU.create(componentCall);
+                                let paramsLambda = () => {
+                                    return {};
+                                };
+                                componentCall.paramsGenerator_ = paramsLambda;
+                            }
+                            else {
+                                this.updateStateVarsOfChildByElmtId(elmtId, {});
+                            }
+                        }, { name: "HotelPage" });
+                    }
+                });
+            }
+            else if (this.selectedTab === 3) {
+                this.ifElseBranchUpdateFunction(3, () => {
+                    {
+                        this.observeComponentCreation2((elmtId, isInitialRender) => {
+                            if (isInitialRender) {
+                                let componentCall = new ScenicRoutePage(this, {}, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 260, col: 11 });
+                                ViewPU.create(componentCall);
+                                let paramsLambda = () => {
+                                    return {};
+                                };
+                                componentCall.paramsGenerator_ = paramsLambda;
+                            }
+                            else {
+                                this.updateStateVarsOfChildByElmtId(elmtId, {});
+                            }
+                        }, { name: "ScenicRoutePage" });
+                    }
+                });
+            }
+            else if (this.selectedTab === 4) {
+                this.ifElseBranchUpdateFunction(4, () => {
+                    {
+                        this.observeComponentCreation2((elmtId, isInitialRender) => {
+                            if (isInitialRender) {
+                                let componentCall = new DiningShowPage(this, {}, undefined, elmtId, () => { }, { page: "entry/src/main/ets/pages/Index.ets", line: 262, col: 11 });
+                                ViewPU.create(componentCall);
+                                let paramsLambda = () => {
+                                    return {};
+                                };
+                                componentCall.paramsGenerator_ = paramsLambda;
+                            }
+                            else {
+                                this.updateStateVarsOfChildByElmtId(elmtId, {});
+                            }
+                        }, { name: "DiningShowPage" });
+                    }
+                });
+            }
+            else {
+                this.ifElseBranchUpdateFunction(5, () => {
+                });
+            }
+        }, If);
+        If.pop();
+        Column.pop();
+    }
     //自定义 Tab 栏样式构建器
     TabBarBuilder(title: string, tabIndex: number, parent = null): void {
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Column.create();
-            Column.debugLine("entry/src/main/ets/pages/Index.ets(189:5)", "entry");
+            Column.debugLine("entry/src/main/ets/pages/Index.ets(273:5)", "entry");
             Column.padding({ top: 8, bottom: 8, left: 20, right: 20 });
             Column.width('auto');
             Column.justifyContent(FlexAlign.Center);
@@ -487,7 +709,7 @@ class Index extends ViewPU {
         }, Column);
         this.observeComponentCreation2((elmtId, isInitialRender) => {
             Text.create(title);
-            Text.debugLine("entry/src/main/ets/pages/Index.ets(190:7)", "entry");
+            Text.debugLine("entry/src/main/ets/pages/Index.ets(274:7)", "entry");
             Text.fontSize(14);
             Text.fontColor(tabIndex === this.selectedTab ? '#FFFFFF' : '#666666');
             Text.fontWeight(tabIndex === this.selectedTab ? FontWeight.Bold : FontWeight.Normal);
@@ -503,8 +725,13 @@ class Index extends ViewPU {
                     this.LoginView.bind(this)();
                 });
             }
-            else {
+            else if (this.authStore.hasRole('ADMIN')) {
                 this.ifElseBranchUpdateFunction(1, () => {
+                    this.AdminView.bind(this)();
+                });
+            }
+            else {
+                this.ifElseBranchUpdateFunction(2, () => {
                     this.HomeView.bind(this)();
                 });
             }
