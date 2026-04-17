@@ -5,6 +5,15 @@ export interface ApiResponse<T> {
   timestamp: string
 }
 
+export type UserRole =
+  | 'VISITOR'
+  | 'ADMIN'
+  | 'COMPLAINT_HANDLER'
+  | 'EMERGENCY_WRITER'
+  | 'APPROVER'
+  | 'HOTEL_MANAGER'
+  | 'SYSTEM_ADMIN'
+
 export interface LoginRequest {
   username: string
   password: string
@@ -14,21 +23,42 @@ export interface LoginResponse {
   token: string
   username: string
   displayName: string
-  role: string
+  role: UserRole | string
 }
 
 export interface CurrentUser {
   username: string
   displayName: string
-  role: string
+  role: UserRole | string
 }
 
 export interface ComplaintItem {
   id: number
   title: string
   content: string
+  attachmentUrls: string | null
   status: string
+  handlerComment: string | null
+  closureComment: string | null
+  rating: number | null
+  createdBy: string
+  processedBy: string | null
   createdAt: string
+  updatedAt: string
+}
+
+export interface ComplaintCreateRequest {
+  title: string
+  content: string
+  attachmentUrls?: string
+}
+
+export interface ComplaintActionRequest {
+  comment: string
+}
+
+export interface ComplaintRatingRequest {
+  rating: number
 }
 
 export interface EmergencyItem {
@@ -36,11 +66,101 @@ export interface EmergencyItem {
   title: string
   content: string
   status: string
+  validFrom: string | null
+  validUntil: string | null
+  createdBy: string
+  approvedBy: string | null
   createdAt: string
+  updatedAt: string
 }
 
-export interface SimpleItem {
+export interface EmergencyRequest {
+  title: string
+  content: string
+  validFrom: string | null
+  validUntil: string | null
+}
+
+export interface HotelResponse {
   id: string
   name: string
+  address: string
+  star: number
+  price: number
+  phone: string
+  score: number
+  hasBreakfast: boolean
+  facility: string
+  introduction: string
+}
+
+export interface ScenicSpotResponse {
+  id: string
+  name: string
+  scenicArea: string
+  location: string
+  openTime: string
+  ticketPrice: number
+  level: string
+  type: string
+  isFree: boolean
   description: string
+}
+
+export interface TravelRouteResponse {
+  id: string
+  name: string
+  durationHours: number
+  difficulty: string
+  suitableFor: string
+  spots: string
+  detail: string
+}
+
+export interface DiningResponse {
+  id: string
+  name: string
+  type: string
+  avgPrice: number
+  businessHours: string
+  address: string
+  recommendFood: string
+  detailDesc: string
+}
+
+export interface EntertainmentResponse {
+  id: string
+  name: string
+  type: string
+  location: string
+  openTime: string
+  price: number
+  description: string
+}
+
+export interface PerformanceResponse {
+  id: string
+  name: string
+  location: string
+  showTime: string
+  price: number
+  team: string
+  detail: string
+}
+
+export interface WeatherResponse {
+  date: string
+  weather: string
+  temperature: string
+  wind: string
+  humidity: number
+  tip: string
+}
+
+export interface TrafficResponse {
+  fromLocation: string
+  toLocation: string
+  status: string
+  suggestRoute: string
+  takeTime: string
 }

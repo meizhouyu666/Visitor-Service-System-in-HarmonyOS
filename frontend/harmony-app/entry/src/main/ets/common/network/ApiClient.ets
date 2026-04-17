@@ -1,6 +1,8 @@
 import { http } from '@kit.NetworkKit'
 import { ApiResponse } from '../model/ApiModels'
 
+// Team default for emulator -> host machine.
+// For physical device testing, use developer's LAN IP locally (do not commit personal IPs).
 const API_BASE_URL: string = 'http://10.0.2.2:8080'
 
 export class ApiClient {
@@ -11,36 +13,39 @@ export class ApiClient {
   }
 
   async get<T>(path: string): Promise<T> {
-    const httpRequest: http.HttpRequest = http.createHttp()
-    try {
-      const response: http.HttpResponse = await httpRequest.request(
-        `${API_BASE_URL}${path}`,
-        {
-          method: http.RequestMethod.GET,
-          header: this.buildHeaders(),
-          expectDataType: http.HttpDataType.STRING
-        }
-      )
-      const body: ApiResponse<T> = JSON.parse(response.result as string) as ApiResponse<T>
-      return body.data
-    } finally {
-      httpRequest.destroy()
-    }
+    return this.request<T>(path, http.RequestMethod.GET)
   }
 
   async post<T, R>(path: string, payload: T): Promise<R> {
+    return this.request<R>(path, http.RequestMethod.POST, payload)
+  }
+
+  async put<T, R>(path: string, payload: T): Promise<R> {
+    return this.request<R>(path, http.RequestMethod.PUT, payload)
+  }
+
+  async delete<R>(path: string): Promise<R> {
+    return this.request<R>(path, http.RequestMethod.DELETE)
+  }
+
+  private async request<R>(path: string, method: http.RequestMethod, payload?: unknown): Promise<R> {
     const httpRequest: http.HttpRequest = http.createHttp()
     try {
       const response: http.HttpResponse = await httpRequest.request(
         `${API_BASE_URL}${path}`,
         {
-          method: http.RequestMethod.POST,
+          method,
           header: this.buildHeaders(),
-          extraData: JSON.stringify(payload),
+          extraData: payload === undefined ? undefined : JSON.stringify(payload),
           expectDataType: http.HttpDataType.STRING
         }
       )
-      const body: ApiResponse<R> = JSON.parse(response.result as string) as ApiResponse<R>
+
+      const raw: string = `${response.result}`
+      const body: ApiResponse<R> = JSON.parse(raw)
+      if (body.code !== 0) {
+        throw new Error(body.message)
+      }
       return body.data
     } finally {
       httpRequest.destroy()
