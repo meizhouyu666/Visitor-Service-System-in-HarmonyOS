@@ -36,9 +36,9 @@ public class EmergencyController {
         return ApiResponse.success(emergencyService.listAll());
     }
 
-    @Operation(summary = "Create emergency info draft (admin or emergency writer)")
+    @Operation(summary = "Create emergency info draft (emergency writer)")
     @PostMapping("/admin")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMERGENCY_WRITER')")
+    @PreAuthorize("hasRole('EMERGENCY_WRITER')")
     public ApiResponse<EmergencyResponse> create(@Valid @RequestBody EmergencyRequest request, Authentication authentication) {
         return ApiResponse.success(emergencyService.create(authentication.getName(), request));
     }
@@ -50,7 +50,7 @@ public class EmergencyController {
         return ApiResponse.success(emergencyService.update(id, request));
     }
 
-    @Operation(summary = "Delete emergency info (admin or emergency writer)")
+    @Operation(summary = "Delete emergency info (admin)")
     @DeleteMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -58,7 +58,7 @@ public class EmergencyController {
         return ApiResponse.successMessage("Deleted");
     }
 
-    @Operation(summary = "Submit emergency info for approval (admin or emergency writer)")
+    @Operation(summary = "Submit emergency info for approval (emergency writer)")
     @PostMapping("/admin/{id}/submit")
     @PreAuthorize("hasRole('EMERGENCY_WRITER')")
     public ApiResponse<EmergencyResponse> submit(@PathVariable Long id) {

@@ -38,6 +38,7 @@ public class DataInitializer implements CommandLineRunner {
         // 创建初始用户
         createUserIfAbsent("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
         createUserIfAbsent("admin", "admin123", "Admin Demo", UserRole.ADMIN);
+        createUserIfAbsent("writer", "writer123", "Emergency Writer Demo", UserRole.EMERGENCY_WRITER);
     }
 
     private UserAccount createUserIfAbsent(String username, String rawPassword, String displayName, UserRole role) {
