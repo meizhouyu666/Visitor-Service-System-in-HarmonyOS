@@ -36,8 +36,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers("/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health")
                         .permitAll()
-                        .requestMatchers("/api/complaints/admin/**", "/api/emergency/admin/**")
-                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated()
                 )

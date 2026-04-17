@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,24 +31,28 @@ public class EmergencyController {
 
     @Operation(summary = "List all emergency info for admin")
     @GetMapping("/admin")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','APPROVER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<List<EmergencyResponse>> listAll() {
         return ApiResponse.success(emergencyService.listAll());
     }
 
     @Operation(summary = "Create emergency info draft (admin)")
     @PostMapping("/admin")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> create(@Valid @RequestBody EmergencyRequest request, Authentication authentication) {
         return ApiResponse.success(emergencyService.create(authentication.getName(), request));
     }
 
     @Operation(summary = "Update emergency info (admin)")
     @PutMapping("/admin/{id}")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> update(@PathVariable Long id, @Valid @RequestBody EmergencyRequest request) {
         return ApiResponse.success(emergencyService.update(id, request));
     }
 
     @Operation(summary = "Delete emergency info (admin)")
     @DeleteMapping("/admin/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         emergencyService.delete(id);
         return ApiResponse.successMessage("Deleted");
@@ -55,12 +60,14 @@ public class EmergencyController {
 
     @Operation(summary = "Submit emergency info for approval (admin)")
     @PostMapping("/admin/{id}/submit")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> submit(@PathVariable Long id) {
         return ApiResponse.success(emergencyService.submitForApproval(id));
     }
 
     @Operation(summary = "Approve and publish emergency info (admin)")
     @PostMapping("/admin/{id}/approve")
+    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> approve(@PathVariable Long id, Authentication authentication) {
         return ApiResponse.success(emergencyService.approve(id, authentication.getName()));
     }
