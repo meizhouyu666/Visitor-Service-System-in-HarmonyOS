@@ -29,6 +29,9 @@ Spring Boot backend for the Visitor Service System.
 - Admin:
   - username: `admin`
   - password: `admin123`
+- Emergency Writer:
+  - username: `writer`
+  - password: `writer123`
 
 ## Auth Header
 
