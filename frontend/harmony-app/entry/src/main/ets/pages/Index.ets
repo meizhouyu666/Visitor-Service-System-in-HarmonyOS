@@ -1,10 +1,16 @@
 import { AuthStore } from '../common/state/AuthStore'
-import { ComplaintPage } from './modules/ComplaintPage'
-import { EmergencyPage } from './modules/EmergencyPage'
-import { HotelPage } from './modules/HotelPage'
+import { UserRole } from '../common/model/ApiModels'
+import { ComplaintPage, ComplaintMode } from './modules/ComplaintPage'
+import { EmergencyPage, EmergencyMode } from './modules/EmergencyPage'
+import { HotelPage, HotelMode } from './modules/HotelPage'
 import { ScenicRoutePage } from './modules/ScenicRoutePage'
 import { DiningShowPage } from './modules/DiningShowPage'
 import { WeatherTrafficPage } from './modules/WeatherTrafficPage'
+
+interface TabItem {
+  key: string
+  title: string
+}
 
 @Entry
 @Component
@@ -15,10 +21,83 @@ struct Index {
   @State private authStore: AuthStore = new AuthStore()
 
   private async doLogin(): Promise<void> {
-    await this.authStore.login({
-      username: this.username,
-      password: this.password
-    })
+    const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
+    if (ok) {
+      this.selectedTab = 0
+    }
+  }
+
+  private tabsForRole(role: UserRole): TabItem[] {
+    switch (role) {
+      case 'VISITOR':
+        return [
+          { key: 'complaint-visitor', title: '投诉服务' },
+          { key: 'emergency-visitor', title: '应急信息' },
+          { key: 'hotel-visitor', title: '酒店服务' },
+          { key: 'scenic', title: '景区线路' },
+          { key: 'dining', title: '餐饮娱乐' },
+          { key: 'weather', title: '天气路况' }
+        ]
+      case 'COMPLAINT_HANDLER':
+        return [{ key: 'complaint-handler', title: '投诉处理' }]
+      case 'EMERGENCY_WRITER':
+        return [{ key: 'emergency-writer', title: '应急发布' }]
+      case 'APPROVER':
+        return [
+          { key: 'complaint-approver', title: '投诉审批' },
+          { key: 'emergency-approver', title: '应急审批' }
+        ]
+      case 'HOTEL_MANAGER':
+        return [{ key: 'hotel-manager', title: '酒店管理' }]
+      case 'SYSTEM_ADMIN':
+      case 'ADMIN':
+        return [
+          { key: 'complaint-admin', title: '投诉管理' },
+          { key: 'emergency-admin', title: '应急管理' },
+          { key: 'hotel-admin', title: '酒店管理' },
+          { key: 'scenic', title: '景区线路' },
+          { key: 'dining', title: '餐饮娱乐' },
+          { key: 'weather', title: '天气路况' }
+        ]
+      default:
+        return [{ key: 'complaint-visitor', title: '投诉服务' }]
+    }
+  }
+
+  private complaintModeByKey(key: string): ComplaintMode {
+    if (key === 'complaint-handler') {
+      return 'handler'
+    }
+    if (key === 'complaint-approver') {
+      return 'approver'
+    }
+    if (key === 'complaint-admin') {
+      return 'admin'
+    }
+    return 'visitor'
+  }
+
+  private emergencyModeByKey(key: string): EmergencyMode {
+    if (key === 'emergency-writer') {
+      return 'writer'
+    }
+    if (key === 'emergency-approver') {
+      return 'approver'
+    }
+    if (key === 'emergency-admin') {
+      return 'admin'
+    }
+    return 'visitor'
+  }
+
+  private hotelModeByKey(key: string): HotelMode {
+    if (key === 'hotel-manager') {
+      return 'manager'
+    }
+    if (key === 'hotel-admin') {
+      return 'admin'
+    }
+    return 'visitor'
   }
 
   @Builder
@@ -29,9 +108,7 @@ struct Index {
           .fontSize(26)
           .fontWeight(FontWeight.Bold)
           .fontColor('#1F2937')
-          .margin({ bottom: 12 })
 
-        //用户名输入框
         TextInput({ placeholder: '请输入用户名', text: this.username })
           .onChange((value: string) => {
             this.username = value
@@ -42,7 +119,6 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        //密码输入框
         TextInput({ placeholder: '请输入密码', text: this.password })
           .type(InputType.Password)
           .onChange((value: string) => {
@@ -54,7 +130,6 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        //登录按钮
         Button(this.authStore.loading ? '登录中...' : '登录')
           .enabled(!this.authStore.loading)
           .onClick(() => {
@@ -65,29 +140,19 @@ struct Index {
           .borderRadius(8)
           .backgroundColor('#3B82F6')
           .fontColor(Color.White)
-          .fontWeight(FontWeight.Medium)
-          .margin({ top: 8 })
 
-        //错误提示
         if (this.authStore.errorMessage.length > 0) {
-          Text(this.authStore.errorMessage)
-            .fontColor(Color.Red)
-            .fontSize(12)
-            .margin({ top: 4 })
+          Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
         }
 
-        Text('演示账号：visitor/visitor123 或 admin/admin123')
+        Text('演示账号：visitor / admin / handler / writer / approver / hoteladmin / sysadmin')
           .fontSize(12)
           .fontColor('#6B7280')
-          .margin({ top: 12 })
       }
       .width('90%')
-      .padding(28)
+      .padding(24)
       .backgroundColor(Color.White)
       .borderRadius(16)
-      .shadow({ radius: 12, color: '#00000010', offsetX: 0, offsetY: 4 })
-
-      //让卡片垂直水平居中
     }
     .padding(20)
     .width('100%')
@@ -97,213 +162,83 @@ struct Index {
   }
 
   @Builder
-  private HomeView(): void {
+  private RoleHomeView(): void {
+    const role: UserRole = this.authStore.getRole()
+    const tabs: TabItem[] = this.tabsForRole(role)
+
+    if (this.selectedTab >= tabs.length) {
+      this.selectedTab = 0
+    }
+
     Column() {
-      //顶部欢迎栏
-      Row({ space: 12 }) {
-        Row({ space: 8 }) {
-          Image($r('app.media.layered_image'))
-            .width(32)
-            .height(32)
-            .borderRadius(16)
-            .backgroundColor(Color.White)
-            .padding(4)
-
-          Column({ space: 2 }) {
-            Text('欢迎登陆')
-              .fontSize(12)
-              .fontColor('rgba(255, 255, 255, 0.85)')
-              .fontWeight(FontWeight.Normal)
-
-            Text(`${this.authStore.currentUser?.displayName ?? 'Guest'}`)
-              .fontSize(16)
-              .fontColor(Color.White)
-              .fontWeight(FontWeight.Medium)
-          }.alignItems(HorizontalAlign.Start)
-        }
+      Row({ space: 8 }) {
+        Column({ space: 2 }) {
+          Text(`欢迎：${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
+          Text(this.authStore.getRoleLabel()).fontSize(12).fontColor('#6B7280')
+        }.alignItems(HorizontalAlign.Start)
 
         Blank()
 
-        Button('退出')
-          .height(32)
-          .padding({ left: 16, right: 16 })
-          .backgroundColor('rgba(255, 255, 255, 0.2)')
-          .fontColor(Color.White)
-          .fontSize(14)
-          .borderRadius(20)
+        Button('退出登录')
+          .height(30)
           .onClick(() => this.authStore.logout())
       }
-      .padding({ left: 20, right: 20, top: 12, bottom: 12 })
+      .padding(12)
       .width('100%')
-      .backgroundColor('#4A90E2')
-      .shadow({ radius: 8, color: 'rgba(0, 0, 0, 0.1)', offsetY: 2 })
 
-      //自定义 Tab 栏
       Scroll() {
-        Row({ space: 0 }) {
-          //使用TabBarBuilder构建每个选项
-          this.TabBarBuilder('投诉', 0)
-          this.TabBarBuilder('紧急求助', 1)
-          this.TabBarBuilder('酒店信息', 2)
-          this.TabBarBuilder('景点路线', 3)
-          this.TabBarBuilder('餐饮演出', 4)
-          this.TabBarBuilder('天气交通', 5)
+        Row({ space: 8 }) {
+          ForEach(tabs, (tab: TabItem, index: number) => {
+            Text(tab.title)
+              .fontSize(14)
+              .fontColor(index === this.selectedTab ? Color.White : '#4B5563')
+              .backgroundColor(index === this.selectedTab ? '#2563EB' : '#F3F4F6')
+              .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+              .borderRadius(16)
+              .onClick(() => {
+                this.selectedTab = index
+              })
+          }, (tab: TabItem) => tab.key)
         }
-        .padding({ left: 8, right: 8 })
+        .padding({ left: 12, right: 12, bottom: 8 })
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
-      .width('100%')
-      .height(56)
-      .backgroundColor(Color.White)
+      .height(52)
 
-      //分割线
-      Divider()
-        .height(1)
-        .color('#E0E0E0')
-        .width('100%')
+      Divider().height(1).color('#E5E7EB').width('100%')
 
-      //内容区域（根据选中的Tab显示不同页面）
-      if (this.selectedTab === 0) {
-        ComplaintPage()
-      } else if (this.selectedTab === 1) {
-        EmergencyPage()
-      } else if (this.selectedTab === 2) {
-        HotelPage()
-      } else if (this.selectedTab === 3) {
-        ScenicRoutePage()
-      } else if (this.selectedTab === 4) {
-        DiningShowPage()
-      } else if (this.selectedTab === 5) {
-        WeatherTrafficPage()
+      if (tabs.length > 0) {
+        this.renderTab(tabs[this.selectedTab].key)
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F5F5F5')
+    .backgroundColor('#F9FAFB')
   }
 
   @Builder
-  private AdminView(): void {
-      Column() {
-        //顶部欢迎栏
-        Row({ space: 12 }) {
-          Row({ space: 8 }) {
-            Image($r('app.media.layered_image'))
-              .width(32)
-              .height(32)
-              .borderRadius(16)
-              .backgroundColor(Color.White)
-              .padding(4)
-
-            Column({ space: 2 }) {
-              Text('管理员中心')
-                .fontSize(12)
-                .fontColor('rgba(255, 255, 255, 0.85)')
-                .fontWeight(FontWeight.Normal)
-
-              Text(`${this.authStore.currentUser?.displayName ?? 'Admin'}`)
-                .fontSize(16)
-                .fontColor(Color.White)
-                .fontWeight(FontWeight.Medium)
-            }.alignItems(HorizontalAlign.Start)
-          }
-
-          Blank()
-
-          Button('退出')
-            .height(32)
-            .padding({ left: 16, right: 16 })
-            .backgroundColor('rgba(255, 255, 255, 0.2)')
-            .fontColor(Color.White)
-            .fontSize(14)
-            .borderRadius(20)
-            .onClick(() => this.authStore.logout())
-        }
-        .padding({ left: 20, right: 20, top: 12, bottom: 12 })
-        .width('100%')
-        .backgroundColor('#4A90E2')
-        .shadow({ radius: 8, color: 'rgba(0, 0, 0, 0.1)', offsetY: 2 })
-
-        //自定义 Tab 栏
-        Scroll() {
-          Row({ space: 0 }) {
-            //使用TabBarBuilder构建每个选项
-            this.TabBarBuilder('投诉管理', 0)
-            this.TabBarBuilder('紧急求助管理', 1)
-            this.TabBarBuilder('酒店信息管理', 2)
-            this.TabBarBuilder('景点路线管理', 3)
-            this.TabBarBuilder('餐饮演出管理', 4)
-          }
-          .padding({ left: 8, right: 8 })
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .width('100%')
-        .height(56)
-        .backgroundColor(Color.White)
-
-        //分割线
-        Divider()
-          .height(1)
-          .color('#E0E0E0')
-          .width('100%')
-
-        //内容区域（根据选中的Tab显示不同页面）
-        if (this.selectedTab === 0) {
-          ComplaintPage()
-        } else if (this.selectedTab === 1) {
-          EmergencyPage()
-        } else if (this.selectedTab === 2) {
-          HotelPage()
-        } else if (this.selectedTab === 3) {
-          ScenicRoutePage()
-        } else if (this.selectedTab === 4) {
-          DiningShowPage()
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#F5F5F5')
-  }
-
-  //自定义 Tab 栏样式构建器
-  @Builder
-  TabBarBuilder(title: string, tabIndex: number): void {
-    Column() {
-      Text(title)
-        .fontSize(14)
-        .fontColor(tabIndex === this.selectedTab ? '#FFFFFF' : '#666666')
-        .fontWeight(tabIndex === this.selectedTab ? FontWeight.Bold : FontWeight.Normal)
+  private renderTab(key: string): void {
+    if (key.startsWith('complaint')) {
+      ComplaintPage({ mode: this.complaintModeByKey(key) })
+    } else if (key.startsWith('emergency')) {
+      EmergencyPage({ mode: this.emergencyModeByKey(key) })
+    } else if (key.startsWith('hotel')) {
+      HotelPage({ mode: this.hotelModeByKey(key) })
+    } else if (key === 'scenic') {
+      ScenicRoutePage()
+    } else if (key === 'dining') {
+      DiningShowPage()
+    } else if (key === 'weather') {
+      WeatherTrafficPage()
     }
-    .padding({ top: 8, bottom: 8, left: 20, right: 20 })
-    .width('auto')
-    .justifyContent(FlexAlign.Center)
-    .borderRadius(20)  //胶囊样式
-    .backgroundColor(tabIndex === this.selectedTab ? '#4A90E2' : '#F5F5F5')
-    .border({
-      width: 1,
-      color: tabIndex === this.selectedTab ? '#4A90E2' : '#E0E0E0',
-      style: BorderStyle.Solid
-    })
-    .margin({ left: 6, right: 6 })
-    .shadow({
-      radius: tabIndex === this.selectedTab ? 4 : 0,  //选中态添加阴影
-      color: 'rgba(74, 144, 226, 0.3)',
-      offsetY: 2
-    })
-    .onClick(() => {
-      this.selectedTab = tabIndex
-    })
   }
 
   build() {
     if (this.authStore.currentUser === null) {
       this.LoginView()
-    } else if (this.authStore.hasRole('ADMIN')) {
-      this.AdminView()
     } else {
-      this.HomeView()
+      this.RoleHomeView()
     }
   }
 }

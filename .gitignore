@@ -12,8 +12,8 @@ backend/.mvn/wrapper/maven-wrapper.jar
 frontend/harmony-app/.hvigor/
 frontend/harmony-app/.idea/
 frontend/harmony-app/entry/build/
-frontend/harmony-app/entry/.preview/
 frontend/harmony-app/build/
+frontend/harmony-app/entry/.preview/
 frontend/harmony-app/oh_modules/
 
 # OS
