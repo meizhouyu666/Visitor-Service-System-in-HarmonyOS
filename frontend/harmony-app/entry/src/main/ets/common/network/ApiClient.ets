@@ -4,6 +4,7 @@ import { ApiResponse } from '../model/ApiModels'
 // Team default for emulator -> host machine.
 // For physical device testing, use developer's LAN IP locally (do not commit personal IPs).
 const API_BASE_URL: string = 'http://10.0.2.2:8080'
+type RequestPayload = Record<string, Object> | string | number | boolean | null
 
 export class ApiClient {
   private token: string = ''
@@ -28,7 +29,7 @@ export class ApiClient {
     return this.request<R>(path, http.RequestMethod.DELETE)
   }
 
-  private async request<R>(path: string, method: http.RequestMethod, payload?: unknown): Promise<R> {
+  private async request<R>(path: string, method: http.RequestMethod, payload?: RequestPayload): Promise<R> {
     const httpRequest: http.HttpRequest = http.createHttp()
     try {
       const response: http.HttpResponse = await httpRequest.request(
@@ -47,6 +48,9 @@ export class ApiClient {
         throw new Error(body.message)
       }
       return body.data
+    } catch (error) {
+      const message: string = `${error}`
+      throw new Error(`Network request failed: ${message}`)
     } finally {
       httpRequest.destroy()
     }
