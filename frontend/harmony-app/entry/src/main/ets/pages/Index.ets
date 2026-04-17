@@ -1,4 +1,4 @@
-import { AuthStore } from '../common/state/AuthStore'
+﻿import { AuthStore } from '../common/state/AuthStore'
 import { UserRole } from '../common/model/ApiModels'
 import { ComplaintPage, ComplaintMode } from './modules/ComplaintPage'
 import { EmergencyPage, EmergencyMode } from './modules/EmergencyPage'
@@ -31,37 +31,52 @@ struct Index {
     switch (role) {
       case 'VISITOR':
         return [
-          { key: 'complaint-visitor', title: '投诉服务' },
-          { key: 'emergency-visitor', title: '应急信息' },
-          { key: 'hotel-visitor', title: '酒店服务' },
-          { key: 'scenic', title: '景区线路' },
-          { key: 'dining', title: '餐饮娱乐' },
-          { key: 'weather', title: '天气路况' }
+          { key: 'complaint-visitor', title: 'Complaints' },
+          { key: 'emergency-visitor', title: 'Emergency' },
+          { key: 'hotel-visitor', title: 'Hotels' },
+          { key: 'scenic', title: 'Scenic & Routes' },
+          { key: 'dining', title: 'Dining & Shows' },
+          { key: 'weather', title: 'Weather & Traffic' }
         ]
       case 'COMPLAINT_HANDLER':
-        return [{ key: 'complaint-handler', title: '投诉处理' }]
+        return [{ key: 'complaint-handler', title: 'Complaint Handling' }]
       case 'EMERGENCY_WRITER':
-        return [{ key: 'emergency-writer', title: '应急发布' }]
+        return [{ key: 'emergency-writer', title: 'Emergency Drafting' }]
       case 'APPROVER':
         return [
-          { key: 'complaint-approver', title: '投诉审批' },
-          { key: 'emergency-approver', title: '应急审批' }
+          { key: 'complaint-approver', title: 'Complaint Approval' },
+          { key: 'emergency-approver', title: 'Emergency Approval' }
         ]
       case 'HOTEL_MANAGER':
-        return [{ key: 'hotel-manager', title: '酒店管理' }]
+        return [{ key: 'hotel-manager', title: 'Hotel Management' }]
       case 'SYSTEM_ADMIN':
       case 'ADMIN':
         return [
-          { key: 'complaint-admin', title: '投诉管理' },
-          { key: 'emergency-admin', title: '应急管理' },
-          { key: 'hotel-admin', title: '酒店管理' },
-          { key: 'scenic', title: '景区线路' },
-          { key: 'dining', title: '餐饮娱乐' },
-          { key: 'weather', title: '天气路况' }
+          { key: 'complaint-admin', title: 'Complaint Admin' },
+          { key: 'emergency-admin', title: 'Emergency Admin' },
+          { key: 'hotel-admin', title: 'Hotel Admin' },
+          { key: 'scenic', title: 'Scenic & Routes' },
+          { key: 'dining', title: 'Dining & Shows' },
+          { key: 'weather', title: 'Weather & Traffic' }
         ]
       default:
-        return [{ key: 'complaint-visitor', title: '投诉服务' }]
+        return [{ key: 'complaint-visitor', title: 'Complaints' }]
     }
+  }
+
+  private getRoleTabs(): TabItem[] {
+    return this.tabsForRole(this.authStore.getRole())
+  }
+
+  private getSafeSelectedTabKey(): string {
+    const tabs: TabItem[] = this.getRoleTabs()
+    if (tabs.length === 0) {
+      return ''
+    }
+    if (this.selectedTab < 0 || this.selectedTab >= tabs.length) {
+      return tabs[0].key
+    }
+    return tabs[this.selectedTab].key
   }
 
   private complaintModeByKey(key: string): ComplaintMode {
@@ -104,12 +119,12 @@ struct Index {
   private LoginView(): void {
     Column({ space: 10 }) {
       Column({ space: 16 }) {
-        Text('游客服务系统')
+        Text('Visitor Service System')
           .fontSize(26)
           .fontWeight(FontWeight.Bold)
           .fontColor('#1F2937')
 
-        TextInput({ placeholder: '请输入用户名', text: this.username })
+        TextInput({ placeholder: 'Username', text: this.username })
           .onChange((value: string) => {
             this.username = value
           })
@@ -119,7 +134,7 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        TextInput({ placeholder: '请输入密码', text: this.password })
+        TextInput({ placeholder: 'Password', text: this.password })
           .type(InputType.Password)
           .onChange((value: string) => {
             this.password = value
@@ -130,7 +145,7 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        Button(this.authStore.loading ? '登录中...' : '登录')
+        Button(this.authStore.loading ? 'Signing in...' : 'Sign in')
           .enabled(!this.authStore.loading)
           .onClick(() => {
             this.doLogin()
@@ -145,7 +160,7 @@ struct Index {
           Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
         }
 
-        Text('演示账号：visitor / admin / handler / writer / approver / hoteladmin / sysadmin')
+        Text('Demo users: visitor/admin/handler/writer/approver/hoteladmin/sysadmin')
           .fontSize(12)
           .fontColor('#6B7280')
       }
@@ -163,23 +178,16 @@ struct Index {
 
   @Builder
   private RoleHomeView(): void {
-    const role: UserRole = this.authStore.getRole()
-    const tabs: TabItem[] = this.tabsForRole(role)
-
-    if (this.selectedTab >= tabs.length) {
-      this.selectedTab = 0
-    }
-
     Column() {
       Row({ space: 8 }) {
         Column({ space: 2 }) {
-          Text(`欢迎：${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
-          Text(this.authStore.getRoleLabel()).fontSize(12).fontColor('#6B7280')
+          Text(`Welcome: ${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
+          Text(`Role: ${this.authStore.getRole()}`).fontSize(12).fontColor('#6B7280')
         }.alignItems(HorizontalAlign.Start)
 
         Blank()
 
-        Button('退出登录')
+        Button('Logout')
           .height(30)
           .onClick(() => this.authStore.logout())
       }
@@ -188,7 +196,7 @@ struct Index {
 
       Scroll() {
         Row({ space: 8 }) {
-          ForEach(tabs, (tab: TabItem, index: number) => {
+          ForEach(this.getRoleTabs(), (tab: TabItem, index: number) => {
             Text(tab.title)
               .fontSize(14)
               .fontColor(index === this.selectedTab ? Color.White : '#4B5563')
@@ -208,8 +216,8 @@ struct Index {
 
       Divider().height(1).color('#E5E7EB').width('100%')
 
-      if (tabs.length > 0) {
-        this.renderTab(tabs[this.selectedTab].key)
+      if (this.getRoleTabs().length > 0) {
+        this.renderTab(this.getSafeSelectedTabKey())
       }
     }
     .width('100%')
