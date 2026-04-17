@@ -32,6 +32,9 @@ Spring Boot backend for the Visitor Service System.
 - Emergency Writer:
   - username: `writer`
   - password: `writer123`
+- Complaint Handler:
+  - username: `handler`
+  - password: `handler123`
 
 ## Auth Header
 

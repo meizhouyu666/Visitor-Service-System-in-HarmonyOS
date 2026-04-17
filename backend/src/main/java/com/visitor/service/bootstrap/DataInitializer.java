@@ -39,6 +39,7 @@ public class DataInitializer implements CommandLineRunner {
         createUserIfAbsent("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
         createUserIfAbsent("admin", "admin123", "Admin Demo", UserRole.ADMIN);
         createUserIfAbsent("writer", "writer123", "Emergency Writer Demo", UserRole.EMERGENCY_WRITER);
+        createUserIfAbsent("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
     }
 
     private UserAccount createUserIfAbsent(String username, String rawPassword, String displayName, UserRole role) {

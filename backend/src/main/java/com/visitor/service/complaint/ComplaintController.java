@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,11 +32,12 @@ public class ComplaintController {
         return ApiResponse.success(complaintService.create(authentication.getName(), request));
     }
 
-    @Operation(summary = "List complaints for current user (admin gets all)")
+    @Operation(summary = "List complaints for current user (admin or complaint handler gets all)")
     @GetMapping
     public ApiResponse<List<ComplaintResponse>> list(Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")
+                    || authority.getAuthority().equals("ROLE_COMPLAINT_HANDLER"));
         return ApiResponse.success(complaintService.listForUser(authentication.getName(), isAdmin));
     }
 
@@ -43,7 +45,8 @@ public class ComplaintController {
     @GetMapping("/{id}")
     public ApiResponse<ComplaintResponse> detail(@PathVariable Long id, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")
+                    || authority.getAuthority().equals("ROLE_COMPLAINT_HANDLER"));
         return ApiResponse.success(complaintService.detail(authentication.getName(), id, isAdmin));
     }
 
@@ -55,24 +58,27 @@ public class ComplaintController {
         return ApiResponse.success(complaintService.rate(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Approve complaint (admin)")
+    @Operation(summary = "Approve complaint (admin only)")
     @PostMapping("/admin/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ComplaintResponse> approve(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
         return ApiResponse.success(complaintService.approve(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Process complaint (admin)")
+    @Operation(summary = "Process complaint (complaint handler only)")
     @PostMapping("/admin/{id}/process")
+    @PreAuthorize("hasRole('COMPLAINT_HANDLER')")
     public ApiResponse<ComplaintResponse> process(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
         return ApiResponse.success(complaintService.process(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Close complaint (admin)")
+    @Operation(summary = "Close complaint (admin only)")
     @PostMapping("/admin/{id}/close")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ComplaintResponse> close(@PathVariable Long id,
                                                 @Valid @RequestBody ComplaintActionRequest request,
                                                 Authentication authentication) {

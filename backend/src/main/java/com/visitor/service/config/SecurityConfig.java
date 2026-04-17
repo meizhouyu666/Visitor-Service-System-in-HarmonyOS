@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/emergency/admin/*/approve")
                         .hasRole("ADMIN")
                         .requestMatchers("/api/complaints/admin/**")
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "COMPLAINT_HANDLER")
                         .requestMatchers("/api/emergency/admin/**")
                         .hasAnyRole("ADMIN", "EMERGENCY_WRITER")
                         .anyRequest()
