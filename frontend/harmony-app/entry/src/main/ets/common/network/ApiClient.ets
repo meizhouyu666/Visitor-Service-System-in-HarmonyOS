@@ -51,14 +51,15 @@ export class ApiClient {
       if (raw.trim().length === 0) {
         throw new Error('服务返回空响应')
       }
-      const body: ApiResponse<R> | R = JSON.parse(raw)
-      if (this.isEnvelope(body)) {
-        if (body.code !== 0) {
-          throw new Error(body.message.length > 0 ? body.message : '请求失败，请稍后重试')
+      const envelope: ApiResponse<R> = JSON.parse(raw)
+      if (typeof envelope.code === 'number') {
+        if (envelope.code !== 0) {
+          throw new Error(envelope.message.length > 0 ? envelope.message : '请求失败，请稍后重试')
         }
-        return body.data
+        return envelope.data
       }
-      return body
+      const plain: R = JSON.parse(raw)
+      return plain
     } catch (error) {
       if (error instanceof Error) {
         throw error
@@ -67,10 +68,6 @@ export class ApiClient {
     } finally {
       httpRequest.destroy()
     }
-  }
-
-  private isEnvelope<R>(body: ApiResponse<R> | R): body is ApiResponse<R> {
-    return typeof body === 'object' && body !== null && 'code' in body && 'data' in body
   }
 
   private buildHeaders(): Record<string, string> {

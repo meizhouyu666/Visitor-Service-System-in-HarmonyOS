@@ -24,7 +24,7 @@ type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
 @Component
 export struct VisitorHomePage {
   @Prop displayName: string = '游客'
-  @Link navKey: VisitorNav = 'home'
+  @Link navKey: VisitorNav
 
   @State private weatherToday: WeatherResponse | null = null
   @State private complaintList: ComplaintItem[] = []
