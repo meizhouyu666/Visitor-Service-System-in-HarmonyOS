@@ -15,6 +15,9 @@ import {
 
 export type BadgeTone = 'primary' | 'success' | 'warning' | 'danger' | 'neutral'
 
+@Builder
+function EmptyBuilder(): void {}
+
 function toneTextColor(tone: BadgeTone): string {
   if (tone === 'primary') {
     return THEME_PRIMARY
@@ -49,7 +52,7 @@ function toneBackgroundColor(tone: BadgeTone): string {
 
 @Component
 export struct FloatingCard {
-  @BuilderParam content: () => void
+  @BuilderParam content: () => void = EmptyBuilder
 
   build() {
     Column() {
