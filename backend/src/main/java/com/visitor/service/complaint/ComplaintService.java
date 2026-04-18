@@ -9,6 +9,7 @@ import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class ComplaintService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public ComplaintResponse create(String username, ComplaintCreateRequest request) {
         UserAccount creator = findUser(username);
         Complaint complaint = new Complaint();
@@ -34,6 +36,7 @@ public class ComplaintService {
         return ComplaintResponse.from(complaintRepository.save(complaint));
     }
 
+    @Transactional(readOnly = true)
     public List<ComplaintResponse> listForUser(String username, boolean isAdmin) {
         if (isAdmin) {
             return complaintRepository.findAll().stream()
@@ -45,6 +48,7 @@ public class ComplaintService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ComplaintResponse detail(String username, Long id, boolean isAdmin) {
         Complaint complaint = findComplaint(id);
         if (!isAdmin && !complaint.getCreatedBy().getUsername().equals(username)) {
@@ -53,6 +57,7 @@ public class ComplaintService {
         return ComplaintResponse.from(complaint);
     }
 
+    @Transactional
     public ComplaintResponse approve(String adminUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
         complaint.setStatus(ComplaintStatus.APPROVED);
@@ -61,6 +66,7 @@ public class ComplaintService {
         return ComplaintResponse.from(complaintRepository.save(complaint));
     }
 
+    @Transactional
     public ComplaintResponse process(String adminUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
         complaint.setStatus(ComplaintStatus.RESOLVED);
@@ -69,6 +75,7 @@ public class ComplaintService {
         return ComplaintResponse.from(complaintRepository.save(complaint));
     }
 
+    @Transactional
     public ComplaintResponse close(String adminUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
         complaint.setStatus(ComplaintStatus.CLOSED);
@@ -77,6 +84,7 @@ public class ComplaintService {
         return ComplaintResponse.from(complaintRepository.save(complaint));
     }
 
+    @Transactional
     public ComplaintResponse rate(String username, Long id, ComplaintRatingRequest request) {
         Complaint complaint = findComplaint(id);
         if (!complaint.getCreatedBy().getUsername().equals(username)) {
