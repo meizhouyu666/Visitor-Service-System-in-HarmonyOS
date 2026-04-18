@@ -1,25 +1,25 @@
-# Release & Collaboration Gates (Zero-Config Safety)
+# 发布与协作门禁（零配置安全）
 
-## Release Gate (Must Pass)
-1. Teammate can pull latest and run with existing steps (no local config edits).
-2. Existing core flows still work:
-   - login
-   - complaint main path
-   - emergency main path
-   - existing query endpoints
-3. Additive features verified and documented.
-4. README version section updated in this commit.
+## 发布门禁（必须全部通过）
+1. 组员拉取最新代码后，沿用现有步骤可直接启动（无需改本地配置）。
+2. 既有核心流程保持可用：
+   - 登录流程
+   - 投诉主链路
+   - 应急主链路
+   - 既有查询接口（`/api/query/*`）
+3. 新增能力完成验证并在文档中说明。
+4. 本次提交必须更新 README 版本说明。
 
-## PR Checklist (Copy into PR Description)
-- [ ] No teammate-side config change required
-- [ ] Existing startup commands unchanged
-- [ ] Existing API routes remain usable
-- [ ] Flyway migration is additive only
-- [ ] Compatibility statement included
-- [ ] Rollback approach included
-- [ ] README version note updated
+## PR 检查清单（可直接复制到 PR 描述）
+- [ ] 不需要组员侧配置变更
+- [ ] 既有启动命令不变
+- [ ] 既有 API 路由保持可用
+- [ ] Flyway 迁移仅做增量
+- [ ] 已包含兼容性说明
+- [ ] 已包含回滚方案
+- [ ] 已更新 README 版本说明
 
-## README Version Note Template (Required)
+## README 版本说明模板（必填）
 ```md
 ## 版本说明（YYYY-MM-DD）
 
@@ -41,9 +41,9 @@
   - 数据库回滚（如适用）：
 ```
 
-## Notes for Frontend Work
-- When frontend implementation starts, follow `harmonyos-app` skill constraints:
-  - strict ArkTS typing
-  - Stage model only
-  - componentized ArkUI
-  - immutable state updates
+## 前端实施备注
+- 前端进入实施阶段时，遵循 `harmonyos-app` skill 约束：
+  - ArkTS 严格类型
+  - 仅使用 Stage Model
+  - ArkUI 组件化
+  - 不可变状态更新

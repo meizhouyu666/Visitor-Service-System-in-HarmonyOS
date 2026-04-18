@@ -1,39 +1,39 @@
-# Gap Backlog (Actionable, Team-Ready)
+# 缺口清单（可开发、可拆分）
 
-## Prioritization Rule
-- `P0`: Core business closure and compatibility safety.
-- `P1`: Important functional expansion that should follow P0.
-- `P2`: Optimization/governance features after core rollout.
+## 优先级规则
+- `P0`：核心业务闭环与兼容性安全。
+- `P1`：重要功能扩展，建议紧随 P0。
+- `P2`：核心上线后推进的优化与治理能力。
 
 ## P0
-| Gap ID | Current State | Target Behavior | Impact | Compatibility Risk | Recommended Implementation | Acceptance Criteria |
+| 缺口 ID | 当前现状 | 目标行为 | 影响范围 | 兼容风险 | 建议改造方式 | 验收标准 |
 |---|---|---|---|---|---|---|
-| G-P0-01 | Complaint lacks reject action | Add explicit reject workflow | Complaint admin flow | Low (additive) | Add `REJECTED` status + `POST /api/complaints/admin/{id}/reject` | Approver/Admin can reject; visitor can see rejected status; old approve/process/close still works |
-| G-P0-02 | No explicit assignment endpoint | Add assign-to-handler action | Complaint triage | Low (additive) | Add assignee field + `POST /api/complaints/admin/{id}/assign` | Assigned handler visible in detail/list; old flow unaffected |
-| G-P0-03 | No complaint timeline/replies model | Full process trace for one complaint | Complaint transparency | Medium (new table) | Add complaint timeline entity/table + read/write APIs | Each action creates trace record; timeline query returns ordered records |
-| G-P0-04 | Emergency visitor list ignores explicit active-window rule | Show only published + in-valid-window records | Emergency trust | Low | Apply validity filter in service layer while keeping endpoint path | Expired or not-yet-active items hidden from visitor API |
-| G-P0-05 | No release gate enforcing zero-config startup | Prevent teammate config regressions | Whole project | Low | Add explicit release checklist (docs + CI gate note) | New release verified by "pull and run without config changes" |
+| G-P0-01 | 投诉缺少驳回动作 | 增加明确驳回流程 | 投诉管理流程 | 低（增量） | 新增 `REJECTED` 状态 + `POST /api/complaints/admin/{id}/reject` | 审批人/管理员可驳回；游客可见驳回状态；原审批/处理/结案流程不受影响 |
+| G-P0-02 | 无显式分派接口 | 增加分派给处理人的动作 | 投诉分诊流程 | 低（增量） | 新增处理人（`assignee`）字段 + `POST /api/complaints/admin/{id}/assign` | 列表/详情可见处理人；历史流程不受影响 |
+| G-P0-03 | 缺少投诉过程记录模型 | 单条投诉具备完整过程追踪 | 投诉透明度 | 中（新增表） | 新增投诉时间线实体/数据表 + 读写接口 | 每个动作产生轨迹记录；时间线接口按时间有序返回 |
+| G-P0-04 | 应急游客列表未显式执行有效期规则 | 仅展示“已发布且在有效期内”的数据 | 应急信息可信度 | 低 | 在服务层增加有效期过滤，保持原接口路径不变 | 过期或未生效数据不会出现在游客接口 |
+| G-P0-05 | 缺少“零配置可启动”发布门禁 | 避免组员配置回归问题 | 全项目 | 低 | 增加发布核对清单（文档 + CI 门禁说明） | 每次发布都通过“拉代码即启动，无需改配置”验证 |
 
 ## P1
-| Gap ID | Current State | Target Behavior | Impact | Compatibility Risk | Recommended Implementation | Acceptance Criteria |
+| 缺口 ID | 当前现状 | 目标行为 | 影响范围 | 兼容风险 | 建议改造方式 | 验收标准 |
 |---|---|---|---|---|---|---|
-| G-P1-01 | Auth only has login/me | Add registration | User onboarding | Medium | Add `/api/auth/register` + UI entry | New user can register and login; existing login unchanged |
-| G-P1-02 | No forgot-password flow | Add reset via verification code | Account recovery | Medium | Add request-code/reset APIs and flow | Reset works with valid code; invalid/expired code blocked |
-| G-P1-03 | No admin delete user API | Add controlled user deletion | Platform ops | Medium | Add admin user-management endpoint | Admin can disable/delete by policy; unauthorized role blocked |
-| G-P1-04 | Complaint list lacks multi-filter query | Add filter params | Admin efficiency | Low | Add optional query params; keep default behavior | Existing no-param call unchanged; filtered call returns narrowed set |
-| G-P1-05 | Query data is in-memory sample | Persistent source for hotel/scenic/route/dining/weather traffic | Data reliability | Medium | Add repository-backed read path under existing endpoints | Existing endpoint paths preserved; data from DB source |
-| G-P1-06 | No management CRUD for hotel/scenic/content | Add management-side data maintenance | Operations | Medium | Add admin/hotel manager CRUD APIs + pages | Managers can CRUD entities; visitor query reflects updates |
+| G-P1-01 | 鉴权仅有 login/me | 增加注册能力 | 用户接入 | 中 | 新增 `/api/auth/register` + 前端入口 | 新用户可注册并登录；既有登录流程不变 |
+| G-P1-02 | 无忘记密码流程 | 增加验证码重置密码 | 账号找回 | 中 | 新增申请验证码/重置密码接口与流程 | 验证码正确可重置；无效或过期验证码被拦截 |
+| G-P1-03 | 无管理员删用户接口 | 增加受控用户删除能力 | 平台运维 | 中 | 新增管理员用户管理接口 | 管理员可按策略禁用/删除；非授权角色被拦截 |
+| G-P1-04 | 投诉列表缺少多条件筛选 | 增加筛选参数 | 管理效率 | 低 | 新增可选查询参数，保持默认行为 | 无参调用结果不变；有参调用返回过滤结果 |
+| G-P1-05 | 查询数据为内存样例 | 酒店/景区/线路/餐饮/天气路况接入持久化数据源 | 数据可信度 | 中 | 在现有接口下增加基于仓储的读取路径 | `/api/query/*` 路径不变；数据来源切换为数据库 |
+| G-P1-06 | 酒店/景区/内容缺少管理侧 CRUD | 增加管理维护能力 | 运营侧 | 中 | 新增管理员/酒店方 CRUD 接口 + 页面 | 管理员可维护实体；游客查询可看到更新结果 |
 
 ## P2
-| Gap ID | Current State | Target Behavior | Impact | Compatibility Risk | Recommended Implementation | Acceptance Criteria |
+| 缺口 ID | 当前现状 | 目标行为 | 影响范围 | 兼容风险 | 建议改造方式 | 验收标准 |
 |---|---|---|---|---|---|---|
-| G-P2-01 | No complaint export | Export list/detail for operations | Reporting | Low | Add export endpoint (CSV/XLSX) | Admin export downloads valid file with selected filters |
-| G-P2-02 | No push scope/real-time channel abstraction | Emergency push strategy by scope | Timeliness | Medium | Add push adapter and scope model | Push can target configured scope; visitor receives notifications |
-| G-P2-03 | Audit logs not surfaced as module | Queryable operation audit | Governance | Medium | Add audit table + admin query API/page | Critical actions captured and queryable |
-| G-P2-04 | No operations content management module | Manage homepage recommendations and hot services | Product operations | Medium | Add content ops APIs + admin UI | Ops updates visible on visitor home/content areas |
+| G-P2-01 | 无投诉导出 | 支持按条件导出列表/明细 | 报表能力 | 低 | 新增导出接口（CSV/XLSX） | 管理员导出成功，文件结构与筛选条件一致 |
+| G-P2-02 | 无推送范围/实时通道抽象 | 按范围策略推送应急信息 | 时效性 | 中 | 新增推送适配层与范围模型 | 可按配置范围推送；游客可接收通知 |
+| G-P2-03 | 审计日志未形成独立模块 | 可查询的操作审计能力 | 治理能力 | 中 | 新增审计表 + 管理端查询接口/页面 | 关键操作可落库且可检索 |
+| G-P2-04 | 无运营内容管理模块 | 可维护首页推荐与热点服务 | 产品运营 | 中 | 新增内容运营 API + 管理页面 | 运营修改可反映到游客端首页/内容区 |
 
-## Execution Notes
-- Internal refactor is allowed, but all external compatibility constraints remain mandatory:
-  - old startup steps unchanged
-  - old API routes remain usable in compatibility window
-  - no teammate-side config edits required after pulling latest
+## 执行说明
+- 允许内部重构，但必须严格遵守外部兼容约束：
+  - 既有启动步骤不变
+  - 兼容期内旧接口保持可用
+  - 组员拉取最新代码后无需修改本地配置

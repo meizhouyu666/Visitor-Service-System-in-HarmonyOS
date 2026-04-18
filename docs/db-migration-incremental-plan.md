@@ -1,32 +1,32 @@
-# Database Migration Plan (Flyway V2+ / Docker MySQL)
+# 数据库增量迁移计划（Flyway V2+ / Docker MySQL）
 
-## Hard Constraints
-- DB runtime remains Docker MySQL (existing `backend/docker-compose.yml` flow).
-- Only additive Flyway migrations (`V2__...` and above).
-- No destructive migration that can break existing teammate environments.
+## 硬性约束
+- 数据库运行时继续使用 Docker MySQL（沿用现有 `backend/docker-compose.yml` 流程）。
+- 仅允许 Flyway 增量迁移（`V2__...` 及以上）。
+- 禁止破坏组员现有环境的破坏性迁移。
 
-## Planned Migrations
-| Script | Purpose | Change Type | Existing Data Impact | Rollback Strategy | Compatibility |
+## 计划迁移脚本
+| 脚本 | 目的 | 变更类型 | 对存量数据影响 | 回滚策略 | 兼容性 |
 |---|---|---|---|---|---|
-| `V2__complaint_workflow_extensions.sql` | Add complaint reject/assign fields and indexes | Add columns/indexes | Existing rows remain valid (nullable defaults) | Forward rollback via compensating migration (`Vx__revert_*`) if needed | Old APIs continue to read existing fields |
-| `V3__complaint_timeline.sql` | Add complaint timeline table for process trace | New table | No impact on existing tables | Drop newly added table in compensating migration | Fully additive |
-| `V4__query_domain_tables.sql` | Add persistent domain tables for hotel/scenic/route/dining/performance/weather/traffic | New tables | No impact on existing data | Compensating migration to drop new tables | Existing `/api/query/*` paths preserved |
-| `V5__auth_extension_tables.sql` | Add verification-code and password-reset support tables | New table(s) | No impact on existing users | Compensating migration to drop new table(s) | Existing login unchanged |
-| `V6__audit_log.sql` | Add operation audit log storage | New table | No impact | Compensating migration | Additive governance feature |
+| `V2__complaint_workflow_extensions.sql` | 增加投诉驳回/分派字段与索引 | 新增列/索引 | 历史记录保持可用（可空默认） | 必要时通过补偿迁移（`Vx__revert_*`）前向回滚 | 旧接口继续读取原有字段 |
+| `V3__complaint_timeline.sql` | 新增投诉过程跟踪表 | 新增表 | 不影响现有表 | 通过补偿迁移删除新增表 | 纯增量 |
+| `V4__query_domain_tables.sql` | 新增酒店/景区/线路/餐饮/演出/天气/路况持久化表 | 新增表 | 不影响现有数据 | 通过补偿迁移删除新增表 | 保持 `/api/query/*` 路径不变 |
+| `V5__auth_extension_tables.sql` | 新增验证码与重置密码支撑表 | 新增表 | 不影响现有用户 | 通过补偿迁移删除新增表 | 现有登录流程不变 |
+| `V6__audit_log.sql` | 新增操作审计日志存储 | 新增表 | 无影响 | 通过补偿迁移回退 | 增量治理能力 |
 
-## Execution Checklist
-1. Validate migration on clean DB (fresh Docker volume).
-2. Validate migration on existing DB with V1 data.
-3. Run app startup and smoke test old flows:
-   - auth login/me
-   - complaint create/list/detail/rate/admin actions
-   - emergency publish flow
-   - existing query endpoints
-4. Verify no config changes required by teammates.
+## 执行核对清单
+1. 在空库环境验证迁移（新建 Docker volume）。
+2. 在已有 V1 数据的历史库环境验证迁移。
+3. 启动应用并回归旧流程冒烟测试：
+   - 认证登录与当前用户接口（`/api/auth/login`、`/api/auth/me`）
+   - 投诉主流程（创建/列表/详情/评价/管理动作）
+   - 应急发布主流程
+   - 既有查询接口（`/api/query/*`）
+4. 验证组员无需任何本地配置修改即可启动。
 
-## Delivery Rule
-- Every migration PR must include:
-  - purpose
-  - compatibility statement
-  - rollback approach
-  - clean DB + existing DB verification result
+## 交付规则
+- 每个迁移 PR 必须包含：
+  - 迁移目的
+  - 兼容性声明
+  - 回滚方案
+  - 空库 + 历史库验证结果
