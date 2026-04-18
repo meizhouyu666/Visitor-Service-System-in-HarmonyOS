@@ -15,7 +15,7 @@ interface TabItem {
 @Entry
 @Component
 struct Index {
-  @State private selectedTab: number = 0
+  @State private selectedTabKey: string = ''
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
   @State private authStore: AuthStore = new AuthStore()
@@ -23,7 +23,8 @@ struct Index {
   private async doLogin(): Promise<void> {
     const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
     if (ok) {
-      this.selectedTab = 0
+      const tabs: TabItem[] = this.getRoleTabs()
+      this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
     }
   }
 
@@ -73,10 +74,15 @@ struct Index {
     if (tabs.length === 0) {
       return ''
     }
-    if (this.selectedTab < 0 || this.selectedTab >= tabs.length) {
+    const exists: boolean = tabs.some((tab: TabItem) => tab.key === this.selectedTabKey)
+    if (!exists) {
       return tabs[0].key
     }
-    return tabs[this.selectedTab].key
+    return this.selectedTabKey
+  }
+
+  private isTabSelected(key: string): boolean {
+    return this.getSafeSelectedTabKey() === key
   }
 
   private complaintModeByKey(key: string): ComplaintMode {
@@ -196,15 +202,15 @@ struct Index {
 
       Scroll() {
         Row({ space: 8 }) {
-          ForEach(this.getRoleTabs(), (tab: TabItem, index: number) => {
+          ForEach(this.getRoleTabs(), (tab: TabItem) => {
             Text(tab.title)
               .fontSize(14)
-              .fontColor(index === this.selectedTab ? Color.White : '#4B5563')
-              .backgroundColor(index === this.selectedTab ? '#2563EB' : '#F3F4F6')
+              .fontColor(this.isTabSelected(tab.key) ? Color.White : '#4B5563')
+              .backgroundColor(this.isTabSelected(tab.key) ? '#2563EB' : '#F3F4F6')
               .padding({ left: 14, right: 14, top: 8, bottom: 8 })
               .borderRadius(16)
               .onClick(() => {
-                this.selectedTab = index
+                this.selectedTabKey = tab.key
               })
           }, (tab: TabItem) => tab.key)
         }
