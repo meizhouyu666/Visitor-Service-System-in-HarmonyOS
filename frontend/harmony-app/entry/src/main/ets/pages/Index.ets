@@ -412,7 +412,7 @@ struct Index {
       .shadow(SHADOW_CARD)
 
       Column() {
-        this.renderVisitorTab(this.visitorNav)
+        this.renderVisitorTab()
       }
       .layoutWeight(1)
       .width('100%')
@@ -513,15 +513,15 @@ struct Index {
   }
 
   @Builder
-  private renderVisitorTab(key: VisitorNav): void {
-    if (key === 'home') {
+  private renderVisitorTab(): void {
+    if (this.visitorNav === 'home') {
       VisitorHomePage({
         displayName: this.authStore.currentUser?.displayName ?? '游客',
         navKey: this.visitorNav
       })
-    } else if (key === 'services') {
+    } else if (this.visitorNav === 'services') {
       VisitorServicesPage()
-    } else if (key === 'complaint') {
+    } else if (this.visitorNav === 'complaint') {
       ComplaintPage({ mode: 'visitor' })
     } else {
       EmergencyPage({ mode: 'visitor' })
