@@ -27,17 +27,17 @@ public class ComplaintController {
 
     @Operation(summary = "Submit complaint as visitor")
     @PostMapping
-    @PreAuthorize("hasAnyRole('VISITOR','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VISITOR','ADMIN')")
     public ApiResponse<ComplaintResponse> create(@Valid @RequestBody ComplaintCreateRequest request,
                                                  Authentication authentication) {
         return ApiResponse.success(complaintService.create(authentication.getName(), request));
     }
 
-    @Operation(summary = "List complaints for current user (admin gets all)")
+    @Operation(summary = "List complaints for current user (admin or complaint handler gets all)")
     @GetMapping
     public ApiResponse<List<ComplaintResponse>> list(Authentication authentication) {
         boolean canReadAll = hasAnyRole(authentication,
-                "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN", "ROLE_COMPLAINT_HANDLER", "ROLE_APPROVER");
+                "ROLE_ADMIN", "ROLE_COMPLAINT_HANDLER");
         return ApiResponse.success(complaintService.listForUser(authentication.getName(), canReadAll));
     }
 
@@ -45,40 +45,40 @@ public class ComplaintController {
     @GetMapping("/{id}")
     public ApiResponse<ComplaintResponse> detail(@PathVariable Long id, Authentication authentication) {
         boolean canReadAll = hasAnyRole(authentication,
-                "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN", "ROLE_COMPLAINT_HANDLER", "ROLE_APPROVER");
+                "ROLE_ADMIN", "ROLE_COMPLAINT_HANDLER");
         return ApiResponse.success(complaintService.detail(authentication.getName(), id, canReadAll));
     }
 
     @Operation(summary = "Rate complaint after closure")
     @PostMapping("/{id}/rating")
-    @PreAuthorize("hasAnyRole('VISITOR','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VISITOR','ADMIN')")
     public ApiResponse<ComplaintResponse> rate(@PathVariable Long id,
                                                @Valid @RequestBody ComplaintRatingRequest request,
                                                Authentication authentication) {
         return ApiResponse.success(complaintService.rate(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Approve complaint (admin)")
+    @Operation(summary = "Approve complaint (admin only)")
     @PostMapping("/admin/{id}/approve")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ComplaintResponse> approve(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
         return ApiResponse.success(complaintService.approve(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Process complaint (admin)")
+    @Operation(summary = "Process complaint (complaint handler only)")
     @PostMapping("/admin/{id}/process")
-    @PreAuthorize("hasAnyRole('COMPLAINT_HANDLER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasRole('COMPLAINT_HANDLER')")
     public ApiResponse<ComplaintResponse> process(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
         return ApiResponse.success(complaintService.process(authentication.getName(), id, request));
     }
 
-    @Operation(summary = "Close complaint (admin)")
+    @Operation(summary = "Close complaint (admin only)")
     @PostMapping("/admin/{id}/close")
-    @PreAuthorize("hasAnyRole('COMPLAINT_HANDLER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ComplaintResponse> close(@PathVariable Long id,
                                                 @Valid @RequestBody ComplaintActionRequest request,
                                                 Authentication authentication) {

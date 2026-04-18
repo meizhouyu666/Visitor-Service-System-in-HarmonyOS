@@ -7,6 +7,7 @@ import com.visitor.service.emergency.dto.EmergencyResponse;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class EmergencyService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public EmergencyResponse create(String username, EmergencyRequest request) {
         UserAccount user = findUser(username);
         EmergencyInfo info = new EmergencyInfo();
@@ -33,6 +35,7 @@ public class EmergencyService {
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
+    @Transactional
     public EmergencyResponse update(Long id, EmergencyRequest request) {
         EmergencyInfo info = findEmergency(id);
         info.setTitle(request.title());
@@ -42,16 +45,19 @@ public class EmergencyService {
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
+    @Transactional
     public void delete(Long id) {
         emergencyInfoRepository.deleteById(id);
     }
 
+    @Transactional
     public EmergencyResponse submitForApproval(Long id) {
         EmergencyInfo info = findEmergency(id);
         info.setStatus(EmergencyStatus.PENDING_APPROVAL);
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
+    @Transactional
     public EmergencyResponse approve(Long id, String username) {
         EmergencyInfo info = findEmergency(id);
         info.setStatus(EmergencyStatus.PUBLISHED);
@@ -59,11 +65,13 @@ public class EmergencyService {
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
+    @Transactional(readOnly = true)
     public List<EmergencyResponse> listPublished() {
         return emergencyInfoRepository.findByStatusOrderByCreatedAtDesc(EmergencyStatus.PUBLISHED)
                 .stream().map(EmergencyResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<EmergencyResponse> listAll() {
         return emergencyInfoRepository.findAll().stream().map(EmergencyResponse::from).toList();
     }
