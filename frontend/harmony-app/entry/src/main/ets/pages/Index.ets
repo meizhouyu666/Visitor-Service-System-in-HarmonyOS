@@ -143,6 +143,15 @@ struct Index {
     return this.getSafeSelectedTabKey() === key
   }
 
+  private switchTab(key: string): void {
+    if (this.selectedTabKey === key) {
+      return
+    }
+    animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+      this.selectedTabKey = key
+    })
+  }
+
   private complaintModeByKey(key: string): ComplaintMode {
     if (key === 'complaint-handler') {
       return 'handler'
@@ -359,15 +368,17 @@ struct Index {
       Scroll() {
         Row({ space: 8 }) {
           ForEach(this.getRoleTabs(), (tab: TabItem) => {
-            Text(tab.title)
+            Button(tab.title)
               .fontSize(14)
               .fontWeight(this.isTabSelected(tab.key) ? FontWeight.Medium : FontWeight.Normal)
               .fontColor(this.isTabSelected(tab.key) ? Color.White : THEME_TEXT_SECONDARY)
               .backgroundColor(this.isTabSelected(tab.key) ? THEME_PRIMARY : THEME_SURFACE_MUTED)
               .padding({ left: 14, right: 14, top: 8, bottom: 8 })
               .borderRadius(RADIUS_PILL)
+              .height(36)
+              .stateEffect(true)
               .onClick(() => {
-                this.selectedTabKey = tab.key
+                this.switchTab(tab.key)
               })
           }, (tab: TabItem) => tab.key)
         }
@@ -383,9 +394,13 @@ struct Index {
 
       Divider().height(1).color(THEME_BORDER_SOFT).width('100%')
 
-      if (this.getRoleTabs().length > 0) {
-        this.renderTab(this.getSafeSelectedTabKey())
+      Column() {
+        if (this.getRoleTabs().length > 0) {
+          this.renderTab(this.getSafeSelectedTabKey())
+        }
       }
+      .layoutWeight(1)
+      .width('100%')
     }
     .width('100%')
     .height('100%')
