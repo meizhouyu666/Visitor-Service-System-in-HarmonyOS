@@ -517,15 +517,7 @@ struct Index {
     if (key === 'home') {
       VisitorHomePage({
         displayName: this.authStore.currentUser?.displayName ?? '游客',
-        onNavigate: (target: string) => {
-          if (target === 'services') {
-            this.switchVisitorNav('services')
-          } else if (target === 'complaint') {
-            this.switchVisitorNav('complaint')
-          } else if (target === 'emergency') {
-            this.switchVisitorNav('emergency')
-          }
-        }
+        navKey: this.visitorNav
       })
     } else if (key === 'services') {
       VisitorServicesPage()

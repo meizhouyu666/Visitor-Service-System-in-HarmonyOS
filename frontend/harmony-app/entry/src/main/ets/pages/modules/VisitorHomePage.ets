@@ -11,18 +11,20 @@ import {
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FloatingCard, PrimaryActionButton, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
+import { EmptyStateCard, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
 
 interface QuickServiceItem {
-  key: string
+  key: VisitorNav
   icon: string
   title: string
 }
 
+type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
+
 @Component
 export struct VisitorHomePage {
   @Prop displayName: string = '游客'
-  @Prop onNavigate: (target: string) => void = () => {}
+  @Link navKey: VisitorNav = 'home'
 
   @State private weatherToday: WeatherResponse | null = null
   @State private complaintList: ComplaintItem[] = []
@@ -102,6 +104,15 @@ export struct VisitorHomePage {
     return `${this.weatherToday.weather} · ${this.weatherToday.temperature} · ${this.weatherToday.wind}`
   }
 
+  private navigateTo(target: VisitorNav): void {
+    if (this.navKey === target) {
+      return
+    }
+    animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
+      this.navKey = target
+    })
+  }
+
   @Builder
   private HeaderCard(): void {
     FloatingCard() {
@@ -130,10 +141,17 @@ export struct VisitorHomePage {
           .alignItems(HorizontalAlign.End)
         }
 
-        PrimaryActionButton({
-          label: '开始新的出行计划',
-          onPress: () => this.onNavigate('services')
-        })
+        Button('开始新的出行计划')
+          .onClick(() => {
+            this.navigateTo('services')
+          })
+          .width('100%')
+          .height(44)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .fontWeight(FontWeight.Medium)
+          .shadow(SHADOW_CARD)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -168,7 +186,7 @@ export struct VisitorHomePage {
               .borderRadius(RADIUS_MD)
               .backgroundColor(THEME_SURFACE)
               .onClick(() => {
-                this.onNavigate(item.key)
+                this.navigateTo(item.key)
               })
             }
           }, (item: QuickServiceItem) => `${item.title}-${item.icon}`)
@@ -219,7 +237,9 @@ export struct VisitorHomePage {
           SectionHeader({ title: '投诉进度摘要', subtitle: '最近记录与状态一目了然' })
           Blank()
           Button('查看全部')
-            .onClick(() => this.onNavigate('complaint'))
+            .onClick(() => {
+              this.navigateTo('complaint')
+            })
             .height(30)
             .fontSize(12)
             .borderRadius(RADIUS_PILL)

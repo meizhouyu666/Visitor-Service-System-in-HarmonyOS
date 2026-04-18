@@ -48,16 +48,29 @@ export class ApiClient {
       )
 
       const raw: string = `${response.result}`
-      const body: ApiResponse<R> = JSON.parse(raw)
-      if (body.code !== 0) {
-        throw new Error(body.message)
+      if (raw.trim().length === 0) {
+        throw new Error('服务返回空响应')
       }
-      return body.data
-    } catch (_error) {
+      const body: ApiResponse<R> | R = JSON.parse(raw)
+      if (this.isEnvelope(body)) {
+        if (body.code !== 0) {
+          throw new Error(body.message.length > 0 ? body.message : '请求失败，请稍后重试')
+        }
+        return body.data
+      }
+      return body
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error('请求失败，请稍后重试')
     } finally {
       httpRequest.destroy()
     }
+  }
+
+  private isEnvelope<R>(body: ApiResponse<R> | R): body is ApiResponse<R> {
+    return typeof body === 'object' && body !== null && 'code' in body && 'data' in body
   }
 
   private buildHeaders(): Record<string, string> {

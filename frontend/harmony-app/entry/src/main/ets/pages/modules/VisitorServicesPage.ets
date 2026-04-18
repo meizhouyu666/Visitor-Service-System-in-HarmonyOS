@@ -9,7 +9,7 @@ import {
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FilterChip, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
+import { EmptyStateCard, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
 
 type ServiceFilter = 'all' | 'hotel' | 'scenic' | 'route'
 
@@ -100,10 +100,50 @@ export struct VisitorServicesPage {
         SectionHeader({ title: '服务与线路', subtitle: '酒店、景区和线路统一筛选视图' })
 
         Row({ space: 8 }) {
-          FilterChip({ label: '全部', selected: this.filter === 'all', onToggle: () => this.filter = 'all' })
-          FilterChip({ label: '酒店', selected: this.filter === 'hotel', onToggle: () => this.filter = 'hotel' })
-          FilterChip({ label: '景区', selected: this.filter === 'scenic', onToggle: () => this.filter = 'scenic' })
-          FilterChip({ label: '线路', selected: this.filter === 'route', onToggle: () => this.filter = 'route' })
+          Button('全部')
+            .onClick(() => {
+              this.filter = 'all'
+            })
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .borderRadius(999)
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.filter === 'all' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'all' ? '#007AFF' : '#EEF3FA')
+          Button('酒店')
+            .onClick(() => {
+              this.filter = 'hotel'
+            })
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .borderRadius(999)
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.filter === 'hotel' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'hotel' ? '#007AFF' : '#EEF3FA')
+          Button('景区')
+            .onClick(() => {
+              this.filter = 'scenic'
+            })
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .borderRadius(999)
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.filter === 'scenic' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'scenic' ? '#007AFF' : '#EEF3FA')
+          Button('线路')
+            .onClick(() => {
+              this.filter = 'route'
+            })
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .borderRadius(999)
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.filter === 'route' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'route' ? '#007AFF' : '#EEF3FA')
           Blank()
           Button('刷新')
             .onClick(() => this.loadData())

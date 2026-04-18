@@ -18,7 +18,7 @@ import {
   THEME_TEXT_TERTIARY,
   THEME_WARNING
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FloatingCard, PrimaryActionButton, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
+import { EmptyStateCard, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
 
 export type EmergencyMode = 'visitor' | 'writer' | 'approver' | 'admin'
 
@@ -507,7 +507,16 @@ export struct EmergencyPage {
         }
 
         if (this.canApprove()) {
-          PrimaryActionButton({ label: '审批发布', onPress: () => this.approvePublish() })
+          Button('审批发布')
+            .enabled(!this.loading)
+            .onClick(() => this.approvePublish())
+            .width('100%')
+            .height(44)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor(this.loading ? '#B8CCE8' : THEME_PRIMARY)
+            .fontColor(Color.White)
+            .fontWeight(FontWeight.Medium)
+            .shadow(SHADOW_CARD)
         }
 
         if (this.actionMessage.length > 0) {

@@ -26,7 +26,7 @@ import {
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FloatingCard, PrimaryActionButton, SectionHeader, StatusBadge, TimelineNode } from '../../common/ui/UiKit'
+import { EmptyStateCard, FloatingCard, SectionHeader, StatusBadge, TimelineNode } from '../../common/ui/UiKit'
 
 export type ComplaintMode = 'visitor' | 'approver' | 'handler' | 'admin'
 
@@ -827,11 +827,16 @@ export struct ComplaintPage {
         }
         .width('100%')
 
-        PrimaryActionButton({
-          label: this.loading ? '提交中...' : '提交投诉',
-          disabled: this.loading,
-          onPress: () => this.submitComplaint()
-        })
+        Button(this.loading ? '提交中...' : '提交投诉')
+          .enabled(!this.loading)
+          .onClick(() => this.submitComplaint())
+          .width('100%')
+          .height(44)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(this.loading ? '#B8CCE8' : THEME_PRIMARY)
+          .fontColor(Color.White)
+          .fontWeight(FontWeight.Medium)
+          .shadow(SHADOW_CARD)
 
         if (this.actionMessage.length > 0) {
           Text(this.actionMessage)
