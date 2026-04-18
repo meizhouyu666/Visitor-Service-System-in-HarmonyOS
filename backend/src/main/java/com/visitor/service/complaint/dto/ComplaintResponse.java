@@ -13,9 +13,11 @@ public record ComplaintResponse(
         ComplaintStatus status,
         String handlerComment,
         String closureComment,
+        String rejectionComment,
         Integer rating,
         String createdBy,
         String processedBy,
+        String assignee,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -28,9 +30,11 @@ public record ComplaintResponse(
                 complaint.getStatus(),
                 complaint.getHandlerComment(),
                 complaint.getClosureComment(),
+                complaint.getRejectionComment(),
                 complaint.getRating(),
                 complaint.getCreatedBy().getUsername(),
                 complaint.getProcessedBy() == null ? null : complaint.getProcessedBy().getUsername(),
+                complaint.getAssignee() == null ? null : complaint.getAssignee().getUsername(),
                 complaint.getCreatedAt(),
                 complaint.getUpdatedAt()
         );

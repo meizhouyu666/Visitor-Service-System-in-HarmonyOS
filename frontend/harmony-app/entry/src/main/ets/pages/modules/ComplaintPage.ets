@@ -1,8 +1,10 @@
 import {
   ComplaintActionRequest,
+  ComplaintAssignRequest,
   ComplaintCreateRequest,
   ComplaintItem,
-  ComplaintRatingRequest
+  ComplaintRatingRequest,
+  ComplaintTimelineItem
 } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
@@ -13,7 +15,10 @@ export struct ComplaintPage {
   @Prop mode: ComplaintMode = 'visitor'
 
   @State private items: ComplaintItem[] = []
+  @State private timelines: ComplaintTimelineItem[] = []
+
   @State private loading: boolean = false
+  @State private timelineLoading: boolean = false
   @State private errorMessage: string = ''
   @State private actionMessage: string = ''
 
@@ -23,6 +28,7 @@ export struct ComplaintPage {
 
   @State private selectedId: number = 0
   @State private commentInput: string = ''
+  @State private assigneeInput: string = ''
   @State private ratingInput: string = '5'
 
   async aboutToAppear(): Promise<void> {
@@ -41,6 +47,19 @@ export struct ComplaintPage {
     return this.mode === 'handler' || this.mode === 'admin'
   }
 
+  private modeTitle(): string {
+    if (this.mode === 'visitor') {
+      return '游客投诉'
+    }
+    if (this.mode === 'approver') {
+      return '投诉审批'
+    }
+    if (this.mode === 'handler') {
+      return '投诉处理'
+    }
+    return '投诉管理（管理员）'
+  }
+
   private parseRating(): number {
     const value: number = Number(this.ratingInput)
     if (Number.isNaN(value)) {
@@ -55,20 +74,11 @@ export struct ComplaintPage {
     return Math.floor(value)
   }
 
-  private modeTitle(): string {
-    if (this.mode === 'visitor') {
-      return '游客投诉'
-    }
-    if (this.mode === 'approver') {
-      return '投诉审批'
-    }
-    if (this.mode === 'handler') {
-      return '投诉处理'
-    }
-    return '投诉管理（管理员）'
+  private hasSelectedComplaint(): boolean {
+    return this.selectedId > 0
   }
 
-  private refreshSelection(): void {
+  private ensureSelected(): void {
     if (this.items.length === 0) {
       this.selectedId = 0
       return
@@ -79,13 +89,19 @@ export struct ComplaintPage {
     }
   }
 
+  private selectComplaint(id: number): void {
+    this.selectedId = id
+    this.loadTimeline()
+  }
+
   private async loadComplaints(): Promise<void> {
     this.loading = true
     this.errorMessage = ''
     try {
       const list: ComplaintItem[] = await apiClient.get<ComplaintItem[]>('/api/complaints')
       this.items = [...list]
-      this.refreshSelection()
+      this.ensureSelected()
+      await this.loadTimeline()
     } catch (_error) {
       this.errorMessage = '加载投诉列表失败，请稍后重试'
     } finally {
@@ -93,9 +109,25 @@ export struct ComplaintPage {
     }
   }
 
+  private async loadTimeline(): Promise<void> {
+    if (!this.hasSelectedComplaint()) {
+      this.timelines = []
+      return
+    }
+    this.timelineLoading = true
+    try {
+      const list: ComplaintTimelineItem[] = await apiClient.get<ComplaintTimelineItem[]>(`/api/complaints/${this.selectedId}/timeline`)
+      this.timelines = [...list]
+    } catch (_error) {
+      this.timelines = []
+    } finally {
+      this.timelineLoading = false
+    }
+  }
+
   private async submitComplaint(): Promise<void> {
     if (this.titleInput.trim().length === 0 || this.contentInput.trim().length === 0) {
-      this.actionMessage = '请填写投诉标题与内容'
+      this.actionMessage = '请先填写标题和内容'
       return
     }
 
@@ -115,41 +147,86 @@ export struct ComplaintPage {
       this.actionMessage = '投诉已提交'
       await this.loadComplaints()
     } catch (_error) {
-      this.errorMessage = '提交投诉失败，请稍后重试'
+      this.errorMessage = '提交投诉失败'
     } finally {
       this.loading = false
     }
   }
 
   private async approveComplaint(): Promise<void> {
-    if (this.selectedId <= 0) {
+    if (!this.hasSelectedComplaint()) {
       this.actionMessage = '请先选择一条投诉'
       return
     }
-    const payload: ComplaintActionRequest = { comment: this.commentInput.trim().length > 0 ? this.commentInput : '审批通过' }
-    await this.runAdminAction(`/api/complaints/admin/${this.selectedId}/approve`, payload, '已完成审批')
+    const payload: ComplaintActionRequest = {
+      comment: this.commentInput.trim().length > 0 ? this.commentInput : '审批通过'
+    }
+    await this.runAction(`/api/complaints/admin/${this.selectedId}/approve`, payload, '已审批通过')
+  }
+
+  private async rejectComplaint(): Promise<void> {
+    if (!this.hasSelectedComplaint()) {
+      this.actionMessage = '请先选择一条投诉'
+      return
+    }
+    const payload: ComplaintActionRequest = {
+      comment: this.commentInput.trim().length > 0 ? this.commentInput : '审批驳回'
+    }
+    await this.runAction(`/api/complaints/admin/${this.selectedId}/reject`, payload, '已驳回投诉')
+  }
+
+  private async assignComplaint(): Promise<void> {
+    if (!this.hasSelectedComplaint()) {
+      this.actionMessage = '请先选择一条投诉'
+      return
+    }
+    if (this.assigneeInput.trim().length === 0) {
+      this.actionMessage = '请输入处理人账号'
+      return
+    }
+    this.loading = true
+    this.errorMessage = ''
+    this.actionMessage = ''
+    try {
+      const payload: ComplaintAssignRequest = {
+        assigneeUsername: this.assigneeInput,
+        comment: this.commentInput
+      }
+      await apiClient.post<ComplaintAssignRequest, ComplaintItem>(`/api/complaints/admin/${this.selectedId}/assign`, payload)
+      this.commentInput = ''
+      this.actionMessage = '已完成分派'
+      await this.loadComplaints()
+    } catch (_error) {
+      this.errorMessage = '分派失败'
+    } finally {
+      this.loading = false
+    }
   }
 
   private async processComplaint(): Promise<void> {
-    if (this.selectedId <= 0) {
+    if (!this.hasSelectedComplaint()) {
       this.actionMessage = '请先选择一条投诉'
       return
     }
-    const payload: ComplaintActionRequest = { comment: this.commentInput.trim().length > 0 ? this.commentInput : '已处理并反馈结果' }
-    await this.runAdminAction(`/api/complaints/admin/${this.selectedId}/process`, payload, '已提交处理结果')
+    const payload: ComplaintActionRequest = {
+      comment: this.commentInput.trim().length > 0 ? this.commentInput : '已处理投诉'
+    }
+    await this.runAction(`/api/complaints/admin/${this.selectedId}/process`, payload, '已提交处理结果')
   }
 
   private async closeComplaint(): Promise<void> {
-    if (this.selectedId <= 0) {
+    if (!this.hasSelectedComplaint()) {
       this.actionMessage = '请先选择一条投诉'
       return
     }
-    const payload: ComplaintActionRequest = { comment: this.commentInput.trim().length > 0 ? this.commentInput : '问题关闭' }
-    await this.runAdminAction(`/api/complaints/admin/${this.selectedId}/close`, payload, '已结案')
+    const payload: ComplaintActionRequest = {
+      comment: this.commentInput.trim().length > 0 ? this.commentInput : '已结案'
+    }
+    await this.runAction(`/api/complaints/admin/${this.selectedId}/close`, payload, '投诉已结案')
   }
 
   private async rateComplaint(): Promise<void> {
-    if (this.selectedId <= 0) {
+    if (!this.hasSelectedComplaint()) {
       this.actionMessage = '请先选择一条投诉'
       return
     }
@@ -163,13 +240,13 @@ export struct ComplaintPage {
       this.actionMessage = '评价已提交'
       await this.loadComplaints()
     } catch (_error) {
-      this.errorMessage = '提交评价失败，需在结案后评价'
+      this.errorMessage = '评价失败：仅可对已结案投诉评价'
     } finally {
       this.loading = false
     }
   }
 
-  private async runAdminAction(path: string, payload: ComplaintActionRequest, successMessage: string): Promise<void> {
+  private async runAction(path: string, payload: ComplaintActionRequest, successMessage: string): Promise<void> {
     this.loading = true
     this.errorMessage = ''
     this.actionMessage = ''
@@ -179,7 +256,7 @@ export struct ComplaintPage {
       this.actionMessage = successMessage
       await this.loadComplaints()
     } catch (_error) {
-      this.errorMessage = '操作失败，请确认权限或当前状态'
+      this.errorMessage = '操作失败，请稍后重试'
     } finally {
       this.loading = false
     }
@@ -189,6 +266,9 @@ export struct ComplaintPage {
     if (status === 'SUBMITTED') {
       return '待审批'
     }
+    if (status === 'REJECTED') {
+      return '已驳回'
+    }
     if (status === 'APPROVED') {
       return '已审批'
     }
@@ -196,12 +276,37 @@ export struct ComplaintPage {
       return '处理中'
     }
     if (status === 'RESOLVED') {
-      return '已处理'
+      return '待结案'
     }
     if (status === 'CLOSED') {
       return '已结案'
     }
     return status
+  }
+
+  private actionLabel(action: string): string {
+    if (action === 'CREATE') {
+      return '提交投诉'
+    }
+    if (action === 'APPROVE') {
+      return '审批通过'
+    }
+    if (action === 'REJECT') {
+      return '审批驳回'
+    }
+    if (action === 'ASSIGN') {
+      return '分派处理人'
+    }
+    if (action === 'PROCESS') {
+      return '提交处理'
+    }
+    if (action === 'CLOSE') {
+      return '结案'
+    }
+    if (action === 'RATE') {
+      return '提交评价'
+    }
+    return action
   }
 
   @Builder
@@ -227,7 +332,7 @@ export struct ComplaintPage {
           .height(90)
           .padding(10)
 
-        TextInput({ placeholder: '附件地址（占位）', text: this.attachmentInput })
+        TextInput({ placeholder: '附件链接（可选）', text: this.attachmentInput })
           .onChange((value: string) => {
             this.attachmentInput = value
           })
@@ -239,7 +344,7 @@ export struct ComplaintPage {
       }
 
       if (this.isApproverMode() || this.isHandlerMode()) {
-        TextInput({ placeholder: '处理意见 / 审批意见', text: this.commentInput })
+        TextInput({ placeholder: '处理意见', text: this.commentInput })
           .onChange((value: string) => {
             this.commentInput = value
           })
@@ -249,18 +354,30 @@ export struct ComplaintPage {
       }
 
       if (this.isApproverMode()) {
-        Button('审批通过').onClick(() => this.approveComplaint())
+        TextInput({ placeholder: '分派处理人账号', text: this.assigneeInput })
+          .onChange((value: string) => {
+            this.assigneeInput = value
+          })
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+          .padding(10)
+
+        Row({ space: 8 }) {
+          Button('审批通过').onClick(() => this.approveComplaint()).layoutWeight(1)
+          Button('驳回').onClick(() => this.rejectComplaint()).layoutWeight(1)
+          Button('分派').onClick(() => this.assignComplaint()).layoutWeight(1)
+        }
       }
 
       if (this.isHandlerMode()) {
-        Row({ space: 10 }) {
+        Row({ space: 8 }) {
           Button('提交处理').onClick(() => this.processComplaint()).layoutWeight(1)
-          Button('执行结案').onClick(() => this.closeComplaint()).layoutWeight(1)
+          Button('结案').onClick(() => this.closeComplaint()).layoutWeight(1)
         }
       }
 
       if (this.isVisitorMode()) {
-        TextInput({ placeholder: '评分（1-5）', text: this.ratingInput })
+        TextInput({ placeholder: '满意度（1-5）', text: this.ratingInput })
           .onChange((value: string) => {
             this.ratingInput = value
           })
@@ -282,7 +399,7 @@ export struct ComplaintPage {
   }
 
   @Builder
-  private ListPanel(): void {
+  private ComplaintListPanel(): void {
     if (this.loading) {
       Column() {
         Text('加载中...').fontColor('#6B7280')
@@ -300,7 +417,7 @@ export struct ComplaintPage {
       .alignItems(HorizontalAlign.Center)
     } else if (this.items.length === 0) {
       Column() {
-        Text('暂无投诉数据').fontColor('#6B7280')
+        Text('暂无投诉记录').fontColor('#6B7280')
       }
       .width('100%')
       .padding(20)
@@ -309,38 +426,69 @@ export struct ComplaintPage {
       List({ space: 8 }) {
         ForEach(this.items, (item: ComplaintItem) => {
           ListItem() {
-            Column({ space: 6 }) {
+            Column({ space: 4 }) {
               Row() {
-                Text(item.title).fontSize(16).fontWeight(FontWeight.Medium)
+                Text(item.title).fontSize(15).fontWeight(FontWeight.Medium)
                 Blank()
                 Text(this.statusLabel(item.status)).fontSize(12).fontColor('#2563EB')
               }
-              Text(item.content).fontSize(13).maxLines(2)
-              Text(`投诉人：${item.createdBy}`).fontSize(12).fontColor('#6B7280')
-              Text(`更新时间：${item.updatedAt}`).fontSize(11).fontColor('#9CA3AF')
-              if (item.rating !== null) {
-                Text(`评分：${item.rating}`).fontSize(12).fontColor('#059669')
+              Text(item.content).fontSize(12).maxLines(2)
+              Text(`提交人：${item.createdBy}`).fontSize(11).fontColor('#6B7280')
+              Text(`处理人：${item.assignee ?? '-'}`).fontSize(11).fontColor('#6B7280')
+              if (item.rejectionComment !== null && item.rejectionComment.length > 0) {
+                Text(`驳回原因：${item.rejectionComment}`).fontSize(11).fontColor('#B91C1C').maxLines(2)
               }
+              Text(`更新时间：${item.updatedAt}`).fontSize(10).fontColor('#9CA3AF')
             }
             .alignItems(HorizontalAlign.Start)
-            .padding(12)
+            .padding(10)
             .backgroundColor(this.selectedId === item.id ? '#DBEAFE' : '#FFFFFF')
             .borderRadius(10)
-            .onClick(() => {
-              this.selectedId = item.id
-            })
+            .onClick(() => this.selectComplaint(item.id))
           }
         }, (item: ComplaintItem) => `${item.id}`)
       }
-      .width('100%')
       .layoutWeight(1)
+      .width('100%')
     }
+  }
+
+  @Builder
+  private TimelinePanel(): void {
+    Column({ space: 6 }) {
+      Text('投诉时间线').fontSize(16).fontWeight(FontWeight.Medium)
+      if (this.timelineLoading) {
+        Text('时间线加载中...').fontSize(12).fontColor('#6B7280')
+      } else if (this.timelines.length === 0) {
+        Text('暂无时间线记录').fontSize(12).fontColor('#6B7280')
+      } else {
+        ForEach(this.timelines, (item: ComplaintTimelineItem) => {
+          Column({ space: 2 }) {
+            Text(`${this.actionLabel(item.action)} · ${item.actor ?? '-'}`).fontSize(12).fontWeight(FontWeight.Medium)
+            if (item.comment !== null && item.comment.length > 0) {
+              Text(item.comment).fontSize(11).maxLines(2)
+            }
+            Text(item.createdAt).fontSize(10).fontColor('#9CA3AF')
+          }
+          .alignItems(HorizontalAlign.Start)
+          .padding(8)
+          .width('100%')
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+        }, (item: ComplaintTimelineItem) => `${item.id}`)
+      }
+    }
+    .alignItems(HorizontalAlign.Start)
+    .padding(12)
+    .backgroundColor('#F3F4F6')
+    .borderRadius(12)
   }
 
   build() {
     Column({ space: 10 }) {
       this.ActionPanel()
-      this.ListPanel()
+      this.ComplaintListPanel()
+      this.TimelinePanel()
     }
     .padding(12)
     .width('100%')

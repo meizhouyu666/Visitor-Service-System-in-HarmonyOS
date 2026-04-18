@@ -15,7 +15,7 @@ interface TabItem {
 @Entry
 @Component
 struct Index {
-  @State private selectedTab: number = 0
+  @State private selectedTabKey: string = ''
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
   @State private authStore: AuthStore = new AuthStore()
@@ -23,7 +23,8 @@ struct Index {
   private async doLogin(): Promise<void> {
     const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
     if (ok) {
-      this.selectedTab = 0
+      const tabs: TabItem[] = this.getRoleTabs()
+      this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
     }
   }
 
@@ -31,12 +32,12 @@ struct Index {
     switch (role) {
       case 'VISITOR':
         return [
-          { key: 'complaint-visitor', title: '投诉服务' },
+          { key: 'complaint-visitor', title: '我的投诉' },
           { key: 'emergency-visitor', title: '应急信息' },
-          { key: 'hotel-visitor', title: '酒店服务' },
-          { key: 'scenic', title: '景区线路' },
-          { key: 'dining', title: '餐饮娱乐' },
-          { key: 'weather', title: '天气路况' }
+          { key: 'hotel-visitor', title: '酒店查询' },
+          { key: 'scenic', title: '景区与线路' },
+          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'weather', title: '天气与路况' }
         ]
       case 'COMPLAINT_HANDLER':
         return [{ key: 'complaint-handler', title: '投诉处理' }]
@@ -55,13 +56,33 @@ struct Index {
           { key: 'complaint-admin', title: '投诉管理' },
           { key: 'emergency-admin', title: '应急管理' },
           { key: 'hotel-admin', title: '酒店管理' },
-          { key: 'scenic', title: '景区线路' },
-          { key: 'dining', title: '餐饮娱乐' },
-          { key: 'weather', title: '天气路况' }
+          { key: 'scenic', title: '景区与线路' },
+          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'weather', title: '天气与路况' }
         ]
       default:
-        return [{ key: 'complaint-visitor', title: '投诉服务' }]
+        return [{ key: 'complaint-visitor', title: '我的投诉' }]
     }
+  }
+
+  private getRoleTabs(): TabItem[] {
+    return this.tabsForRole(this.authStore.getRole())
+  }
+
+  private getSafeSelectedTabKey(): string {
+    const tabs: TabItem[] = this.getRoleTabs()
+    if (tabs.length === 0) {
+      return ''
+    }
+    const exists: boolean = tabs.some((tab: TabItem) => tab.key === this.selectedTabKey)
+    if (!exists) {
+      return tabs[0].key
+    }
+    return this.selectedTabKey
+  }
+
+  private isTabSelected(key: string): boolean {
+    return this.getSafeSelectedTabKey() === key
   }
 
   private complaintModeByKey(key: string): ComplaintMode {
@@ -109,7 +130,7 @@ struct Index {
           .fontWeight(FontWeight.Bold)
           .fontColor('#1F2937')
 
-        TextInput({ placeholder: '请输入用户名', text: this.username })
+        TextInput({ placeholder: '账号', text: this.username })
           .onChange((value: string) => {
             this.username = value
           })
@@ -119,7 +140,7 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        TextInput({ placeholder: '请输入密码', text: this.password })
+        TextInput({ placeholder: '密码', text: this.password })
           .type(InputType.Password)
           .onChange((value: string) => {
             this.password = value
@@ -145,7 +166,7 @@ struct Index {
           Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
         }
 
-        Text('演示账号：visitor / admin / handler / writer / approver / hoteladmin / sysadmin')
+        Text('演示账号：visitor/admin/handler/writer/approver/hoteladmin/sysadmin')
           .fontSize(12)
           .fontColor('#6B7280')
       }
@@ -163,18 +184,11 @@ struct Index {
 
   @Builder
   private RoleHomeView(): void {
-    const role: UserRole = this.authStore.getRole()
-    const tabs: TabItem[] = this.tabsForRole(role)
-
-    if (this.selectedTab >= tabs.length) {
-      this.selectedTab = 0
-    }
-
     Column() {
       Row({ space: 8 }) {
         Column({ space: 2 }) {
-          Text(`欢迎：${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
-          Text(this.authStore.getRoleLabel()).fontSize(12).fontColor('#6B7280')
+          Text(`欢迎你：${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
+          Text(`当前角色：${this.authStore.getRoleLabel()}`).fontSize(12).fontColor('#6B7280')
         }.alignItems(HorizontalAlign.Start)
 
         Blank()
@@ -188,15 +202,15 @@ struct Index {
 
       Scroll() {
         Row({ space: 8 }) {
-          ForEach(tabs, (tab: TabItem, index: number) => {
+          ForEach(this.getRoleTabs(), (tab: TabItem) => {
             Text(tab.title)
               .fontSize(14)
-              .fontColor(index === this.selectedTab ? Color.White : '#4B5563')
-              .backgroundColor(index === this.selectedTab ? '#2563EB' : '#F3F4F6')
+              .fontColor(this.isTabSelected(tab.key) ? Color.White : '#4B5563')
+              .backgroundColor(this.isTabSelected(tab.key) ? '#2563EB' : '#F3F4F6')
               .padding({ left: 14, right: 14, top: 8, bottom: 8 })
               .borderRadius(16)
               .onClick(() => {
-                this.selectedTab = index
+                this.selectedTabKey = tab.key
               })
           }, (tab: TabItem) => tab.key)
         }
@@ -208,8 +222,8 @@ struct Index {
 
       Divider().height(1).color('#E5E7EB').width('100%')
 
-      if (tabs.length > 0) {
-        this.renderTab(tabs[this.selectedTab].key)
+      if (this.getRoleTabs().length > 0) {
+        this.renderTab(this.getSafeSelectedTabKey())
       }
     }
     .width('100%')

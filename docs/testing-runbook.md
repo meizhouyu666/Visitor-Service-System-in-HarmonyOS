@@ -1,45 +1,28 @@
-# 游客服务系统测试与运行手册（当前版本）
+# 游客服务系统测试与运行手册（P0 闭环版）
 
-本手册面向负责测试与联调的组员，基于当前仓库代码结构整理。  
-适用提交：`c22d51b`（及之后兼容版本）
+本手册面向负责测试与联调的组员，覆盖当前 P0 交付范围：投诉与应急主链路可演示、六角色权限可验证、数据库增量迁移可执行。
 
----
+## 1. 当前版本范围
 
-## 1. 当前架构概览
-
-### 1.1 仓库结构
-
-- `backend/`：Java Spring Boot 后端
-- `frontend/harmony-app/`：HarmonyOS 前端（ArkTS + ArkUI + Stage Model）
-- `docs/openapi-minimal.yaml`：最小接口契约
-
-### 1.2 技术栈
-
-- 前端：ArkTS、ArkUI、UIAbility（Stage Model）
-- 后端：Spring Boot 3、Spring Security、JWT、JPA、Flyway
-- 数据库：MySQL 8
-- 接口文档：Swagger UI
-
-### 1.3 当前实现范围
-
-- 登录与鉴权：`/api/auth/login`、`/api/auth/me`
-- 投诉主链路：提交、列表、详情、审批、处理、结案、评价
-- 应急信息：创建、审批发布、查询、修改、删除
-- 查询模块骨架：酒店、景区线路、餐饮演出、天气路况
-
----
+- 前端：HarmonyOS（ArkTS + ArkUI + Stage Model）
+- 后端：Spring Boot 3 + Spring Security + JWT + JPA + Flyway
+- 数据库：MySQL 8（Docker）
+- 本轮重点：
+  - 投诉：提交、审批、驳回、分派、处理、结案、评价、时间线
+  - 应急：建稿、提交、审批发布、游客查询（有效期过滤）
+  - 查询：保留现有接口，不破坏兼容路径
 
 ## 2. 环境初始化
 
-## 2.1 必备软件
+### 2.1 必备软件
 
 - Git
 - JDK 17
 - Maven 3.8+
-- Docker Desktop（用于 MySQL）
-- DevEco Studio（用于 Harmony 前端）
+- Docker Desktop
+- DevEco Studio
 
-## 2.2 拉取代码
+### 2.2 拉取代码
 
 ```bash
 git clone https://github.com/meizhouyu666/Visitor-Service-System-in-HarmonyOS.git
@@ -48,24 +31,22 @@ git checkout main
 git pull origin main
 ```
 
----
+## 3. 后端运行
 
-## 3. 后端运行与验证
-
-## 3.1 启动数据库（MySQL）
+### 3.1 启动 MySQL
 
 ```bash
 cd backend
 docker compose up -d
 ```
 
-说明：
-
-- 默认数据库：`visitor_service_system`
-- 默认 root 密码：`root`
+默认配置：
+- 数据库：`visitor_service_system`
+- 用户：`root`
+- 密码：`root`
 - 端口：`3306`
 
-## 3.2 启动后端服务
+### 3.2 启动后端
 
 ```bash
 cd backend
@@ -74,121 +55,135 @@ mvn spring-boot:run
 
 默认端口：`8080`
 
-## 3.3 打开 Swagger
+### 3.3 迁移验证（V1 -> V3）
 
-- [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+启动日志中应看到 Flyway 成功执行：
+- `V1__create_core_tables.sql`
+- `V2__complaint_workflow_extensions.sql`
+- `V3__complaint_timeline.sql`
 
-## 3.4 默认测试账号
+## 4. 前端运行（DevEco）
 
-- 游客：
-  - 用户名：`visitor`
-  - 密码：`visitor123`
-- 管理员：
-  - 用户名：`admin`
-  - 密码：`admin123`
+### 4.1 打开工程
 
----
+在 DevEco Studio 打开：
+- `frontend/harmony-app`
 
-## 4. 前端（DevEco）运行说明
+### 4.2 网络地址
 
-## 4.1 打开工程
+文件：
+- `frontend/harmony-app/entry/src/main/ets/common/network/ApiClient.ets`
 
-在 DevEco Studio 中打开目录：
-
-`frontend/harmony-app`
-
-## 4.2 网络地址配置
-
-前端 API 地址在：
-
-`frontend/harmony-app/entry/src/main/ets/common/network/ApiClient.ets`
-
-当前默认值：
-
-`http://10.0.2.2:8080`
+团队默认值：
+- `http://10.0.2.2:8080`
 
 说明：
+- 模拟器通常使用 `10.0.2.2` 访问宿主机后端。
+- 真机调试改为本机局域网 IP，但不要提交个人 IP 到仓库。
 
-- 若使用模拟器，通常 `10.0.2.2` 可访问宿主机 localhost。
-- 若使用真机，请改为电脑局域网 IP（例如 `http://192.168.x.x:8080`）。
+## 5. 账号与角色
 
-## 4.3 前端基本验证
+- 游客：`visitor / visitor123`
+- 平台管理员：`admin / admin123`
+- 投诉处理员：`handler / handler123`
+- 应急发布员：`writer / writer123`
+- 审批员：`approver / approver123`
+- 酒店管理员：`hoteladmin / hoteladmin123`
+- 系统管理员：`sysadmin / sysadmin123`
 
-- 启动应用后出现登录页
-- 用 `visitor/visitor123` 登录进入游客视图
-- 用 `admin/admin123` 登录进入管理角色视图（用于后台接口测试）
-- Tab 页面可切换：投诉、应急、酒店、景区、餐饮、天气
+## 6. 权限矩阵（P0）
 
----
+- `VISITOR`：提交投诉、查看本人投诉、结案后评价、查看游客应急
+- `APPROVER | ADMIN | SYSTEM_ADMIN`：投诉审批/驳回/分派
+- `COMPLAINT_HANDLER | ADMIN | SYSTEM_ADMIN`：投诉处理/结案
+- `EMERGENCY_WRITER | ADMIN | SYSTEM_ADMIN`：应急建稿/编辑/提交审批
+- `APPROVER | ADMIN | SYSTEM_ADMIN`：应急审批发布
 
-## 5. 测试清单（建议按顺序）
+## 7. 测试清单
 
-## 5.1 鉴权与角色
-
-1. 游客登录成功，能调用普通接口。
-2. 游客访问管理员接口（`/api/complaints/admin/*`、`/api/emergency/admin/*`）应被拒绝。
-3. 管理员登录后可访问管理员接口。
-
-## 5.2 投诉主链路（核心）
+### 7.1 投诉主链路（必测）
 
 1. 游客提交投诉成功。
-2. 管理员可在列表看到投诉并执行审批。
-3. 管理员执行处理、结案。
-4. 游客对已结案投诉可评分。
-5. 未结案投诉评分应失败（业务限制）。
+2. 审批员或管理员执行“审批通过”成功。
+3. 审批员或管理员执行“分派”成功，列表可看到处理人。
+4. 处理员或管理员执行“提交处理”成功。
+5. 处理员或管理员执行“结案”成功。
+6. 游客对该投诉提交评价成功。
+7. 投诉详情时间线可看到 `CREATE/APPROVE/ASSIGN/PROCESS/CLOSE/RATE`。
 
-## 5.3 应急信息链路
+### 7.2 驳回链路（必测）
 
-1. 管理员创建草稿成功。
-2. 提交审批成功。
-3. 审批发布成功。
-4. 游客侧接口可查询到已发布信息。
-5. 管理员可修改、删除应急信息。
+1. 游客提交投诉。
+2. 审批员或管理员执行“驳回”。
+3. 列表/详情可看到 `REJECTED` 状态与驳回原因。
+4. 时间线可看到 `REJECT` 记录。
 
-## 5.4 查询模块骨架
+### 7.3 应急链路（必测）
 
-检查以下接口均可返回列表或结构化结果：
+1. 发布员或管理员创建草稿。
+2. 提交审批。
+3. 审批员或管理员审批发布。
+4. 游客接口 `/api/emergency` 仅返回状态 `PUBLISHED` 且在有效窗口内的数据：
+   - `validFrom` 为空：立即生效
+   - `validUntil` 为空：长期有效
 
+### 7.4 异常映射（必测）
+
+1. 访问不存在的详情资源（如不存在投诉 ID）。
+2. 返回应为业务 `NOT_FOUND/404`，不能是 500。
+
+### 7.5 查询模块回归（必测）
+
+以下接口应可正常返回（包含兼容接口）：
+- `/api/query/hotels`
 - `/api/query/hotels/star`
 - `/api/query/hotels/non-star`
 - `/api/query/scenic-spots`
 - `/api/query/routes`
+- `/api/query/dining`
+- `/api/query/entertainment`
 - `/api/query/dining-entertainment`
 - `/api/query/performances`
+- `/api/query/weather`
+- `/api/query/traffic`
 - `/api/query/weather-traffic`
 
----
+## 8. 仓库卫生检查
 
-## 6. 常见问题排查
+合并前请确认：
+- 不提交 `frontend/harmony-app/entry/.preview/**`
+- 不提交 `frontend/harmony-app/oh_modules/.ohpm/**`
+- 不提交个人 IP、个人数据库密码
 
-## 6.1 后端启动失败
+可使用：
 
-- 检查 JDK 是否为 17
-- 检查 8080 端口是否被占用
-- 检查 MySQL 是否已启动并可连接
+```bash
+git ls-files | grep -E "entry/.preview|oh_modules/.ohpm"
+```
 
-## 6.2 数据库连接失败
+Windows PowerShell：
 
-- 查看 `backend/src/main/resources/application.yml` 中数据库配置
-- 确认 Docker MySQL 容器是否正常运行
+```powershell
+git ls-files | Select-String "entry/.preview|oh_modules/.ohpm"
+```
 
-## 6.3 前端请求失败
+## 9. 常见问题排查
 
-- 确认后端已启动
-- 检查 `ApiClient.ets` 中 `API_BASE_URL` 是否符合当前设备网络路径
-- 检查是否有防火墙拦截 8080 端口
+- 后端起不来：检查 JDK 17、8080 端口占用、MySQL 容器状态
+- 连不上库：检查 `backend/src/main/resources/application.yml` 与容器账号密码
+- 前端请求失败：确认后端已启动、`API_BASE_URL` 是否符合当前网络路径
+- 权限报错：检查登录账号角色是否匹配当前操作
 
----
-
-## 7. 测试反馈模板（请直接回传）
-
-请按以下模板反馈，便于快速定位：
+## 10. 反馈模板
 
 ```text
 【环境】
 操作系统：
-DevEco版本：
+DevEco 版本：
 运行方式：模拟器/真机
+
+【测试项】
+（例如：投诉驳回链路）
 
 【步骤】
 1.
@@ -200,15 +195,8 @@ DevEco版本：
 【实际结果】
 
 【日志/报错】
-（粘贴完整报错，包含时间与接口路径）
+（包含接口路径与时间）
 
 【截图】
 （可选）
 ```
-
----
-
-## 8. 备注
-
-- 当前版本重点是“架构完整 + 可联调”，不是最终业务深度版本。
-- 若发现接口字段不一致，请优先以 Swagger 实际返回为准并反馈。
