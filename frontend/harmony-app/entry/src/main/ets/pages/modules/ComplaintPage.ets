@@ -1,4 +1,4 @@
-﻿import {
+import {
   ComplaintActionRequest,
   ComplaintAssignRequest,
   ComplaintCreateRequest,
@@ -8,6 +8,22 @@
   ComplaintTimelineItem
 } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
+import {
+  complaintStatusTone,
+  RADIUS_LG,
+  RADIUS_MD,
+  SHADOW_CARD,
+  THEME_DANGER,
+  THEME_PAGE_BG,
+  THEME_PRIMARY,
+  THEME_PRIMARY_SOFT,
+  THEME_SUCCESS,
+  THEME_SURFACE,
+  THEME_SURFACE_MUTED,
+  THEME_TEXT_PRIMARY,
+  THEME_TEXT_SECONDARY,
+  THEME_TEXT_TERTIARY
+} from '../../common/ui/AppTheme'
 
 export type ComplaintMode = 'visitor' | 'approver' | 'handler' | 'admin'
 
@@ -265,6 +281,7 @@ export struct ComplaintPage {
       this.actionMessage = '请输入处理人账号'
       return
     }
+
     this.loading = true
     this.errorMessage = ''
     this.actionMessage = ''
@@ -365,6 +382,10 @@ export struct ComplaintPage {
     return status
   }
 
+  private statusTone(status: string): { icon: string; color: string; background: string } {
+    return complaintStatusTone(status)
+  }
+
   private actionLabel(action: string): string {
     if (action === 'CREATE') {
       return '提交投诉'
@@ -393,7 +414,7 @@ export struct ComplaintPage {
   @Builder
   private FilterPanel(): void {
     Column({ space: 8 }) {
-      Text('筛选条件').fontSize(16).fontWeight(FontWeight.Medium)
+      Text('筛选条件').fontSize(16).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
 
       Row({ space: 8 }) {
         TextInput({ placeholder: '状态（如 SUBMITTED）', text: this.filters.status })
@@ -401,16 +422,16 @@ export struct ComplaintPage {
             this.updateFilter('status', value)
           })
           .layoutWeight(1)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(8)
         TextInput({ placeholder: '关键词（标题/内容）', text: this.filters.keyword })
           .onChange((value: string) => {
             this.updateFilter('keyword', value)
           })
           .layoutWeight(1)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(8)
       }
 
@@ -420,16 +441,16 @@ export struct ComplaintPage {
             this.updateFilter('from', value)
           })
           .layoutWeight(1)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(8)
         TextInput({ placeholder: '结束时间（ISO）', text: this.filters.to })
           .onChange((value: string) => {
             this.updateFilter('to', value)
           })
           .layoutWeight(1)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(8)
       }
 
@@ -440,51 +461,62 @@ export struct ComplaintPage {
               this.updateFilter('createdBy', value)
             })
             .layoutWeight(1)
-            .backgroundColor('#FFFFFF')
-            .borderRadius(8)
+            .backgroundColor(THEME_SURFACE)
+            .borderRadius(RADIUS_MD)
             .padding(8)
           TextInput({ placeholder: '处理人账号', text: this.filters.assignee })
             .onChange((value: string) => {
               this.updateFilter('assignee', value)
             })
             .layoutWeight(1)
-            .backgroundColor('#FFFFFF')
-            .borderRadius(8)
+            .backgroundColor(THEME_SURFACE)
+            .borderRadius(RADIUS_MD)
             .padding(8)
         }
       }
 
       Row({ space: 8 }) {
-        Button('应用筛选').onClick(() => this.loadComplaints()).layoutWeight(1)
-        Button('重置筛选').onClick(() => this.resetFilters()).layoutWeight(1)
+        Button('应用筛选')
+          .onClick(() => this.loadComplaints())
+          .layoutWeight(1)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
+        Button('重置筛选')
+          .onClick(() => this.resetFilters())
+          .layoutWeight(1)
+          .backgroundColor(THEME_SURFACE)
+          .fontColor(THEME_TEXT_SECONDARY)
+          .borderRadius(RADIUS_MD)
       }
     }
     .alignItems(HorizontalAlign.Start)
     .padding(12)
-    .backgroundColor('#F3F4F6')
-    .borderRadius(12)
+    .backgroundColor(THEME_SURFACE_MUTED)
+    .borderRadius(RADIUS_LG)
+    .shadow(SHADOW_CARD)
   }
 
   @Builder
   private ActionPanel(): void {
     Column({ space: 8 }) {
-      Text(this.modeTitle()).fontSize(20).fontWeight(FontWeight.Medium)
+      Text(this.modeTitle()).fontSize(20).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
 
       if (this.isVisitorMode()) {
         TextInput({ placeholder: '投诉标题', text: this.titleInput })
           .onChange((value: string) => {
             this.titleInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         TextArea({ placeholder: '投诉内容', text: this.contentInput })
           .onChange((value: string) => {
             this.contentInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .height(90)
           .padding(10)
 
@@ -492,11 +524,15 @@ export struct ComplaintPage {
           .onChange((value: string) => {
             this.attachmentInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
-        Button('提交投诉').onClick(() => this.submitComplaint())
+        Button('提交投诉')
+          .onClick(() => this.submitComplaint())
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
       }
 
       if (this.isApproverMode() || this.isHandlerMode()) {
@@ -504,8 +540,8 @@ export struct ComplaintPage {
           .onChange((value: string) => {
             this.commentInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
       }
 
@@ -514,21 +550,46 @@ export struct ComplaintPage {
           .onChange((value: string) => {
             this.assigneeInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         Row({ space: 8 }) {
-          Button('审批通过').onClick(() => this.approveComplaint()).layoutWeight(1)
-          Button('驳回').onClick(() => this.rejectComplaint()).layoutWeight(1)
-          Button('分派').onClick(() => this.assignComplaint()).layoutWeight(1)
+          Button('审批通过')
+            .onClick(() => this.approveComplaint())
+            .layoutWeight(1)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+            .borderRadius(RADIUS_MD)
+          Button('驳回')
+            .onClick(() => this.rejectComplaint())
+            .layoutWeight(1)
+            .backgroundColor(THEME_DANGER)
+            .fontColor(Color.White)
+            .borderRadius(RADIUS_MD)
+          Button('分派')
+            .onClick(() => this.assignComplaint())
+            .layoutWeight(1)
+            .backgroundColor(THEME_SURFACE)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .borderRadius(RADIUS_MD)
         }
       }
 
       if (this.isHandlerMode()) {
         Row({ space: 8 }) {
-          Button('提交处理').onClick(() => this.processComplaint()).layoutWeight(1)
-          Button('结案').onClick(() => this.closeComplaint()).layoutWeight(1)
+          Button('提交处理')
+            .onClick(() => this.processComplaint())
+            .layoutWeight(1)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+            .borderRadius(RADIUS_MD)
+          Button('结案')
+            .onClick(() => this.closeComplaint())
+            .layoutWeight(1)
+            .backgroundColor(THEME_SURFACE)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .borderRadius(RADIUS_MD)
         }
       }
 
@@ -537,43 +598,52 @@ export struct ComplaintPage {
           .onChange((value: string) => {
             this.ratingInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
-        Button('提交评价').onClick(() => this.rateComplaint())
+        Button('提交评价')
+          .onClick(() => this.rateComplaint())
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
       }
 
       if (this.actionMessage.length > 0) {
-        Text(this.actionMessage).fontColor('#059669').fontSize(12)
+        Text(this.actionMessage).fontColor(THEME_SUCCESS).fontSize(12)
       }
     }
     .alignItems(HorizontalAlign.Start)
     .padding(12)
-    .backgroundColor('#F3F4F6')
-    .borderRadius(12)
+    .backgroundColor(THEME_SURFACE_MUTED)
+    .borderRadius(RADIUS_LG)
+    .shadow(SHADOW_CARD)
   }
 
   @Builder
   private ComplaintListPanel(): void {
     if (this.loading) {
       Column() {
-        Text('加载中...').fontColor('#6B7280')
+        Text('加载中...').fontColor(THEME_TEXT_SECONDARY)
       }
       .width('100%')
       .padding(20)
       .alignItems(HorizontalAlign.Center)
     } else if (this.errorMessage.length > 0) {
       Column({ space: 8 }) {
-        Text(this.errorMessage).fontColor(Color.Red).fontSize(12)
-        Button('重试').onClick(() => this.loadComplaints())
+        Text(this.errorMessage).fontColor(THEME_DANGER).fontSize(12)
+        Button('重试')
+          .onClick(() => this.loadComplaints())
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
       }
       .width('100%')
       .padding(20)
       .alignItems(HorizontalAlign.Center)
     } else if (this.items.length === 0) {
       Column() {
-        Text('暂无投诉记录').fontColor('#6B7280')
+        Text('暂无投诉记录').fontColor(THEME_TEXT_SECONDARY)
       }
       .width('100%')
       .padding(20)
@@ -582,24 +652,30 @@ export struct ComplaintPage {
       List({ space: 8 }) {
         ForEach(this.items, (item: ComplaintItem) => {
           ListItem() {
-            Column({ space: 4 }) {
-              Row() {
-                Text(item.title).fontSize(15).fontWeight(FontWeight.Medium)
+            Column({ space: 6 }) {
+              Row({ space: 6 }) {
+                Text(item.title).fontSize(15).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
                 Blank()
-                Text(this.statusLabel(item.status)).fontSize(12).fontColor('#2563EB')
+                Text(`${this.statusTone(item.status).icon} ${this.statusLabel(item.status)}`)
+                  .fontSize(11)
+                  .fontColor(this.statusTone(item.status).color)
+                  .backgroundColor(this.statusTone(item.status).background)
+                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                  .borderRadius(RADIUS_MD)
               }
-              Text(item.content).fontSize(12).maxLines(2)
-              Text(`提交人：${item.createdBy}`).fontSize(11).fontColor('#6B7280')
-              Text(`处理人：${item.assignee ?? '-'}`).fontSize(11).fontColor('#6B7280')
+              Text(item.content).fontSize(12).maxLines(2).fontColor(THEME_TEXT_PRIMARY)
+              Text(`提交人：${item.createdBy}`).fontSize(11).fontColor(THEME_TEXT_SECONDARY)
+              Text(`处理人：${item.assignee ?? '-'}`).fontSize(11).fontColor(THEME_TEXT_SECONDARY)
               if (item.rejectionComment !== null && item.rejectionComment.length > 0) {
-                Text(`驳回原因：${item.rejectionComment}`).fontSize(11).fontColor('#B91C1C').maxLines(2)
+                Text(`驳回原因：${item.rejectionComment}`).fontSize(11).fontColor(THEME_DANGER).maxLines(2)
               }
-              Text(`更新时间：${item.updatedAt}`).fontSize(10).fontColor('#9CA3AF')
+              Text(`更新时间：${item.updatedAt}`).fontSize(10).fontColor(THEME_TEXT_TERTIARY)
             }
             .alignItems(HorizontalAlign.Start)
             .padding(10)
-            .backgroundColor(this.selectedId === item.id ? '#DBEAFE' : '#FFFFFF')
-            .borderRadius(10)
+            .backgroundColor(this.selectedId === item.id ? THEME_PRIMARY_SOFT : THEME_SURFACE)
+            .borderRadius(RADIUS_MD)
+            .shadow(SHADOW_CARD)
             .onClick(() => this.selectComplaint(item.id))
           }
         }, (item: ComplaintItem) => `${item.id}`)
@@ -612,32 +688,34 @@ export struct ComplaintPage {
   @Builder
   private TimelinePanel(): void {
     Column({ space: 6 }) {
-      Text('投诉时间线').fontSize(16).fontWeight(FontWeight.Medium)
+      Text('投诉时间线').fontSize(16).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
       if (this.timelineLoading) {
-        Text('时间线加载中...').fontSize(12).fontColor('#6B7280')
+        Text('时间线加载中...').fontSize(12).fontColor(THEME_TEXT_SECONDARY)
       } else if (this.timelines.length === 0) {
-        Text('暂无时间线记录').fontSize(12).fontColor('#6B7280')
+        Text('暂无时间线记录').fontSize(12).fontColor(THEME_TEXT_SECONDARY)
       } else {
         ForEach(this.timelines, (item: ComplaintTimelineItem) => {
           Column({ space: 2 }) {
-            Text(`${this.actionLabel(item.action)} · ${item.actor ?? '-'}`).fontSize(12).fontWeight(FontWeight.Medium)
+            Text(`${this.actionLabel(item.action)} · ${item.actor ?? '-'}`).fontSize(12).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
             if (item.comment !== null && item.comment.length > 0) {
-              Text(item.comment).fontSize(11).maxLines(2)
+              Text(item.comment).fontSize(11).maxLines(2).fontColor(THEME_TEXT_SECONDARY)
             }
-            Text(item.createdAt).fontSize(10).fontColor('#9CA3AF')
+            Text(item.createdAt).fontSize(10).fontColor(THEME_TEXT_TERTIARY)
           }
           .alignItems(HorizontalAlign.Start)
           .padding(8)
           .width('100%')
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
+          .shadow(SHADOW_CARD)
         }, (item: ComplaintTimelineItem) => `${item.id}`)
       }
     }
     .alignItems(HorizontalAlign.Start)
     .padding(12)
-    .backgroundColor('#F3F4F6')
-    .borderRadius(12)
+    .backgroundColor(THEME_SURFACE_MUTED)
+    .borderRadius(RADIUS_LG)
+    .shadow(SHADOW_CARD)
   }
 
   build() {
@@ -652,6 +730,6 @@ export struct ComplaintPage {
       .width('100%')
     }
     .height('100%')
-    .backgroundColor('#F9FAFB')
+    .backgroundColor(THEME_PAGE_BG)
   }
 }

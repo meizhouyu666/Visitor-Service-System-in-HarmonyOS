@@ -1,5 +1,20 @@
-﻿import { EmergencyItem, EmergencyRequest } from '../../common/model/ApiModels'
+import { EmergencyItem, EmergencyRequest } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
+import {
+  emergencyStatusTone,
+  RADIUS_LG,
+  RADIUS_MD,
+  SHADOW_CARD,
+  THEME_DANGER,
+  THEME_PAGE_BG,
+  THEME_PRIMARY,
+  THEME_SUCCESS,
+  THEME_SURFACE,
+  THEME_SURFACE_MUTED,
+  THEME_TEXT_PRIMARY,
+  THEME_TEXT_SECONDARY,
+  THEME_TEXT_TERTIARY
+} from '../../common/ui/AppTheme'
 
 export type EmergencyMode = 'visitor' | 'writer' | 'approver' | 'admin'
 
@@ -191,18 +206,22 @@ export struct EmergencyPage {
     return status
   }
 
+  private statusTone(status: string): { icon: string; color: string; background: string } {
+    return emergencyStatusTone(status)
+  }
+
   @Builder
   private ActionPanel(): void {
     Column({ space: 8 }) {
-      Text(this.modeTitle()).fontSize(20).fontWeight(FontWeight.Medium)
+      Text(this.modeTitle()).fontSize(20).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
 
       if (this.canWrite()) {
         TextInput({ placeholder: '标题', text: this.titleInput })
           .onChange((value: string) => {
             this.titleInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         TextArea({ placeholder: '内容', text: this.contentInput })
@@ -210,67 +229,91 @@ export struct EmergencyPage {
             this.contentInput = value
           })
           .height(90)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         TextInput({ placeholder: '生效时间（如 2026-04-18T08:00:00）', text: this.validFromInput })
           .onChange((value: string) => {
             this.validFromInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         TextInput({ placeholder: '失效时间（如 2026-04-18T20:00:00）', text: this.validUntilInput })
           .onChange((value: string) => {
             this.validUntilInput = value
           })
-          .backgroundColor('#FFFFFF')
-          .borderRadius(8)
+          .backgroundColor(THEME_SURFACE)
+          .borderRadius(RADIUS_MD)
           .padding(10)
 
         Row({ space: 10 }) {
-          Button('建草稿').onClick(() => this.createDraft()).layoutWeight(1)
-          Button('保存修改').onClick(() => this.updateDraft()).layoutWeight(1)
-          Button('提交审批').onClick(() => this.submitForApproval()).layoutWeight(1)
+          Button('建草稿')
+            .onClick(() => this.createDraft())
+            .layoutWeight(1)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+            .borderRadius(RADIUS_MD)
+          Button('保存修改')
+            .onClick(() => this.updateDraft())
+            .layoutWeight(1)
+            .backgroundColor(THEME_SURFACE)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .borderRadius(RADIUS_MD)
+          Button('提交审批')
+            .onClick(() => this.submitForApproval())
+            .layoutWeight(1)
+            .backgroundColor(THEME_SURFACE)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .borderRadius(RADIUS_MD)
         }
       }
 
       if (this.canApprove()) {
-        Button('审批发布').onClick(() => this.approvePublish())
+        Button('审批发布')
+          .onClick(() => this.approvePublish())
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
       }
 
       if (this.actionMessage.length > 0) {
-        Text(this.actionMessage).fontColor('#059669').fontSize(12)
+        Text(this.actionMessage).fontColor(THEME_SUCCESS).fontSize(12)
       }
     }
     .alignItems(HorizontalAlign.Start)
     .padding(12)
-    .backgroundColor('#F3F4F6')
-    .borderRadius(12)
+    .backgroundColor(THEME_SURFACE_MUTED)
+    .borderRadius(RADIUS_LG)
+    .shadow(SHADOW_CARD)
   }
 
   @Builder
   private ListPanel(): void {
     if (this.loading) {
       Column() {
-        Text('加载中...').fontColor('#6B7280')
+        Text('加载中...').fontColor(THEME_TEXT_SECONDARY)
       }
       .width('100%')
       .padding(20)
       .alignItems(HorizontalAlign.Center)
     } else if (this.errorMessage.length > 0) {
       Column({ space: 8 }) {
-        Text(this.errorMessage).fontColor(Color.Red).fontSize(12)
-        Button('重试').onClick(() => this.loadItems())
+        Text(this.errorMessage).fontColor(THEME_DANGER).fontSize(12)
+        Button('重试')
+          .onClick(() => this.loadItems())
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .borderRadius(RADIUS_MD)
       }
       .width('100%')
       .padding(20)
       .alignItems(HorizontalAlign.Center)
     } else if (this.items.length === 0) {
       Column() {
-        Text('暂无应急信息').fontColor('#6B7280')
+        Text('暂无应急信息').fontColor(THEME_TEXT_SECONDARY)
       }
       .width('100%')
       .padding(20)
@@ -281,17 +324,24 @@ export struct EmergencyPage {
           ListItem() {
             Column({ space: 6 }) {
               Row() {
-                Text(item.title).fontSize(16).fontWeight(FontWeight.Medium)
+                Text(item.title).fontSize(16).fontWeight(FontWeight.Medium).fontColor(THEME_TEXT_PRIMARY)
                 Blank()
-                Text(this.statusLabel(item.status)).fontSize(12).fontColor('#2563EB')
+                Text(`${this.statusTone(item.status).icon} ${this.statusLabel(item.status)}`)
+                  .fontSize(11)
+                  .fontColor(this.statusTone(item.status).color)
+                  .backgroundColor(this.statusTone(item.status).background)
+                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                  .borderRadius(RADIUS_MD)
               }
-              Text(item.content).fontSize(13).maxLines(2)
-              Text(`生效：${item.validFrom ?? '-'}  失效：${item.validUntil ?? '-'}`).fontSize(11).fontColor('#6B7280')
+              Text(item.content).fontSize(13).maxLines(2).fontColor(THEME_TEXT_PRIMARY)
+              Text(`生效：${item.validFrom ?? '-'}  失效：${item.validUntil ?? '-'}`).fontSize(11).fontColor(THEME_TEXT_SECONDARY)
+              Text(`更新时间：${item.updatedAt}`).fontSize(10).fontColor(THEME_TEXT_TERTIARY)
             }
             .alignItems(HorizontalAlign.Start)
             .padding(12)
-            .backgroundColor(this.selectedId === item.id ? '#DBEAFE' : '#FFFFFF')
-            .borderRadius(10)
+            .backgroundColor(this.selectedId === item.id ? '#EAF3FF' : THEME_SURFACE)
+            .borderRadius(RADIUS_MD)
+            .shadow(SHADOW_CARD)
             .onClick(() => {
               this.fillEditor(item)
             })
@@ -311,6 +361,6 @@ export struct EmergencyPage {
     .padding(12)
     .width('100%')
     .height('100%')
-    .backgroundColor('#F9FAFB')
+    .backgroundColor(THEME_PAGE_BG)
   }
 }
