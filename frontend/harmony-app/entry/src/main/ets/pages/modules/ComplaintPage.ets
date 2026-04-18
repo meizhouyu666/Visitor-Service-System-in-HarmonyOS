@@ -14,6 +14,7 @@ import {
   RADIUS_MD,
   RADIUS_PILL,
   SHADOW_CARD,
+  StatusTone,
   THEME_DANGER,
   THEME_PAGE_BG,
   THEME_PRIMARY,
@@ -384,7 +385,7 @@ export struct ComplaintPage {
     return status
   }
 
-  private statusTone(status: string): { icon: string; color: string; background: string } {
+  private statusTone(status: string): StatusTone {
     return complaintStatusTone(status)
   }
 
@@ -434,6 +435,26 @@ export struct ComplaintPage {
       return 4
     }
     return 1
+  }
+
+  private hasLatestComplaint(): boolean {
+    return this.latestComplaint() !== null
+  }
+
+  private latestComplaintStatusLabel(): string {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return '待提交'
+    }
+    return this.statusLabel(latest.status)
+  }
+
+  private visitorProgressStep(): number {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return 1
+    }
+    return this.complaintStepIndex(latest.status)
   }
 
   @Builder
@@ -830,23 +851,41 @@ export struct ComplaintPage {
 
   @Builder
   private VisitorProgressPanel(): void {
-    const latest: ComplaintItem | null = this.latestComplaint()
-    const step: number = latest === null ? 1 : this.complaintStepIndex(latest.status)
     FloatingCard() {
       Column({ space: 10 }) {
         Row() {
           SectionHeader({ title: '投诉进度', subtitle: '全流程状态闭环跟踪' })
           Blank()
-          if (latest !== null) {
-            StatusBadge({ label: this.statusLabel(latest.status), tone: 'primary' })
+          if (this.hasLatestComplaint()) {
+            StatusBadge({ label: this.latestComplaintStatusLabel(), tone: 'primary' })
           }
         }
         .width('100%')
 
-        TimelineNode({ title: '已提交', detail: '投诉已进入系统', active: step === 1, completed: step > 1 })
-        TimelineNode({ title: '审批中', detail: '等待审批员处理', active: step === 2, completed: step > 2 })
-        TimelineNode({ title: '处理中', detail: '处理人正在跟进', active: step === 3, completed: step > 3 })
-        TimelineNode({ title: '已结案', detail: '流程已闭环', active: step === 4, completed: step >= 4 })
+        TimelineNode({
+          title: '已提交',
+          detail: '投诉已进入系统',
+          active: this.visitorProgressStep() === 1,
+          completed: this.visitorProgressStep() > 1
+        })
+        TimelineNode({
+          title: '审批中',
+          detail: '等待审批员处理',
+          active: this.visitorProgressStep() === 2,
+          completed: this.visitorProgressStep() > 2
+        })
+        TimelineNode({
+          title: '处理中',
+          detail: '处理人正在跟进',
+          active: this.visitorProgressStep() === 3,
+          completed: this.visitorProgressStep() > 3
+        })
+        TimelineNode({
+          title: '已结案',
+          detail: '流程已闭环',
+          active: this.visitorProgressStep() === 4,
+          completed: this.visitorProgressStep() >= 4
+        })
 
         Row({ space: 8 }) {
           TextInput({ placeholder: '满意度（1-5）', text: this.ratingInput })

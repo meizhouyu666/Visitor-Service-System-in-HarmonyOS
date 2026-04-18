@@ -6,6 +6,7 @@ import {
   RADIUS_MD,
   RADIUS_PILL,
   SHADOW_CARD,
+  StatusTone,
   THEME_DANGER,
   THEME_PAGE_BG,
   THEME_PRIMARY,
@@ -223,7 +224,7 @@ export struct EmergencyPage {
     return status
   }
 
-  private statusTone(status: string): { icon: string; color: string; background: string } {
+  private statusTone(status: string): StatusTone {
     return emergencyStatusTone(status)
   }
 

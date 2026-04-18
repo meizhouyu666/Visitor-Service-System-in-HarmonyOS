@@ -59,6 +59,42 @@ export struct VisitorHomePage {
     return this.complaintList.length > 0 ? this.complaintList[0] : null
   }
 
+  private hasLatestComplaint(): boolean {
+    return this.latestComplaint() !== null
+  }
+
+  private latestComplaintTitle(): string {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return ''
+    }
+    return latest.title
+  }
+
+  private latestComplaintStatus(): string {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return ''
+    }
+    return latest.status
+  }
+
+  private latestComplaintContent(): string {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return ''
+    }
+    return latest.content
+  }
+
+  private latestComplaintUpdatedAt(): string {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    if (latest === null) {
+      return ''
+    }
+    return latest.updatedAt
+  }
+
   private weatherSummaryText(): string {
     if (this.weatherToday === null) {
       return '天气数据准备中'
@@ -177,7 +213,6 @@ export struct VisitorHomePage {
 
   @Builder
   private ComplaintSummaryCard(): void {
-    const latest: ComplaintItem | null = this.latestComplaint()
     FloatingCard() {
       Column({ space: 8 }) {
         Row() {
@@ -193,25 +228,25 @@ export struct VisitorHomePage {
         }
         .width('100%')
 
-        if (latest === null) {
+        if (!this.hasLatestComplaint()) {
           EmptyStateCard({ message: '还没有投诉记录，祝你旅途愉快。' })
         } else {
           Column({ space: 6 }) {
             Row() {
-              Text(latest.title)
+              Text(this.latestComplaintTitle())
                 .fontSize(14)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(THEME_TEXT_PRIMARY)
                 .layoutWeight(1)
-              StatusBadge({ label: latest.status, tone: 'primary' })
+              StatusBadge({ label: this.latestComplaintStatus(), tone: 'primary' })
             }
             .width('100%')
 
-            Text(latest.content)
+            Text(this.latestComplaintContent())
               .fontSize(12)
               .fontColor(THEME_TEXT_SECONDARY)
               .maxLines(2)
-            Text(`更新时间：${latest.updatedAt}`)
+            Text(`更新时间：${this.latestComplaintUpdatedAt()}`)
               .fontSize(10)
               .fontColor(THEME_TEXT_TERTIARY)
           }
