@@ -40,9 +40,11 @@ export interface ComplaintItem {
   status: string
   handlerComment: string | null
   closureComment: string | null
+  rejectionComment: string | null
   rating: number | null
   createdBy: string
   processedBy: string | null
+  assignee: string | null
   createdAt: string
   updatedAt: string
 }
@@ -57,8 +59,21 @@ export interface ComplaintActionRequest {
   comment: string
 }
 
+export interface ComplaintAssignRequest {
+  assigneeUsername: string
+  comment?: string
+}
+
 export interface ComplaintRatingRequest {
   rating: number
+}
+
+export interface ComplaintTimelineItem {
+  id: number
+  action: string
+  comment: string | null
+  actor: string | null
+  createdAt: string
 }
 
 export interface EmergencyItem {

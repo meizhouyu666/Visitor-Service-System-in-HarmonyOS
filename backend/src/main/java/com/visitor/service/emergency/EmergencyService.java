@@ -8,6 +8,7 @@ import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -60,8 +61,13 @@ public class EmergencyService {
     }
 
     public List<EmergencyResponse> listPublished() {
+        LocalDateTime now = LocalDateTime.now();
         return emergencyInfoRepository.findByStatusOrderByCreatedAtDesc(EmergencyStatus.PUBLISHED)
-                .stream().map(EmergencyResponse::from).toList();
+                .stream()
+                .filter(item -> (item.getValidFrom() == null || !item.getValidFrom().isAfter(now))
+                        && (item.getValidUntil() == null || !item.getValidUntil().isBefore(now)))
+                .map(EmergencyResponse::from)
+                .toList();
     }
 
     public List<EmergencyResponse> listAll() {

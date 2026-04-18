@@ -8,6 +8,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.NoSuchElementException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -34,6 +36,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "No permission"));
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoSuchElement(NoSuchElementException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.failure(ErrorCode.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

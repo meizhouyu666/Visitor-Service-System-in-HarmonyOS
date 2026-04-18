@@ -1,4 +1,4 @@
-﻿import { AuthStore } from '../common/state/AuthStore'
+import { AuthStore } from '../common/state/AuthStore'
 import { UserRole } from '../common/model/ApiModels'
 import { ComplaintPage, ComplaintMode } from './modules/ComplaintPage'
 import { EmergencyPage, EmergencyMode } from './modules/EmergencyPage'
@@ -32,36 +32,36 @@ struct Index {
     switch (role) {
       case 'VISITOR':
         return [
-          { key: 'complaint-visitor', title: 'Complaints' },
-          { key: 'emergency-visitor', title: 'Emergency' },
-          { key: 'hotel-visitor', title: 'Hotels' },
-          { key: 'scenic', title: 'Scenic & Routes' },
-          { key: 'dining', title: 'Dining & Shows' },
-          { key: 'weather', title: 'Weather & Traffic' }
+          { key: 'complaint-visitor', title: '我的投诉' },
+          { key: 'emergency-visitor', title: '应急信息' },
+          { key: 'hotel-visitor', title: '酒店查询' },
+          { key: 'scenic', title: '景区与线路' },
+          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'weather', title: '天气与路况' }
         ]
       case 'COMPLAINT_HANDLER':
-        return [{ key: 'complaint-handler', title: 'Complaint Handling' }]
+        return [{ key: 'complaint-handler', title: '投诉处理' }]
       case 'EMERGENCY_WRITER':
-        return [{ key: 'emergency-writer', title: 'Emergency Drafting' }]
+        return [{ key: 'emergency-writer', title: '应急发布' }]
       case 'APPROVER':
         return [
-          { key: 'complaint-approver', title: 'Complaint Approval' },
-          { key: 'emergency-approver', title: 'Emergency Approval' }
+          { key: 'complaint-approver', title: '投诉审批' },
+          { key: 'emergency-approver', title: '应急审批' }
         ]
       case 'HOTEL_MANAGER':
-        return [{ key: 'hotel-manager', title: 'Hotel Management' }]
+        return [{ key: 'hotel-manager', title: '酒店管理' }]
       case 'SYSTEM_ADMIN':
       case 'ADMIN':
         return [
-          { key: 'complaint-admin', title: 'Complaint Admin' },
-          { key: 'emergency-admin', title: 'Emergency Admin' },
-          { key: 'hotel-admin', title: 'Hotel Admin' },
-          { key: 'scenic', title: 'Scenic & Routes' },
-          { key: 'dining', title: 'Dining & Shows' },
-          { key: 'weather', title: 'Weather & Traffic' }
+          { key: 'complaint-admin', title: '投诉管理' },
+          { key: 'emergency-admin', title: '应急管理' },
+          { key: 'hotel-admin', title: '酒店管理' },
+          { key: 'scenic', title: '景区与线路' },
+          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'weather', title: '天气与路况' }
         ]
       default:
-        return [{ key: 'complaint-visitor', title: 'Complaints' }]
+        return [{ key: 'complaint-visitor', title: '我的投诉' }]
     }
   }
 
@@ -125,12 +125,12 @@ struct Index {
   private LoginView(): void {
     Column({ space: 10 }) {
       Column({ space: 16 }) {
-        Text('Visitor Service System')
+        Text('游客服务系统')
           .fontSize(26)
           .fontWeight(FontWeight.Bold)
           .fontColor('#1F2937')
 
-        TextInput({ placeholder: 'Username', text: this.username })
+        TextInput({ placeholder: '账号', text: this.username })
           .onChange((value: string) => {
             this.username = value
           })
@@ -140,7 +140,7 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        TextInput({ placeholder: 'Password', text: this.password })
+        TextInput({ placeholder: '密码', text: this.password })
           .type(InputType.Password)
           .onChange((value: string) => {
             this.password = value
@@ -151,7 +151,7 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        Button(this.authStore.loading ? 'Signing in...' : 'Sign in')
+        Button(this.authStore.loading ? '登录中...' : '登录')
           .enabled(!this.authStore.loading)
           .onClick(() => {
             this.doLogin()
@@ -166,7 +166,7 @@ struct Index {
           Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
         }
 
-        Text('Demo users: visitor/admin/handler/writer/approver/hoteladmin/sysadmin')
+        Text('演示账号：visitor/admin/handler/writer/approver/hoteladmin/sysadmin')
           .fontSize(12)
           .fontColor('#6B7280')
       }
@@ -187,13 +187,13 @@ struct Index {
     Column() {
       Row({ space: 8 }) {
         Column({ space: 2 }) {
-          Text(`Welcome: ${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
-          Text(`Role: ${this.authStore.getRole()}`).fontSize(12).fontColor('#6B7280')
+          Text(`欢迎你：${this.authStore.currentUser?.displayName ?? ''}`).fontSize(16).fontWeight(FontWeight.Medium)
+          Text(`当前角色：${this.authStore.getRoleLabel()}`).fontSize(12).fontColor('#6B7280')
         }.alignItems(HorizontalAlign.Start)
 
         Blank()
 
-        Button('Logout')
+        Button('退出登录')
           .height(30)
           .onClick(() => this.authStore.logout())
       }

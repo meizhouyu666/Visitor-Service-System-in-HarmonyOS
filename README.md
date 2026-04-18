@@ -5,15 +5,15 @@
 ## 仓库结构
 
 - `backend/`：Spring Boot + MySQL + JWT + OpenAPI
-- `frontend/harmony-app/`：HarmonyOS ArkTS 前端骨架（Stage Model）
-- `docs/`：最小接口契约与测试运行文档
+- `frontend/harmony-app/`：HarmonyOS ArkTS 前端（Stage Model）
+- `docs/`：接口契约、测试与交付文档
 
 ## 快速开始
 
 1. 克隆仓库。
 2. 创建自己的功能分支。
 3. 开发对应模块并推送分支。
-4. 发起合并到 `main` 的 Pull Request。
+4. 发起合并到 `main` 的 Pull Request（或由管理员直接合并）。
 
 ## 分支命名规范
 
@@ -43,7 +43,7 @@ Swagger 页面：
 
 ### v0.2.0（阶段二前后端统一版）
 
-本版本合并了本日两次推送，目标是将项目从“骨架阶段”推进到“可联调演示阶段”，并完成前后端角色与接口统一。
+本版本合并了当日两次推送，目标是将项目从“骨架阶段”推进到“可联调演示阶段”，并完成前后端角色与接口统一。
 
 1. 前端更新（提交：`0ac6c40`）
 - 完成六角色导航与入口分离（含 `ADMIN` 兼容）。
@@ -71,7 +71,6 @@ Swagger 页面：
 - 本版本按协作约定未执行本地 build/模拟器验证，需由测试同学在 DevEco 与后端环境中回归。
 - 需持续避免提交本机产物与个人环境配置（如 `.preview`、`oh_modules`、个人 IP、个人密码）。
 
-
 ## 版本说明（2026-04-18）
 
 ### v0.2.1（需求差距交付包）
@@ -87,3 +86,20 @@ Swagger 页面：
 - 兼容性承诺：保持现有项目架构边界，组员拉取最新代码后无需新增本地配置即可启动。
 - 接口策略：旧接口保持可用（兼容层优先），新增能力通过增量方式落地。
 - 发布要求：后续每次提交按模板补充 README 版本说明与验证结果。
+
+### v0.2.2（P0 闭环统一落地）
+
+- 投诉链路补齐：新增驳回、分派、时间线能力，状态扩展 `REJECTED`。
+- 权限规则收口：
+  - `approve/reject/assign`：`APPROVER | ADMIN | SYSTEM_ADMIN`
+  - `process/close`：`COMPLAINT_HANDLER | ADMIN | SYSTEM_ADMIN`
+  - `VISITOR`：创建、查看本人、结案后评价
+- 应急游客列表增加有效期过滤：仅返回 `PUBLISHED` 且处于有效窗口内的数据（`validFrom`/`validUntil` 支持空值语义）。
+- 数据库增量迁移落地：
+  - `V2__complaint_workflow_extensions.sql`
+  - `V3__complaint_timeline.sql`
+- 异常映射增强：`NoSuchElementException` 统一返回 `404/NOT_FOUND`，避免落入 500。
+- 前端投诉页完成可用闭环：审批/驳回/分派动作、详情时间线、处理人/驳回信息展示、中文文案统一。
+- 修复首页标签页切换问题：`Index.ets` 改为按 `tab key` 渲染，解决“点击标签未刷新页面”问题。
+- 文档同步：更新 `docs/openapi-minimal.yaml` 与 `docs/testing-runbook.md`。
+- 仓库卫生：未引入 `entry/.preview/**`、`oh_modules/.ohpm/**`、个人 IP、个人密码。

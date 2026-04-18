@@ -31,6 +31,9 @@ public class Complaint {
     @Column(name = "closure_comment", columnDefinition = "TEXT")
     private String closureComment;
 
+    @Column(name = "rejection_comment", columnDefinition = "TEXT")
+    private String rejectionComment;
+
     @Column(name = "rating")
     private Integer rating;
 
@@ -41,6 +44,10 @@ public class Complaint {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "processed_by")
     private UserAccount processedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignee_id")
+    private UserAccount assignee;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -134,6 +141,22 @@ public class Complaint {
 
     public void setProcessedBy(UserAccount processedBy) {
         this.processedBy = processedBy;
+    }
+
+    public UserAccount getAssignee() {
+        return assignee;
+    }
+
+    public void setAssignee(UserAccount assignee) {
+        this.assignee = assignee;
+    }
+
+    public String getRejectionComment() {
+        return rejectionComment;
+    }
+
+    public void setRejectionComment(String rejectionComment) {
+        this.rejectionComment = rejectionComment;
     }
 
     public Instant getCreatedAt() {
