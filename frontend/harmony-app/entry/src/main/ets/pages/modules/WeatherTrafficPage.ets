@@ -1,4 +1,4 @@
-import { TrafficResponse, WeatherResponse } from '../../common/model/ApiModels'
+﻿import { TrafficResponse, WeatherResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
 @Component

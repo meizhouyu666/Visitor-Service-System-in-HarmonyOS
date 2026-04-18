@@ -1,4 +1,4 @@
-export interface ApiResponse<T> {
+﻿export interface ApiResponse<T> {
   code: number
   message: string
   data: T
@@ -24,6 +24,34 @@ export interface LoginResponse {
   username: string
   displayName: string
   role: UserRole | string
+}
+
+export interface RegisterRequest {
+  username: string
+  password: string
+  displayName: string
+}
+
+export interface RegisterResponse {
+  username: string
+  displayName: string
+  role: UserRole | string
+}
+
+export interface RequestResetCodeRequest {
+  username: string
+}
+
+export interface RequestResetCodeResponse {
+  username: string
+  debugCode: string
+  expiresAt: string
+}
+
+export interface ResetPasswordRequest {
+  username: string
+  code: string
+  newPassword: string
 }
 
 export interface CurrentUser {
@@ -74,6 +102,15 @@ export interface ComplaintTimelineItem {
   comment: string | null
   actor: string | null
   createdAt: string
+}
+
+export interface ComplaintQueryFilter {
+  status: string
+  createdBy: string
+  assignee: string
+  keyword: string
+  from: string
+  to: string
 }
 
 export interface EmergencyItem {
@@ -179,3 +216,4 @@ export interface TrafficResponse {
   suggestRoute: string
   takeTime: string
 }
+

@@ -1,9 +1,12 @@
-import { http } from '@kit.NetworkKit'
+﻿import { http } from '@kit.NetworkKit'
 import { ApiResponse } from '../model/ApiModels'
 
-// Team default for emulator -> host machine.
-// For physical device testing, use developer's LAN IP locally (do not commit personal IPs).
+// 团队默认地址：模拟器访问宿主机后端
+// 真机联调时可本地改为局域网地址，但不要提交个人 IP
 const API_BASE_URL: string = 'http://10.0.2.2:8080'
+
+type RequestPayloadValue = string | number | boolean | null
+type RequestPayload = Record<string, RequestPayloadValue | undefined>
 
 export class ApiClient {
   private token: string = ''
@@ -16,19 +19,23 @@ export class ApiClient {
     return this.request<T>(path, http.RequestMethod.GET)
   }
 
-  async post<T, R>(path: string, payload: T): Promise<R> {
-    return this.request<R>(path, http.RequestMethod.POST, payload)
+  async post<T extends RequestPayload, R>(path: string, payload: T): Promise<R> {
+    return this.request<R, T>(path, http.RequestMethod.POST, payload)
   }
 
-  async put<T, R>(path: string, payload: T): Promise<R> {
-    return this.request<R>(path, http.RequestMethod.PUT, payload)
+  async put<T extends RequestPayload, R>(path: string, payload: T): Promise<R> {
+    return this.request<R, T>(path, http.RequestMethod.PUT, payload)
   }
 
   async delete<R>(path: string): Promise<R> {
     return this.request<R>(path, http.RequestMethod.DELETE)
   }
 
-  private async request<R>(path: string, method: http.RequestMethod, payload?: unknown): Promise<R> {
+  private async request<R, T extends RequestPayload | undefined = undefined>(
+    path: string,
+    method: http.RequestMethod,
+    payload?: T
+  ): Promise<R> {
     const httpRequest: http.HttpRequest = http.createHttp()
     try {
       const response: http.HttpResponse = await httpRequest.request(
@@ -47,6 +54,8 @@ export class ApiClient {
         throw new Error(body.message)
       }
       return body.data
+    } catch (_error) {
+      throw new Error('请求失败，请稍后重试')
     } finally {
       httpRequest.destroy()
     }

@@ -1,8 +1,9 @@
-import {
+﻿import {
   ComplaintActionRequest,
   ComplaintAssignRequest,
   ComplaintCreateRequest,
   ComplaintItem,
+  ComplaintQueryFilter,
   ComplaintRatingRequest,
   ComplaintTimelineItem
 } from '../../common/model/ApiModels'
@@ -31,6 +32,15 @@ export struct ComplaintPage {
   @State private assigneeInput: string = ''
   @State private ratingInput: string = '5'
 
+  @State private filters: ComplaintQueryFilter = {
+    status: '',
+    createdBy: '',
+    assignee: '',
+    keyword: '',
+    from: '',
+    to: ''
+  }
+
   async aboutToAppear(): Promise<void> {
     await this.loadComplaints()
   }
@@ -45,6 +55,10 @@ export struct ComplaintPage {
 
   private isHandlerMode(): boolean {
     return this.mode === 'handler' || this.mode === 'admin'
+  }
+
+  private showAdvancedFilters(): boolean {
+    return this.isApproverMode() || this.isHandlerMode()
   }
 
   private modeTitle(): string {
@@ -94,11 +108,39 @@ export struct ComplaintPage {
     this.loadTimeline()
   }
 
+  private buildListPath(): string {
+    const params: string[] = []
+
+    if (this.filters.status.trim().length > 0) {
+      params.push(`status=${encodeURIComponent(this.filters.status.trim())}`)
+    }
+    if (this.filters.createdBy.trim().length > 0) {
+      params.push(`createdBy=${encodeURIComponent(this.filters.createdBy.trim())}`)
+    }
+    if (this.filters.assignee.trim().length > 0) {
+      params.push(`assignee=${encodeURIComponent(this.filters.assignee.trim())}`)
+    }
+    if (this.filters.keyword.trim().length > 0) {
+      params.push(`keyword=${encodeURIComponent(this.filters.keyword.trim())}`)
+    }
+    if (this.filters.from.trim().length > 0) {
+      params.push(`from=${encodeURIComponent(this.filters.from.trim())}`)
+    }
+    if (this.filters.to.trim().length > 0) {
+      params.push(`to=${encodeURIComponent(this.filters.to.trim())}`)
+    }
+
+    if (params.length === 0) {
+      return '/api/complaints'
+    }
+    return `/api/complaints?${params.join('&')}`
+  }
+
   private async loadComplaints(): Promise<void> {
     this.loading = true
     this.errorMessage = ''
     try {
-      const list: ComplaintItem[] = await apiClient.get<ComplaintItem[]>('/api/complaints')
+      const list: ComplaintItem[] = await apiClient.get<ComplaintItem[]>(this.buildListPath())
       this.items = [...list]
       this.ensureSelected()
       await this.loadTimeline()
@@ -123,6 +165,18 @@ export struct ComplaintPage {
     } finally {
       this.timelineLoading = false
     }
+  }
+
+  private resetFilters(): void {
+    this.filters = {
+      status: '',
+      createdBy: '',
+      assignee: '',
+      keyword: '',
+      from: '',
+      to: ''
+    }
+    this.loadComplaints()
   }
 
   private async submitComplaint(): Promise<void> {
@@ -310,6 +364,81 @@ export struct ComplaintPage {
   }
 
   @Builder
+  private FilterPanel(): void {
+    Column({ space: 8 }) {
+      Text('筛选条件').fontSize(16).fontWeight(FontWeight.Medium)
+
+      Row({ space: 8 }) {
+        TextInput({ placeholder: '状态（如 SUBMITTED）', text: this.filters.status })
+          .onChange((value: string) => {
+            this.filters = { ...this.filters, status: value }
+          })
+          .layoutWeight(1)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+          .padding(8)
+        TextInput({ placeholder: '关键词（标题/内容）', text: this.filters.keyword })
+          .onChange((value: string) => {
+            this.filters = { ...this.filters, keyword: value }
+          })
+          .layoutWeight(1)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+          .padding(8)
+      }
+
+      Row({ space: 8 }) {
+        TextInput({ placeholder: '开始时间（ISO）', text: this.filters.from })
+          .onChange((value: string) => {
+            this.filters = { ...this.filters, from: value }
+          })
+          .layoutWeight(1)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+          .padding(8)
+        TextInput({ placeholder: '结束时间（ISO）', text: this.filters.to })
+          .onChange((value: string) => {
+            this.filters = { ...this.filters, to: value }
+          })
+          .layoutWeight(1)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(8)
+          .padding(8)
+      }
+
+      if (this.showAdvancedFilters()) {
+        Row({ space: 8 }) {
+          TextInput({ placeholder: '提交人账号', text: this.filters.createdBy })
+            .onChange((value: string) => {
+              this.filters = { ...this.filters, createdBy: value }
+            })
+            .layoutWeight(1)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(8)
+            .padding(8)
+          TextInput({ placeholder: '处理人账号', text: this.filters.assignee })
+            .onChange((value: string) => {
+              this.filters = { ...this.filters, assignee: value }
+            })
+            .layoutWeight(1)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(8)
+            .padding(8)
+        }
+      }
+
+      Row({ space: 8 }) {
+        Button('应用筛选').onClick(() => this.loadComplaints()).layoutWeight(1)
+        Button('重置筛选').onClick(() => this.resetFilters()).layoutWeight(1)
+      }
+    }
+    .alignItems(HorizontalAlign.Start)
+    .padding(12)
+    .backgroundColor('#F3F4F6')
+    .borderRadius(12)
+  }
+
+  @Builder
   private ActionPanel(): void {
     Column({ space: 8 }) {
       Text(this.modeTitle()).fontSize(20).fontWeight(FontWeight.Medium)
@@ -485,13 +614,16 @@ export struct ComplaintPage {
   }
 
   build() {
-    Column({ space: 10 }) {
-      this.ActionPanel()
-      this.ComplaintListPanel()
-      this.TimelinePanel()
+    Scroll() {
+      Column({ space: 10 }) {
+        this.ActionPanel()
+        this.FilterPanel()
+        this.ComplaintListPanel()
+        this.TimelinePanel()
+      }
+      .padding(12)
+      .width('100%')
     }
-    .padding(12)
-    .width('100%')
     .height('100%')
     .backgroundColor('#F9FAFB')
   }

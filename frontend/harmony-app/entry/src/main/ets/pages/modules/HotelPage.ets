@@ -1,4 +1,4 @@
-import { HotelResponse } from '../../common/model/ApiModels'
+﻿import { HotelResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
 export type HotelMode = 'visitor' | 'manager' | 'admin'

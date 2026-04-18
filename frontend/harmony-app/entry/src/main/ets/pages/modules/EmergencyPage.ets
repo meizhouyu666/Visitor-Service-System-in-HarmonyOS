@@ -1,4 +1,4 @@
-import { EmergencyItem, EmergencyRequest } from '../../common/model/ApiModels'
+﻿import { EmergencyItem, EmergencyRequest } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
 export type EmergencyMode = 'visitor' | 'writer' | 'approver' | 'admin'
@@ -116,7 +116,7 @@ export struct EmergencyPage {
     try {
       const payload: EmergencyRequest = this.buildRequest()
       await apiClient.put<EmergencyRequest, EmergencyItem>(`/api/emergency/admin/${this.selectedId}`, payload)
-      this.actionMessage = '已更新草稿'
+      this.actionMessage = '草稿已更新'
       await this.loadItems()
     } catch (_error) {
       this.errorMessage = '更新草稿失败'

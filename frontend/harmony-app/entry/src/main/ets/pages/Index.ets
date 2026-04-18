@@ -1,4 +1,4 @@
-import { AuthStore } from '../common/state/AuthStore'
+﻿import { AuthStore } from '../common/state/AuthStore'
 import { UserRole } from '../common/model/ApiModels'
 import { ComplaintPage, ComplaintMode } from './modules/ComplaintPage'
 import { EmergencyPage, EmergencyMode } from './modules/EmergencyPage'
@@ -6,6 +6,8 @@ import { HotelPage, HotelMode } from './modules/HotelPage'
 import { ScenicRoutePage } from './modules/ScenicRoutePage'
 import { DiningShowPage } from './modules/DiningShowPage'
 import { WeatherTrafficPage } from './modules/WeatherTrafficPage'
+
+type AuthMode = 'login' | 'register' | 'reset'
 
 interface TabItem {
   key: string
@@ -16,15 +18,56 @@ interface TabItem {
 @Component
 struct Index {
   @State private selectedTabKey: string = ''
+  @State private authMode: AuthMode = 'login'
+
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
+  @State private displayName: string = ''
+  @State private resetCode: string = ''
+  @State private newPassword: string = ''
+
   @State private authStore: AuthStore = new AuthStore()
+
+  private switchAuthMode(mode: AuthMode): void {
+    this.authMode = mode
+    this.authStore.errorMessage = ''
+    this.authStore.infoMessage = ''
+    this.resetCode = ''
+    this.newPassword = ''
+  }
 
   private async doLogin(): Promise<void> {
     const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
     if (ok) {
       const tabs: TabItem[] = this.getRoleTabs()
       this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
+    }
+  }
+
+  private async doRegister(): Promise<void> {
+    const ok: boolean = await this.authStore.register({
+      username: this.username,
+      password: this.password,
+      displayName: this.displayName.trim().length > 0 ? this.displayName : this.username
+    })
+    if (ok) {
+      this.switchAuthMode('login')
+    }
+  }
+
+  private async requestCode(): Promise<void> {
+    await this.authStore.requestResetCode({ username: this.username })
+  }
+
+  private async doResetPassword(): Promise<void> {
+    const ok: boolean = await this.authStore.resetPassword({
+      username: this.username,
+      code: this.resetCode,
+      newPassword: this.newPassword
+    })
+    if (ok) {
+      this.password = this.newPassword
+      this.switchAuthMode('login')
     }
   }
 
@@ -36,7 +79,7 @@ struct Index {
           { key: 'emergency-visitor', title: '应急信息' },
           { key: 'hotel-visitor', title: '酒店查询' },
           { key: 'scenic', title: '景区与线路' },
-          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'dining', title: '餐饮娱乐演出' },
           { key: 'weather', title: '天气与路况' }
         ]
       case 'COMPLAINT_HANDLER':
@@ -57,7 +100,7 @@ struct Index {
           { key: 'emergency-admin', title: '应急管理' },
           { key: 'hotel-admin', title: '酒店管理' },
           { key: 'scenic', title: '景区与线路' },
-          { key: 'dining', title: '餐饮娱乐与演出' },
+          { key: 'dining', title: '餐饮娱乐演出' },
           { key: 'weather', title: '天气与路况' }
         ]
       default:
@@ -122,6 +165,27 @@ struct Index {
   }
 
   @Builder
+  private AuthModeSwitch(): void {
+    Row({ space: 8 }) {
+      Button('登录')
+        .onClick(() => this.switchAuthMode('login'))
+        .backgroundColor(this.authMode === 'login' ? '#2563EB' : '#E5E7EB')
+        .fontColor(this.authMode === 'login' ? Color.White : '#4B5563')
+        .layoutWeight(1)
+      Button('注册')
+        .onClick(() => this.switchAuthMode('register'))
+        .backgroundColor(this.authMode === 'register' ? '#2563EB' : '#E5E7EB')
+        .fontColor(this.authMode === 'register' ? Color.White : '#4B5563')
+        .layoutWeight(1)
+      Button('忘记密码')
+        .onClick(() => this.switchAuthMode('reset'))
+        .backgroundColor(this.authMode === 'reset' ? '#2563EB' : '#E5E7EB')
+        .fontColor(this.authMode === 'reset' ? Color.White : '#4B5563')
+        .layoutWeight(1)
+    }
+  }
+
+  @Builder
   private LoginView(): void {
     Column({ space: 10 }) {
       Column({ space: 16 }) {
@@ -129,6 +193,8 @@ struct Index {
           .fontSize(26)
           .fontWeight(FontWeight.Bold)
           .fontColor('#1F2937')
+
+        this.AuthModeSwitch()
 
         TextInput({ placeholder: '账号', text: this.username })
           .onChange((value: string) => {
@@ -140,21 +206,73 @@ struct Index {
           .border({ width: 1, color: '#E5E7EB' })
           .width('100%')
 
-        TextInput({ placeholder: '密码', text: this.password })
-          .type(InputType.Password)
-          .onChange((value: string) => {
-            this.password = value
-          })
-          .padding(12)
-          .borderRadius(8)
-          .backgroundColor('#F9FAFB')
-          .border({ width: 1, color: '#E5E7EB' })
-          .width('100%')
+        if (this.authMode === 'register') {
+          TextInput({ placeholder: '昵称（可选）', text: this.displayName })
+            .onChange((value: string) => {
+              this.displayName = value
+            })
+            .padding(12)
+            .borderRadius(8)
+            .backgroundColor('#F9FAFB')
+            .border({ width: 1, color: '#E5E7EB' })
+            .width('100%')
+        }
 
-        Button(this.authStore.loading ? '登录中...' : '登录')
+        if (this.authMode !== 'reset') {
+          TextInput({ placeholder: '密码', text: this.password })
+            .type(InputType.Password)
+            .onChange((value: string) => {
+              this.password = value
+            })
+            .padding(12)
+            .borderRadius(8)
+            .backgroundColor('#F9FAFB')
+            .border({ width: 1, color: '#E5E7EB' })
+            .width('100%')
+        }
+
+        if (this.authMode === 'reset') {
+          Row({ space: 8 }) {
+            Button('获取验证码')
+              .enabled(!this.authStore.loading)
+              .onClick(() => {
+                this.requestCode()
+              })
+              .layoutWeight(1)
+          }
+
+          TextInput({ placeholder: '验证码（6位）', text: this.resetCode })
+            .onChange((value: string) => {
+              this.resetCode = value
+            })
+            .padding(12)
+            .borderRadius(8)
+            .backgroundColor('#F9FAFB')
+            .border({ width: 1, color: '#E5E7EB' })
+            .width('100%')
+
+          TextInput({ placeholder: '新密码', text: this.newPassword })
+            .type(InputType.Password)
+            .onChange((value: string) => {
+              this.newPassword = value
+            })
+            .padding(12)
+            .borderRadius(8)
+            .backgroundColor('#F9FAFB')
+            .border({ width: 1, color: '#E5E7EB' })
+            .width('100%')
+        }
+
+        Button(this.authStore.loading ? '处理中...' : this.authMode === 'login' ? '登录' : this.authMode === 'register' ? '注册' : '重置密码')
           .enabled(!this.authStore.loading)
           .onClick(() => {
-            this.doLogin()
+            if (this.authMode === 'login') {
+              this.doLogin()
+            } else if (this.authMode === 'register') {
+              this.doRegister()
+            } else {
+              this.doResetPassword()
+            }
           })
           .width('100%')
           .padding(12)
@@ -164,6 +282,9 @@ struct Index {
 
         if (this.authStore.errorMessage.length > 0) {
           Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
+        }
+        if (this.authStore.infoMessage.length > 0) {
+          Text(this.authStore.infoMessage).fontColor('#059669').fontSize(12)
         }
 
         Text('演示账号：visitor/admin/handler/writer/approver/hoteladmin/sysadmin')

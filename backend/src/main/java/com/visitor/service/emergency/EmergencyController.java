@@ -1,4 +1,4 @@
-package com.visitor.service.emergency;
+﻿package com.visitor.service.emergency;
 
 import com.visitor.service.common.ApiResponse;
 import com.visitor.service.emergency.dto.EmergencyRequest;
@@ -6,12 +6,20 @@ import com.visitor.service.emergency.dto.EmergencyResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Emergency Information")
+@Tag(name = "应急信息")
 @RestController
 @RequestMapping("/api/emergency")
 public class EmergencyController {
@@ -22,45 +30,51 @@ public class EmergencyController {
         this.emergencyService = emergencyService;
     }
 
-    @Operation(summary = "List published emergency info for visitors")
+    @Operation(summary = "游客侧应急列表（仅有效期内已发布）")
     @GetMapping
     public ApiResponse<List<EmergencyResponse>> listPublished() {
         return ApiResponse.success(emergencyService.listPublished());
     }
 
-    @Operation(summary = "List all emergency info for admin")
+    @Operation(summary = "管理侧应急列表")
     @GetMapping("/admin")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','APPROVER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<List<EmergencyResponse>> listAll() {
         return ApiResponse.success(emergencyService.listAll());
     }
 
-    @Operation(summary = "Create emergency info draft (admin)")
+    @Operation(summary = "创建应急草稿")
     @PostMapping("/admin")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> create(@Valid @RequestBody EmergencyRequest request, Authentication authentication) {
         return ApiResponse.success(emergencyService.create(authentication.getName(), request));
     }
 
-    @Operation(summary = "Update emergency info (admin)")
+    @Operation(summary = "更新应急草稿")
     @PutMapping("/admin/{id}")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> update(@PathVariable Long id, @Valid @RequestBody EmergencyRequest request) {
         return ApiResponse.success(emergencyService.update(id, request));
     }
 
-    @Operation(summary = "Delete emergency info (admin)")
+    @Operation(summary = "删除应急信息")
     @DeleteMapping("/admin/{id}")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         emergencyService.delete(id);
-        return ApiResponse.successMessage("Deleted");
+        return ApiResponse.successMessage("删除成功");
     }
 
-    @Operation(summary = "Submit emergency info for approval (admin)")
+    @Operation(summary = "提交应急信息待审批")
     @PostMapping("/admin/{id}/submit")
+    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> submit(@PathVariable Long id) {
         return ApiResponse.success(emergencyService.submitForApproval(id));
     }
 
-    @Operation(summary = "Approve and publish emergency info (admin)")
+    @Operation(summary = "审批并发布应急信息")
     @PostMapping("/admin/{id}/approve")
+    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
     public ApiResponse<EmergencyResponse> approve(@PathVariable Long id, Authentication authentication) {
         return ApiResponse.success(emergencyService.approve(id, authentication.getName()));
     }

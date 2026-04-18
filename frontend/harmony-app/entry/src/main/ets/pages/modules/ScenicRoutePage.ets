@@ -1,4 +1,4 @@
-import { ScenicSpotResponse, TravelRouteResponse } from '../../common/model/ApiModels'
+﻿import { ScenicSpotResponse, TravelRouteResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
 @Component
@@ -57,7 +57,7 @@ export struct ScenicRoutePage {
       Row({ space: 8 }) {
         Text('景区查询').fontSize(16).fontWeight(FontWeight.Medium)
         Blank()
-        TextInput({ placeholder: '景区关键字', text: this.scenicKeyword })
+        TextInput({ placeholder: '景区关键词', text: this.scenicKeyword })
           .onChange((value: string) => {
             this.scenicKeyword = value
           })
@@ -99,7 +99,7 @@ export struct ScenicRoutePage {
       Row({ space: 8 }) {
         Text('线路查询').fontSize(16).fontWeight(FontWeight.Medium)
         Blank()
-        TextInput({ placeholder: '线路关键字', text: this.routeKeyword })
+        TextInput({ placeholder: '线路关键词', text: this.routeKeyword })
           .onChange((value: string) => {
             this.routeKeyword = value
           })

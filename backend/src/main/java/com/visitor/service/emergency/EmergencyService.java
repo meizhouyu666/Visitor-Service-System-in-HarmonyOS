@@ -1,4 +1,4 @@
-package com.visitor.service.emergency;
+﻿package com.visitor.service.emergency;
 
 import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;
@@ -76,11 +76,11 @@ public class EmergencyService {
 
     private EmergencyInfo findEmergency(Long id) {
         return emergencyInfoRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Emergency info not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "应急信息不存在"));
     }
 
     private UserAccount findUser(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
     }
 }

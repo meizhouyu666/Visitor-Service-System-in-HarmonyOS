@@ -1,7 +1,7 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: 游客服务系统 API（最小契约）
-  version: 2.0.0
+  version: 2.1.0
 servers:
   - url: http://localhost:8080
 components:
@@ -26,6 +26,32 @@ components:
         username:
           type: string
         password:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        displayName:
+          type: string
+    RequestResetCodeRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      required: [username, code, newPassword]
+      properties:
+        username:
+          type: string
+        code:
+          type: string
+        newPassword:
           type: string
     ComplaintCreateRequest:
       type: object
@@ -72,25 +98,84 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
+  /api/auth/register:
+    post:
+      summary: 注册游客账号
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: OK
+  /api/auth/forgot-password/request-code:
+    post:
+      summary: 申请找回密码验证码（站内 debugCode）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestResetCodeRequest'
+      responses:
+        '200':
+          description: OK
+  /api/auth/forgot-password/reset:
+    post:
+      summary: 使用验证码重置密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: OK
   /api/auth/me:
     get:
       summary: 获取当前用户
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints:
     get:
-      summary: 投诉列表
+      summary: 投诉列表（支持筛选）
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: createdBy
+          schema:
+            type: string
+        - in: query
+          name: assignee
+          schema:
+            type: string
+        - in: query
+          name: keyword
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+        - in: query
+          name: to
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
     post:
       summary: 提交投诉
@@ -103,9 +188,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintCreateRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}:
     get:
       summary: 投诉详情
@@ -114,9 +198,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ComplaintId'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}/timeline:
     get:
       summary: 投诉时间线
@@ -125,9 +208,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ComplaintId'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}/rating:
     post:
       summary: 结案后评价
@@ -142,9 +224,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintRatingRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/approve:
     post:
       summary: 审批通过
@@ -159,9 +240,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/reject:
     post:
       summary: 驳回投诉
@@ -176,9 +256,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/assign:
     post:
       summary: 分派投诉
@@ -193,9 +272,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintAssignRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/process:
     post:
       summary: 处理投诉
@@ -210,9 +288,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/close:
     post:
       summary: 结案投诉
@@ -227,172 +304,185 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency:
     get:
-      summary: 游客侧应急信息（仅有效窗口内已发布）
+      summary: 游客侧应急列表（仅有效窗口内已发布）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin:
     get:
       summary: 管理侧应急列表
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
     post:
       summary: 新建应急草稿
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}:
     put:
       summary: 更新应急草稿
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
     delete:
       summary: 删除应急信息
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}/submit:
     post:
       summary: 提交应急审批
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}/approve:
     post:
       summary: 审批并发布应急信息
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/hotels:
     get:
       summary: 酒店查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/hotels/star:
     get:
-      summary: 星级酒店查询
+      summary: 星级酒店查询（兼容）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/hotels/non-star:
     get:
-      summary: 非星级与乡村酒店查询
+      summary: 非星级/乡村酒店查询（兼容）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/scenic-spots:
     get:
       summary: 景区查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/routes:
     get:
       summary: 线路查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/dining:
     get:
       summary: 餐饮查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/entertainment:
     get:
       summary: 娱乐查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/dining-entertainment:
     get:
       summary: 餐饮娱乐综合查询（兼容）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/performances:
     get:
       summary: 演出查询
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/weather:
     get:
       summary: 天气查询
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/traffic:
     get:
       summary: 路况查询
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/weather-traffic:
     get:
       summary: 天气路况综合查询（兼容）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK

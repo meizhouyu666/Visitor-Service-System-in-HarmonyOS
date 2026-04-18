@@ -1,4 +1,4 @@
-package com.visitor.service.common;
+﻿package com.visitor.service.common;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
-                .orElse("Invalid request");
+                .orElse("请求参数不合法");
         return ResponseEntity.badRequest().body(ApiResponse.failure(ErrorCode.VALIDATION, message));
     }
 
@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "No permission"));
+                .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "无权限访问"));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

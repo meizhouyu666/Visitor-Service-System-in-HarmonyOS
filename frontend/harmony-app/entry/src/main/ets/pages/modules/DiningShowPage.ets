@@ -1,4 +1,4 @@
-import { DiningResponse, EntertainmentResponse, PerformanceResponse } from '../../common/model/ApiModels'
+﻿import { DiningResponse, EntertainmentResponse, PerformanceResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 
 @Component

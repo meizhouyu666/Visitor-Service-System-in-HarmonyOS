@@ -1,10 +1,11 @@
-package com.visitor.service.complaint;
+﻿package com.visitor.service.complaint;
 
 import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;
 import com.visitor.service.complaint.dto.ComplaintActionRequest;
 import com.visitor.service.complaint.dto.ComplaintAssignRequest;
 import com.visitor.service.complaint.dto.ComplaintCreateRequest;
+import com.visitor.service.complaint.dto.ComplaintQueryFilter;
 import com.visitor.service.complaint.dto.ComplaintRatingRequest;
 import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.complaint.dto.ComplaintTimelineResponse;
@@ -12,7 +13,12 @@ import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class ComplaintService {
@@ -42,13 +48,31 @@ public class ComplaintService {
         return ComplaintResponse.from(saved);
     }
 
-    public List<ComplaintResponse> listForUser(String username, boolean canReadAll) {
-        if (canReadAll) {
-            return complaintRepository.findAll().stream()
-                    .map(ComplaintResponse::from)
-                    .toList();
+    public List<ComplaintResponse> listForUser(String username, boolean canReadAll, ComplaintQueryFilter filter) {
+        List<Complaint> source = canReadAll
+                ? complaintRepository.findAllByOrderByCreatedAtDesc()
+                : complaintRepository.findByCreatedByUsernameOrderByCreatedAtDesc(username);
+
+        ComplaintStatus statusFilter = parseStatus(filter.status());
+        Instant from = parseDateTime(filter.from(), "from");
+        Instant to = parseDateTime(filter.to(), "to");
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new BusinessException(ErrorCode.VALIDATION, "开始时间不能晚于结束时间");
         }
-        return complaintRepository.findByCreatedByUsernameOrderByCreatedAtDesc(username).stream()
+
+        String createdByFilter = normalize(filter.createdBy());
+        String assigneeFilter = normalize(filter.assignee());
+        String keywordFilter = normalize(filter.keyword());
+
+        return source.stream()
+                .filter(item -> statusFilter == null || item.getStatus() == statusFilter)
+                .filter(item -> createdByFilter == null || containsIgnoreCase(item.getCreatedBy().getUsername(), createdByFilter))
+                .filter(item -> assigneeFilter == null || (item.getAssignee() != null && containsIgnoreCase(item.getAssignee().getUsername(), assigneeFilter)))
+                .filter(item -> keywordFilter == null
+                        || containsIgnoreCase(item.getTitle(), keywordFilter)
+                        || containsIgnoreCase(item.getContent(), keywordFilter))
+                .filter(item -> from == null || !item.getCreatedAt().isBefore(from))
+                .filter(item -> to == null || !item.getCreatedAt().isAfter(to))
                 .map(ComplaintResponse::from)
                 .toList();
     }
@@ -56,7 +80,7 @@ public class ComplaintService {
     public ComplaintResponse detail(String username, Long id, boolean canReadAll) {
         Complaint complaint = findComplaint(id);
         if (!canReadAll && !complaint.getCreatedBy().getUsername().equals(username)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "No permission to read this complaint");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看该投诉");
         }
         return ComplaintResponse.from(complaint);
     }
@@ -64,7 +88,7 @@ public class ComplaintService {
     public List<ComplaintTimelineResponse> timeline(String username, Long id, boolean canReadAll) {
         Complaint complaint = findComplaint(id);
         if (!canReadAll && !complaint.getCreatedBy().getUsername().equals(username)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "No permission to read this complaint timeline");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看该投诉时间线");
         }
         return complaintTimelineRepository.findByComplaintIdOrderByCreatedAtAsc(id).stream()
                 .map(ComplaintTimelineResponse::from)
@@ -73,7 +97,7 @@ public class ComplaintService {
 
     public ComplaintResponse approve(String approverUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
-        assertStatus(complaint, ComplaintStatus.SUBMITTED, "Only submitted complaint can be approved");
+        assertStatus(complaint, ComplaintStatus.SUBMITTED, "只有待审批投诉可以审批通过");
         UserAccount actor = findUser(approverUsername);
 
         complaint.setStatus(ComplaintStatus.APPROVED);
@@ -88,7 +112,7 @@ public class ComplaintService {
 
     public ComplaintResponse reject(String approverUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
-        assertStatus(complaint, ComplaintStatus.SUBMITTED, "Only submitted complaint can be rejected");
+        assertStatus(complaint, ComplaintStatus.SUBMITTED, "只有待审批投诉可以驳回");
         UserAccount actor = findUser(approverUsername);
 
         complaint.setStatus(ComplaintStatus.REJECTED);
@@ -103,7 +127,7 @@ public class ComplaintService {
     public ComplaintResponse assign(String assignerUsername, Long id, ComplaintAssignRequest request) {
         Complaint complaint = findComplaint(id);
         if (complaint.getStatus() != ComplaintStatus.APPROVED && complaint.getStatus() != ComplaintStatus.IN_PROGRESS) {
-            throw new BusinessException(ErrorCode.BUSINESS, "Complaint can be assigned only after approval");
+            throw new BusinessException(ErrorCode.BUSINESS, "仅审批通过后的投诉可分派");
         }
         UserAccount actor = findUser(assignerUsername);
         UserAccount assignee = findUser(request.assigneeUsername());
@@ -121,7 +145,7 @@ public class ComplaintService {
 
     public ComplaintResponse process(String handlerUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
-        assertStatus(complaint, ComplaintStatus.APPROVED, "Complaint must be approved before processing");
+        assertStatus(complaint, ComplaintStatus.APPROVED, "投诉需先审批通过后才能处理");
         UserAccount actor = findUser(handlerUsername);
 
         complaint.setStatus(ComplaintStatus.RESOLVED);
@@ -135,7 +159,7 @@ public class ComplaintService {
 
     public ComplaintResponse close(String handlerUsername, Long id, ComplaintActionRequest request) {
         Complaint complaint = findComplaint(id);
-        assertStatus(complaint, ComplaintStatus.RESOLVED, "Only resolved complaint can be closed");
+        assertStatus(complaint, ComplaintStatus.RESOLVED, "仅已处理投诉可以结案");
         UserAccount actor = findUser(handlerUsername);
 
         complaint.setStatus(ComplaintStatus.CLOSED);
@@ -150,10 +174,10 @@ public class ComplaintService {
     public ComplaintResponse rate(String username, Long id, ComplaintRatingRequest request) {
         Complaint complaint = findComplaint(id);
         if (!complaint.getCreatedBy().getUsername().equals(username)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "No permission to rate this complaint");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权评价该投诉");
         }
         if (complaint.getStatus() != ComplaintStatus.CLOSED) {
-            throw new BusinessException(ErrorCode.BUSINESS, "Complaint must be closed before rating");
+            throw new BusinessException(ErrorCode.BUSINESS, "仅已结案投诉可评价");
         }
         complaint.setRating(request.rating());
         Complaint saved = complaintRepository.save(complaint);
@@ -179,11 +203,53 @@ public class ComplaintService {
 
     private Complaint findComplaint(Long id) {
         return complaintRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Complaint not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "投诉不存在"));
     }
 
     private UserAccount findUser(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
+    }
+
+    private ComplaintStatus parseStatus(String rawStatus) {
+        String normalized = normalize(rawStatus);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return ComplaintStatus.valueOf(normalized.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(ErrorCode.VALIDATION, "状态值无效：" + rawStatus);
+        }
+    }
+
+    private Instant parseDateTime(String value, String fieldName) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return Instant.parse(normalized);
+        } catch (DateTimeParseException ignore) {
+            try {
+                return LocalDateTime.parse(normalized)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant();
+            } catch (DateTimeParseException ex) {
+                throw new BusinessException(ErrorCode.VALIDATION, "时间格式无效：" + fieldName);
+            }
+        }
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean containsIgnoreCase(String source, String keyword) {
+        return source.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
     }
 }

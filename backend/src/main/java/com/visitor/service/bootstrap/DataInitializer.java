@@ -1,4 +1,4 @@
-package com.visitor.service.bootstrap;
+﻿package com.visitor.service.bootstrap;
 
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
@@ -20,8 +20,13 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        createUserIfAbsent("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
-        createUserIfAbsent("admin", "admin123", "Admin Demo", UserRole.ADMIN);
+        createUserIfAbsent("visitor", "visitor123", "游客演示账号", UserRole.VISITOR);
+        createUserIfAbsent("admin", "admin123", "平台管理员", UserRole.ADMIN);
+        createUserIfAbsent("handler", "handler123", "投诉处理员", UserRole.COMPLAINT_HANDLER);
+        createUserIfAbsent("writer", "writer123", "应急发布员", UserRole.EMERGENCY_WRITER);
+        createUserIfAbsent("approver", "approver123", "审批员", UserRole.APPROVER);
+        createUserIfAbsent("hoteladmin", "hoteladmin123", "酒店管理员", UserRole.HOTEL_MANAGER);
+        createUserIfAbsent("sysadmin", "sysadmin123", "系统管理员", UserRole.SYSTEM_ADMIN);
     }
 
     private void createUserIfAbsent(String username, String rawPassword, String displayName, UserRole role) {

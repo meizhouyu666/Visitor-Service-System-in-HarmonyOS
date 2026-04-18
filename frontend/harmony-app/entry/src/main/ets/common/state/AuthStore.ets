@@ -1,5 +1,15 @@
-import { apiClient } from '../network/ApiClient'
-import { CurrentUser, LoginRequest, LoginResponse, UserRole } from '../model/ApiModels'
+﻿import { apiClient } from '../network/ApiClient'
+import {
+  CurrentUser,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  RequestResetCodeRequest,
+  RequestResetCodeResponse,
+  ResetPasswordRequest,
+  UserRole
+} from '../model/ApiModels'
 
 @Observed
 export class AuthStore {
@@ -7,18 +17,72 @@ export class AuthStore {
   currentUser: CurrentUser | null = null
   loading: boolean = false
   errorMessage: string = ''
+  infoMessage: string = ''
 
   async login(request: LoginRequest): Promise<boolean> {
     this.loading = true
     this.errorMessage = ''
+    this.infoMessage = ''
     try {
       const result: LoginResponse = await apiClient.post<LoginRequest, LoginResponse>('/api/auth/login', request)
       this.token = result.token
       apiClient.setToken(result.token)
       this.currentUser = await apiClient.get<CurrentUser>('/api/auth/me')
+      this.infoMessage = '登录成功'
       return true
     } catch (_error) {
       this.errorMessage = '登录失败：账号或密码错误'
+      return false
+    } finally {
+      this.loading = false
+    }
+  }
+
+  async register(request: RegisterRequest): Promise<boolean> {
+    this.loading = true
+    this.errorMessage = ''
+    this.infoMessage = ''
+    try {
+      const result: RegisterResponse = await apiClient.post<RegisterRequest, RegisterResponse>('/api/auth/register', request)
+      this.infoMessage = `注册成功：${result.username}`
+      return true
+    } catch (_error) {
+      this.errorMessage = '注册失败：用户名可能已存在'
+      return false
+    } finally {
+      this.loading = false
+    }
+  }
+
+  async requestResetCode(request: RequestResetCodeRequest): Promise<RequestResetCodeResponse | null> {
+    this.loading = true
+    this.errorMessage = ''
+    this.infoMessage = ''
+    try {
+      const result: RequestResetCodeResponse = await apiClient.post<RequestResetCodeRequest, RequestResetCodeResponse>(
+        '/api/auth/forgot-password/request-code',
+        request
+      )
+      this.infoMessage = `验证码：${result.debugCode}（有效至 ${result.expiresAt}）`
+      return result
+    } catch (_error) {
+      this.errorMessage = '获取验证码失败：请确认账号是否存在'
+      return null
+    } finally {
+      this.loading = false
+    }
+  }
+
+  async resetPassword(request: ResetPasswordRequest): Promise<boolean> {
+    this.loading = true
+    this.errorMessage = ''
+    this.infoMessage = ''
+    try {
+      await apiClient.post<ResetPasswordRequest, Record<string, string>>('/api/auth/forgot-password/reset', request)
+      this.infoMessage = '密码重置成功，请使用新密码登录'
+      return true
+    } catch (_error) {
+      this.errorMessage = '密码重置失败：验证码错误或已过期'
       return false
     } finally {
       this.loading = false
@@ -30,6 +94,7 @@ export class AuthStore {
     this.currentUser = null
     apiClient.setToken('')
     this.errorMessage = ''
+    this.infoMessage = ''
   }
 
   getRole(): UserRole {
