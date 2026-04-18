@@ -179,6 +179,33 @@ export struct ComplaintPage {
     this.loadComplaints()
   }
 
+  private updateFilter(field: string, value: string): void {
+    const next: ComplaintQueryFilter = {
+      status: this.filters.status,
+      createdBy: this.filters.createdBy,
+      assignee: this.filters.assignee,
+      keyword: this.filters.keyword,
+      from: this.filters.from,
+      to: this.filters.to
+    }
+
+    if (field === 'status') {
+      next.status = value
+    } else if (field === 'createdBy') {
+      next.createdBy = value
+    } else if (field === 'assignee') {
+      next.assignee = value
+    } else if (field === 'keyword') {
+      next.keyword = value
+    } else if (field === 'from') {
+      next.from = value
+    } else if (field === 'to') {
+      next.to = value
+    }
+
+    this.filters = next
+  }
+
   private async submitComplaint(): Promise<void> {
     if (this.titleInput.trim().length === 0 || this.contentInput.trim().length === 0) {
       this.actionMessage = '请先填写标题和内容'
@@ -371,7 +398,7 @@ export struct ComplaintPage {
       Row({ space: 8 }) {
         TextInput({ placeholder: '状态（如 SUBMITTED）', text: this.filters.status })
           .onChange((value: string) => {
-            this.filters = { ...this.filters, status: value }
+            this.updateFilter('status', value)
           })
           .layoutWeight(1)
           .backgroundColor('#FFFFFF')
@@ -379,7 +406,7 @@ export struct ComplaintPage {
           .padding(8)
         TextInput({ placeholder: '关键词（标题/内容）', text: this.filters.keyword })
           .onChange((value: string) => {
-            this.filters = { ...this.filters, keyword: value }
+            this.updateFilter('keyword', value)
           })
           .layoutWeight(1)
           .backgroundColor('#FFFFFF')
@@ -390,7 +417,7 @@ export struct ComplaintPage {
       Row({ space: 8 }) {
         TextInput({ placeholder: '开始时间（ISO）', text: this.filters.from })
           .onChange((value: string) => {
-            this.filters = { ...this.filters, from: value }
+            this.updateFilter('from', value)
           })
           .layoutWeight(1)
           .backgroundColor('#FFFFFF')
@@ -398,7 +425,7 @@ export struct ComplaintPage {
           .padding(8)
         TextInput({ placeholder: '结束时间（ISO）', text: this.filters.to })
           .onChange((value: string) => {
-            this.filters = { ...this.filters, to: value }
+            this.updateFilter('to', value)
           })
           .layoutWeight(1)
           .backgroundColor('#FFFFFF')
@@ -410,7 +437,7 @@ export struct ComplaintPage {
         Row({ space: 8 }) {
           TextInput({ placeholder: '提交人账号', text: this.filters.createdBy })
             .onChange((value: string) => {
-              this.filters = { ...this.filters, createdBy: value }
+              this.updateFilter('createdBy', value)
             })
             .layoutWeight(1)
             .backgroundColor('#FFFFFF')
@@ -418,7 +445,7 @@ export struct ComplaintPage {
             .padding(8)
           TextInput({ placeholder: '处理人账号', text: this.filters.assignee })
             .onChange((value: string) => {
-              this.filters = { ...this.filters, assignee: value }
+              this.updateFilter('assignee', value)
             })
             .layoutWeight(1)
             .backgroundColor('#FFFFFF')

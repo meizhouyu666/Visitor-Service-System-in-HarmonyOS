@@ -5,8 +5,7 @@ import { ApiResponse } from '../model/ApiModels'
 // 真机联调时可本地改为局域网地址，但不要提交个人 IP
 const API_BASE_URL: string = 'http://10.0.2.2:8080'
 
-type RequestPayloadValue = string | number | boolean | null
-type RequestPayload = Record<string, RequestPayloadValue | undefined>
+type RequestPayload = object
 
 export class ApiClient {
   private token: string = ''
