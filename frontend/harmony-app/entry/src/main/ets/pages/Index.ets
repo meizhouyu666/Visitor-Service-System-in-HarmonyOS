@@ -24,7 +24,6 @@ import {
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../common/ui/AppTheme'
-import { PrimaryActionButton } from '../common/ui/UiKit'
 
 type AuthMode = 'login' | 'register' | 'reset'
 type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
@@ -338,10 +337,9 @@ struct Index {
             .width('100%')
         }
 
-        PrimaryActionButton({
-          label: this.authStore.loading ? '处理中...' : this.authMode === 'login' ? '登录' : this.authMode === 'register' ? '注册' : '重置密码',
-          disabled: this.authStore.loading,
-          onPress: () => {
+        Button(this.authStore.loading ? '处理中...' : this.authMode === 'login' ? '登录' : this.authMode === 'register' ? '注册' : '重置密码')
+          .enabled(!this.authStore.loading)
+          .onClick(() => {
             if (this.authMode === 'login') {
               this.doLogin()
             } else if (this.authMode === 'register') {
@@ -349,8 +347,14 @@ struct Index {
             } else {
               this.doResetPassword()
             }
-          }
-        })
+          })
+          .width('100%')
+          .height(44)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .fontWeight(FontWeight.Medium)
+          .shadow(SHADOW_CARD)
 
         if (this.authStore.errorMessage.length > 0) {
           Text(this.authStore.errorMessage).fontColor('#B42318').fontSize(12)
