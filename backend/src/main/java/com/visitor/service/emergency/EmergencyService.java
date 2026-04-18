@@ -29,6 +29,8 @@ public class EmergencyService {
         info.setContent(request.content());
         info.setValidFrom(request.validFrom());
         info.setValidUntil(request.validUntil());
+        info.setAlertLevel(normalizeAlertLevel(request.alertLevel()));
+        info.setAlertType(normalizeAlertType(request.alertType()));
         info.setStatus(EmergencyStatus.DRAFT);
         info.setCreatedBy(user);
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
@@ -40,6 +42,8 @@ public class EmergencyService {
         info.setContent(request.content());
         info.setValidFrom(request.validFrom());
         info.setValidUntil(request.validUntil());
+        info.setAlertLevel(resolveAlertLevel(request.alertLevel(), info.getAlertLevel()));
+        info.setAlertType(resolveAlertType(request.alertType(), info.getAlertType()));
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
@@ -82,5 +86,37 @@ public class EmergencyService {
     private UserAccount findUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
+    }
+
+    private String normalizeAlertLevel(String alertLevel) {
+        if (alertLevel == null || alertLevel.isBlank()) {
+            return "MEDIUM";
+        }
+        String normalized = alertLevel.trim().toUpperCase();
+        if (normalized.equals("HIGH") || normalized.equals("MEDIUM") || normalized.equals("LOW")) {
+            return normalized;
+        }
+        return "MEDIUM";
+    }
+
+    private String normalizeAlertType(String alertType) {
+        if (alertType == null || alertType.isBlank()) {
+            return "GENERAL";
+        }
+        return alertType.trim().toUpperCase();
+    }
+
+    private String resolveAlertLevel(String requestLevel, String fallback) {
+        if (requestLevel == null || requestLevel.isBlank()) {
+            return fallback == null || fallback.isBlank() ? "MEDIUM" : normalizeAlertLevel(fallback);
+        }
+        return normalizeAlertLevel(requestLevel);
+    }
+
+    private String resolveAlertType(String requestType, String fallback) {
+        if (requestType == null || requestType.isBlank()) {
+            return fallback == null || fallback.isBlank() ? "GENERAL" : normalizeAlertType(fallback);
+        }
+        return normalizeAlertType(requestType);
     }
 }

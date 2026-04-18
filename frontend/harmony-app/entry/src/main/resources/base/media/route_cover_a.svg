@@ -1,0 +1,8 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#EAF3FF"/>
+  <path d="M130 520C260 420 390 430 520 510C690 615 850 610 1060 450" stroke="#3B82F6" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="180" cy="500" r="22" fill="#2563EB"/>
+  <circle cx="600" cy="560" r="22" fill="#2563EB"/>
+  <circle cx="1020" cy="470" r="22" fill="#2563EB"/>
+  <text x="90" y="130" fill="#17467A" font-size="46" font-family="Arial, sans-serif" font-weight="700">亲子一日游线路</text>
+</svg>

@@ -1,4 +1,4 @@
-﻿export interface ApiResponse<T> {
+export interface ApiResponse<T> {
   code: number
   message: string
   data: T
@@ -120,6 +120,8 @@ export interface EmergencyItem {
   status: string
   validFrom: string | null
   validUntil: string | null
+  alertLevel?: string
+  alertType?: string
   createdBy: string
   approvedBy: string | null
   createdAt: string
@@ -131,6 +133,8 @@ export interface EmergencyRequest {
   content: string
   validFrom: string | null
   validUntil: string | null
+  alertLevel?: string
+  alertType?: string
 }
 
 export interface HotelResponse {
@@ -144,6 +148,8 @@ export interface HotelResponse {
   hasBreakfast: boolean
   facility: string
   introduction: string
+  availabilityStatus?: string
+  coverImageUrl?: string
 }
 
 export interface ScenicSpotResponse {
@@ -157,6 +163,8 @@ export interface ScenicSpotResponse {
   type: string
   isFree: boolean
   description: string
+  crowdHeat?: number
+  coverImageUrl?: string
 }
 
 export interface TravelRouteResponse {
@@ -215,5 +223,5 @@ export interface TrafficResponse {
   status: string
   suggestRoute: string
   takeTime: string
+  severityLevel?: string
 }
-

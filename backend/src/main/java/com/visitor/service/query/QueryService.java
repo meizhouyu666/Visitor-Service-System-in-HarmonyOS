@@ -28,7 +28,8 @@ public class QueryService {
 
     public List<HotelResponse> hotels(String keyword) {
         String sql = """
-                SELECT id, name, address, star, price, phone, score, has_breakfast, facility, introduction
+                SELECT id, name, address, star, price, phone, score, has_breakfast, facility, introduction,
+                       availability_status, cover_image_url
                 FROM query_hotels
                 """;
         RowMapper<HotelResponse> mapper = (rs, rowNum) -> new HotelResponse(
@@ -41,14 +42,17 @@ public class QueryService {
                 rs.getDouble("score"),
                 rs.getBoolean("has_breakfast"),
                 rs.getString("facility"),
-                rs.getString("introduction")
+                rs.getString("introduction"),
+                rs.getString("availability_status"),
+                rs.getString("cover_image_url")
         );
         return queryByKeyword(sql, mapper, keyword, "name", "address", "introduction");
     }
 
     public List<ScenicSpotResponse> scenicSpots(String keyword) {
         String sql = """
-                SELECT id, name, scenic_area, location, open_time, ticket_price, level, type, is_free, description
+                SELECT id, name, scenic_area, location, open_time, ticket_price, level, type, is_free, description,
+                       crowd_heat, cover_image_url
                 FROM query_scenic_spots
                 """;
         RowMapper<ScenicSpotResponse> mapper = (rs, rowNum) -> new ScenicSpotResponse(
@@ -61,7 +65,9 @@ public class QueryService {
                 rs.getString("level"),
                 rs.getString("type"),
                 rs.getBoolean("is_free"),
-                rs.getString("description")
+                rs.getString("description"),
+                rs.getObject("crowd_heat", Integer.class),
+                rs.getString("cover_image_url")
         );
         return queryByKeyword(sql, mapper, keyword, "name", "location", "description");
     }
@@ -153,7 +159,7 @@ public class QueryService {
 
     public List<TrafficResponse> traffic() {
         String sql = """
-                SELECT from_location, to_location, status, suggest_route, take_time
+                SELECT from_location, to_location, status, suggest_route, take_time, severity_level
                 FROM query_traffic
                 ORDER BY sort_order ASC
                 """;
@@ -162,7 +168,8 @@ public class QueryService {
                 rs.getString("to_location"),
                 rs.getString("status"),
                 rs.getString("suggest_route"),
-                rs.getString("take_time")
+                rs.getString("take_time"),
+                rs.getString("severity_level")
         ));
     }
 
@@ -218,7 +225,7 @@ public class QueryService {
                 ? new WeatherResponse("-", "未知", "-", "-", 0, "暂无天气建议")
                 : weatherList.get(0);
         TrafficResponse mainRoute = trafficList.isEmpty()
-                ? new TrafficResponse("-", "-", "未知", "暂无路线", "-")
+                ? new TrafficResponse("-", "-", "未知", "暂无路线", "-", "UNKNOWN")
                 : trafficList.get(0);
 
         return new WeatherTrafficResponse(

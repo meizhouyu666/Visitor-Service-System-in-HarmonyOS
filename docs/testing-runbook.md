@@ -5,6 +5,10 @@
 - 投诉筛选：多条件筛选与权限边界
 - 查询持久化：`/api/query/*` 改为 MySQL 数据源（保留兼容路由）
 
+补充 P2（游客端 UI 大改）：
+- 游客端导航重构为：首页 / 服务 / 投诉 / 应急
+- 查询/应急新增可选展示字段：房态、封面图、客流热度、预警等级/类型、路况告警级别
+
 ## 1. 环境准备
 
 ### 1.1 必备软件
@@ -56,6 +60,7 @@ mvn spring-boot:run
 - `V3__complaint_timeline.sql`
 - `V4__query_domain_tables.sql`
 - `V5__auth_extension_tables.sql`
+- `V6__ui_enhancement_fields.sql`
 
 ## 3. 前端运行（DevEco）
 

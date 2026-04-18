@@ -9,6 +9,8 @@ public record EmergencyRequest(
         @NotBlank @Size(max = 128) String title,
         @NotBlank String content,
         LocalDateTime validFrom,
-        LocalDateTime validUntil
+        LocalDateTime validUntil,
+        String alertLevel,
+        String alertType
 ) {
 }

@@ -10,7 +10,9 @@ public record ScenicSpotResponse(
         String level,
         String type,
         boolean isFree,
-        String description
+        String description,
+        Integer crowdHeat,
+        String coverImageUrl
 ) {
 }
 

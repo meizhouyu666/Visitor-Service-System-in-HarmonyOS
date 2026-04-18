@@ -1,0 +1,19 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D8E8FF"/>
+      <stop offset="1" stop-color="#9FC2FF"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="400" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5E87C9"/>
+      <stop offset="1" stop-color="#274777"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <circle cx="930" cy="180" r="72" fill="#FFF4C6"/>
+  <path d="M0 510C190 400 320 380 530 458C720 528 890 540 1200 430V720H0V510Z" fill="url(#hill)"/>
+  <path d="M200 550L350 370L520 550H200Z" fill="#315A90"/>
+  <path d="M420 550L590 310L780 550H420Z" fill="#3F6BA7"/>
+  <rect x="565" y="420" width="70" height="130" rx="8" fill="#E9F2FF"/>
+  <text x="70" y="100" fill="#173C70" font-size="52" font-family="Arial, sans-serif" font-weight="700">北屿湖湾 · 今日推荐</text>
+</svg>

@@ -10,7 +10,9 @@ public record HotelResponse(
         double score,
         boolean hasBreakfast,
         String facility,
-        String introduction
+        String introduction,
+        String availabilityStatus,
+        String coverImageUrl
 ) {
 }
 

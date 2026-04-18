@@ -1,7 +1,7 @@
 ﻿openapi: 3.0.3
 info:
   title: 游客服务系统 API（最小契约）
-  version: 2.1.0
+  version: 2.2.0
 servers:
   - url: http://localhost:8080
 components:
@@ -87,6 +87,62 @@ components:
           type: integer
           minimum: 1
           maximum: 5
+    HotelResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        availabilityStatus:
+          type: string
+          description: 可选，房态标签（AVAILABLE/LIMITED/BUSY/FULL）
+        coverImageUrl:
+          type: string
+          nullable: true
+          description: 可选，酒店封面图标识
+    ScenicSpotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        crowdHeat:
+          type: integer
+          nullable: true
+          description: 可选，客流热度百分比（0-100）
+        coverImageUrl:
+          type: string
+          nullable: true
+          description: 可选，景区封面图标识
+    EmergencyResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        alertLevel:
+          type: string
+          nullable: true
+          description: 可选，预警等级（HIGH/MEDIUM/LOW）
+        alertType:
+          type: string
+          nullable: true
+          description: 可选，预警类型（WEATHER/TRAFFIC/GENERAL）
+    TrafficResponse:
+      type: object
+      properties:
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        severityLevel:
+          type: string
+          nullable: true
+          description: 可选，路况告警级别（HIGH/MEDIUM/LOW）
 paths:
   /api/auth/login:
     post:

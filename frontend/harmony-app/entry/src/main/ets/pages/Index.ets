@@ -6,6 +6,8 @@ import { HotelPage, HotelMode } from './modules/HotelPage'
 import { ScenicRoutePage } from './modules/ScenicRoutePage'
 import { DiningShowPage } from './modules/DiningShowPage'
 import { WeatherTrafficPage } from './modules/WeatherTrafficPage'
+import { VisitorHomePage } from './modules/VisitorHomePage'
+import { VisitorServicesPage } from './modules/VisitorServicesPage'
 import {
   RADIUS_LG,
   RADIUS_MD,
@@ -19,13 +21,22 @@ import {
   THEME_SURFACE,
   THEME_SURFACE_MUTED,
   THEME_TEXT_PRIMARY,
-  THEME_TEXT_SECONDARY
+  THEME_TEXT_SECONDARY,
+  THEME_TEXT_TERTIARY
 } from '../common/ui/AppTheme'
+import { PrimaryActionButton } from '../common/ui/UiKit'
 
 type AuthMode = 'login' | 'register' | 'reset'
+type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
 
 interface TabItem {
   key: string
+  title: string
+}
+
+interface VisitorNavItem {
+  key: VisitorNav
+  icon: string
   title: string
 }
 
@@ -34,6 +45,7 @@ interface TabItem {
 struct Index {
   @State private selectedTabKey: string = ''
   @State private authMode: AuthMode = 'login'
+  @State private visitorNav: VisitorNav = 'home'
 
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
@@ -42,6 +54,13 @@ struct Index {
   @State private newPassword: string = ''
 
   @State private authStore: AuthStore = new AuthStore()
+
+  private visitorNavItems: VisitorNavItem[] = [
+    { key: 'home', icon: '🏠', title: '首页' },
+    { key: 'services', icon: '🧭', title: '服务' },
+    { key: 'complaint', icon: '💬', title: '投诉' },
+    { key: 'emergency', icon: '🚨', title: '应急' }
+  ]
 
   private switchAuthMode(mode: AuthMode): void {
     this.authMode = mode
@@ -56,6 +75,7 @@ struct Index {
     if (ok) {
       const tabs: TabItem[] = this.getRoleTabs()
       this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
+      this.visitorNav = 'home'
     }
   }
 
@@ -84,6 +104,10 @@ struct Index {
       this.password = this.newPassword
       this.switchAuthMode('login')
     }
+  }
+
+  private isVisitor(): boolean {
+    return this.authStore.getRole() === 'VISITOR'
   }
 
   private tabsForRole(role: UserRole): TabItem[] {
@@ -143,12 +167,25 @@ struct Index {
     return this.getSafeSelectedTabKey() === key
   }
 
+  private isVisitorNavSelected(key: VisitorNav): boolean {
+    return this.visitorNav === key
+  }
+
   private switchTab(key: string): void {
     if (this.selectedTabKey === key) {
       return
     }
-    animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+    animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
       this.selectedTabKey = key
+    })
+  }
+
+  private switchVisitorNav(key: VisitorNav): void {
+    if (this.visitorNav === key) {
+      return
+    }
+    animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
+      this.visitorNav = key
     })
   }
 
@@ -193,25 +230,25 @@ struct Index {
     Row({ space: 8 }) {
       Button('登录')
         .onClick(() => this.switchAuthMode('login'))
-        .backgroundColor(this.authMode === 'login' ? THEME_PRIMARY : THEME_SURFACE_MUTED)
+        .backgroundColor(this.authMode === 'login' ? THEME_PRIMARY : '#EAF2FF')
         .fontColor(this.authMode === 'login' ? Color.White : THEME_TEXT_SECONDARY)
         .borderRadius(RADIUS_PILL)
         .layoutWeight(1)
       Button('注册')
         .onClick(() => this.switchAuthMode('register'))
-        .backgroundColor(this.authMode === 'register' ? THEME_PRIMARY : THEME_SURFACE_MUTED)
+        .backgroundColor(this.authMode === 'register' ? THEME_PRIMARY : '#EAF2FF')
         .fontColor(this.authMode === 'register' ? Color.White : THEME_TEXT_SECONDARY)
         .borderRadius(RADIUS_PILL)
         .layoutWeight(1)
-      Button('忘记密码')
+      Button('找回密码')
         .onClick(() => this.switchAuthMode('reset'))
-        .backgroundColor(this.authMode === 'reset' ? THEME_PRIMARY : THEME_SURFACE_MUTED)
+        .backgroundColor(this.authMode === 'reset' ? THEME_PRIMARY : '#EAF2FF')
         .fontColor(this.authMode === 'reset' ? Color.White : THEME_TEXT_SECONDARY)
         .borderRadius(RADIUS_PILL)
         .layoutWeight(1)
     }
     .padding(4)
-    .backgroundColor(THEME_SURFACE_MUTED)
+    .backgroundColor('#F4F7FD')
     .borderRadius(RADIUS_PILL)
   }
 
@@ -220,9 +257,13 @@ struct Index {
     Column({ space: 10 }) {
       Column({ space: 16 }) {
         Text('游客服务系统')
-          .fontSize(26)
+          .fontSize(30)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)
+
+        Text('极简、清晰、可信赖的旅途服务平台')
+          .fontSize(12)
+          .fontColor(THEME_TEXT_TERTIARY)
 
         this.AuthModeSwitch()
 
@@ -269,6 +310,10 @@ struct Index {
                 this.requestCode()
               })
               .layoutWeight(1)
+              .height(42)
+              .borderRadius(RADIUS_PILL)
+              .backgroundColor('#EAF2FF')
+              .fontColor(THEME_PRIMARY)
           }
 
           TextInput({ placeholder: '验证码（6位）', text: this.resetCode })
@@ -293,9 +338,10 @@ struct Index {
             .width('100%')
         }
 
-        Button(this.authStore.loading ? '处理中...' : this.authMode === 'login' ? '登录' : this.authMode === 'register' ? '注册' : '重置密码')
-          .enabled(!this.authStore.loading)
-          .onClick(() => {
+        PrimaryActionButton({
+          label: this.authStore.loading ? '处理中...' : this.authMode === 'login' ? '登录' : this.authMode === 'register' ? '注册' : '重置密码',
+          disabled: this.authStore.loading,
+          onPress: () => {
             if (this.authMode === 'login') {
               this.doLogin()
             } else if (this.authMode === 'register') {
@@ -303,24 +349,19 @@ struct Index {
             } else {
               this.doResetPassword()
             }
-          })
-          .width('100%')
-          .padding(12)
-          .borderRadius(RADIUS_MD)
-          .backgroundColor(THEME_PRIMARY)
-          .fontColor(Color.White)
-          .shadow(SHADOW_CARD)
+          }
+        })
 
         if (this.authStore.errorMessage.length > 0) {
-          Text(this.authStore.errorMessage).fontColor(Color.Red).fontSize(12)
+          Text(this.authStore.errorMessage).fontColor('#B42318').fontSize(12)
         }
         if (this.authStore.infoMessage.length > 0) {
-          Text(this.authStore.infoMessage).fontColor('#12B76A').fontSize(12)
+          Text(this.authStore.infoMessage).fontColor('#0F8A43').fontSize(12)
         }
 
         Text('演示账号：visitor/admin/handler/writer/approver/hoteladmin/sysadmin')
-          .fontSize(12)
-          .fontColor(THEME_TEXT_SECONDARY)
+          .fontSize(11)
+          .fontColor(THEME_TEXT_TERTIARY)
       }
       .width('90%')
       .padding(26)
@@ -332,6 +373,67 @@ struct Index {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(THEME_PAGE_BG)
+  }
+
+  @Builder
+  private VisitorShellView(): void {
+    Column({ space: 10 }) {
+      Row() {
+        Column({ space: 2 }) {
+          Text(`欢迎你，${this.authStore.currentUser?.displayName ?? '游客'}`)
+            .fontSize(17)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Text('游客模式')
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+        }
+        .alignItems(HorizontalAlign.Start)
+
+        Blank()
+
+        Button('退出登录')
+          .height(34)
+          .padding({ left: 14, right: 14 })
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY_SOFT)
+          .fontColor(THEME_PRIMARY)
+          .onClick(() => this.authStore.logout())
+      }
+      .padding(12)
+      .margin({ left: 12, right: 12, top: 12 })
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_LG)
+      .shadow(SHADOW_CARD)
+
+      Column() {
+        this.renderVisitorTab(this.visitorNav)
+      }
+      .layoutWeight(1)
+      .width('100%')
+
+      Row({ space: 8 }) {
+        ForEach(this.visitorNavItems, (item: VisitorNavItem) => {
+          Button(`${item.icon} ${item.title}`)
+            .layoutWeight(1)
+            .height(40)
+            .fontSize(12)
+            .fontWeight(this.isVisitorNavSelected(item.key) ? FontWeight.Medium : FontWeight.Normal)
+            .fontColor(this.isVisitorNavSelected(item.key) ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.isVisitorNavSelected(item.key) ? THEME_PRIMARY : '#EEF3FA')
+            .borderRadius(RADIUS_PILL)
+            .onClick(() => this.switchVisitorNav(item.key))
+        }, (item: VisitorNavItem) => item.key)
+      }
+      .padding(10)
+      .margin({ left: 12, right: 12, bottom: 12 })
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_LG)
+      .shadow(SHADOW_CARD)
+    }
+    .width('100%')
+    .height('100%')
     .backgroundColor(THEME_PAGE_BG)
   }
 
@@ -352,7 +454,8 @@ struct Index {
         Blank()
 
         Button('退出登录')
-          .height(30)
+          .height(34)
+          .padding({ left: 14, right: 14 })
           .borderRadius(RADIUS_PILL)
           .backgroundColor(THEME_PRIMARY_SOFT)
           .fontColor(THEME_PRIMARY)
@@ -372,10 +475,10 @@ struct Index {
               .fontSize(14)
               .fontWeight(this.isTabSelected(tab.key) ? FontWeight.Medium : FontWeight.Normal)
               .fontColor(this.isTabSelected(tab.key) ? Color.White : THEME_TEXT_SECONDARY)
-              .backgroundColor(this.isTabSelected(tab.key) ? THEME_PRIMARY : THEME_SURFACE_MUTED)
+              .backgroundColor(this.isTabSelected(tab.key) ? THEME_PRIMARY : '#EEF3FA')
               .padding({ left: 14, right: 14, top: 8, bottom: 8 })
               .borderRadius(RADIUS_PILL)
-              .height(36)
+              .height(40)
               .stateEffect(true)
               .onClick(() => {
                 this.switchTab(tab.key)
@@ -386,17 +489,15 @@ struct Index {
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
-      .height(58)
+      .height(64)
       .margin({ left: 12, right: 12, bottom: 8 })
       .backgroundColor(THEME_SURFACE)
       .borderRadius(RADIUS_LG)
       .shadow(SHADOW_CARD)
 
-      Divider().height(1).color(THEME_BORDER_SOFT).width('100%')
-
       Column() {
         if (this.getRoleTabs().length > 0) {
-          this.renderTab(this.getSafeSelectedTabKey())
+          this.renderRoleTab(this.getSafeSelectedTabKey())
         }
       }
       .layoutWeight(1)
@@ -408,7 +509,31 @@ struct Index {
   }
 
   @Builder
-  private renderTab(key: string): void {
+  private renderVisitorTab(key: VisitorNav): void {
+    if (key === 'home') {
+      VisitorHomePage({
+        displayName: this.authStore.currentUser?.displayName ?? '游客',
+        onNavigate: (target: string) => {
+          if (target === 'services') {
+            this.switchVisitorNav('services')
+          } else if (target === 'complaint') {
+            this.switchVisitorNav('complaint')
+          } else if (target === 'emergency') {
+            this.switchVisitorNav('emergency')
+          }
+        }
+      })
+    } else if (key === 'services') {
+      VisitorServicesPage()
+    } else if (key === 'complaint') {
+      ComplaintPage({ mode: 'visitor' })
+    } else {
+      EmergencyPage({ mode: 'visitor' })
+    }
+  }
+
+  @Builder
+  private renderRoleTab(key: string): void {
     if (key.startsWith('complaint')) {
       ComplaintPage({ mode: this.complaintModeByKey(key) })
     } else if (key.startsWith('emergency')) {
@@ -427,6 +552,8 @@ struct Index {
   build() {
     if (this.authStore.currentUser === null) {
       this.LoginView()
+    } else if (this.isVisitor()) {
+      this.VisitorShellView()
     } else {
       this.RoleHomeView()
     }

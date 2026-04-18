@@ -1,0 +1,8 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#E6F5FF"/>
+  <circle cx="930" cy="170" r="70" fill="#FFF2B8"/>
+  <path d="M0 590C190 500 350 500 560 570C740 630 920 620 1200 540V720H0V590Z" fill="#2F5F8E"/>
+  <path d="M150 560L340 330L530 560H150Z" fill="#4A7AB0"/>
+  <path d="M420 560L640 260L860 560H420Z" fill="#34689D"/>
+  <text x="70" y="110" fill="#1D4F83" font-size="48" font-family="Arial, sans-serif" font-weight="700">云峰景区</text>
+</svg>

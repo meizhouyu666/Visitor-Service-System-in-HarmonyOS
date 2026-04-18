@@ -1,0 +1,14 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFF5FF"/>
+      <stop offset="1" stop-color="#D8E7FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#b)"/>
+  <rect x="140" y="150" width="920" height="420" rx="38" fill="#FFFFFF"/>
+  <rect x="230" y="240" width="470" height="230" rx="28" fill="#E6F0FF"/>
+  <rect x="740" y="240" width="210" height="120" rx="20" fill="#DCEAFF"/>
+  <rect x="740" y="380" width="210" height="90" rx="20" fill="#EEF4FF"/>
+  <text x="170" y="620" fill="#2A5E95" font-size="46" font-family="Arial, sans-serif" font-weight="700">舒适客房</text>
+</svg>

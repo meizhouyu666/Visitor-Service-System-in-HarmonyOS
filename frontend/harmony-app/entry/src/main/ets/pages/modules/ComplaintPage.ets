@@ -12,6 +12,7 @@ import {
   complaintStatusTone,
   RADIUS_LG,
   RADIUS_MD,
+  RADIUS_PILL,
   SHADOW_CARD,
   THEME_DANGER,
   THEME_PAGE_BG,
@@ -24,6 +25,7 @@ import {
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
+import { EmptyStateCard, FloatingCard, PrimaryActionButton, SectionHeader, StatusBadge, TimelineNode } from '../../common/ui/UiKit'
 
 export type ComplaintMode = 'visitor' | 'approver' | 'handler' | 'admin'
 
@@ -411,6 +413,29 @@ export struct ComplaintPage {
     return action
   }
 
+  private latestComplaint(): ComplaintItem | null {
+    if (this.items.length === 0) {
+      return null
+    }
+    return this.items[0]
+  }
+
+  private complaintStepIndex(status: string): number {
+    if (status === 'SUBMITTED') {
+      return 1
+    }
+    if (status === 'APPROVED' || status === 'REJECTED') {
+      return 2
+    }
+    if (status === 'IN_PROGRESS' || status === 'RESOLVED') {
+      return 3
+    }
+    if (status === 'CLOSED') {
+      return 4
+    }
+    return 1
+  }
+
   @Builder
   private FilterPanel(): void {
     Column({ space: 8 }) {
@@ -718,18 +743,207 @@ export struct ComplaintPage {
     .shadow(SHADOW_CARD)
   }
 
-  build() {
-    Scroll() {
+  @Builder
+  private VisitorCreatePanel(): void {
+    FloatingCard() {
       Column({ space: 10 }) {
-        this.ActionPanel()
-        this.FilterPanel()
-        this.ComplaintListPanel()
-        this.TimelinePanel()
+        SectionHeader({ title: '提交投诉', subtitle: '支持文字描述与附件留痕' })
+
+        TextInput({ placeholder: '投诉标题', text: this.titleInput })
+          .onChange((value: string) => {
+            this.titleInput = value
+          })
+          .backgroundColor('#F8FAFF')
+          .borderRadius(RADIUS_MD)
+          .padding(10)
+
+        TextArea({ placeholder: '请简要描述问题发生的时间、地点与经过', text: this.contentInput })
+          .onChange((value: string) => {
+            this.contentInput = value
+          })
+          .backgroundColor('#F8FAFF')
+          .borderRadius(RADIUS_MD)
+          .height(96)
+          .padding(10)
+
+        Row({ space: 8 }) {
+          Text('上传证据（图片/视频）')
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+          Blank()
+          Text('可选')
+            .fontSize(11)
+            .fontColor(THEME_TEXT_TERTIARY)
+        }
+        .width('100%')
+
+        Row({ space: 10 }) {
+          Column({ space: 6 }) {
+            Text('+')
+              .fontSize(26)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(THEME_PRIMARY)
+            Text('添加附件')
+              .fontSize(11)
+              .fontColor(THEME_TEXT_SECONDARY)
+          }
+          .width(88)
+          .height(88)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .backgroundColor('#F0F5FF')
+          .borderRadius(RADIUS_MD)
+          .border({ width: 1, color: '#CAD9F7' })
+
+          TextInput({ placeholder: '附件链接（可选）', text: this.attachmentInput })
+            .onChange((value: string) => {
+              this.attachmentInput = value
+            })
+            .layoutWeight(1)
+            .backgroundColor('#F8FAFF')
+            .borderRadius(RADIUS_MD)
+            .padding(10)
+        }
+        .width('100%')
+
+        PrimaryActionButton({
+          label: this.loading ? '提交中...' : '提交投诉',
+          disabled: this.loading,
+          onPress: () => this.submitComplaint()
+        })
+
+        if (this.actionMessage.length > 0) {
+          Text(this.actionMessage)
+            .fontColor(THEME_SUCCESS)
+            .fontSize(12)
+        }
+        if (this.errorMessage.length > 0) {
+          Text(this.errorMessage)
+            .fontColor(THEME_DANGER)
+            .fontSize(12)
+        }
       }
-      .padding(12)
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+  }
+
+  @Builder
+  private VisitorProgressPanel(): void {
+    const latest: ComplaintItem | null = this.latestComplaint()
+    const step: number = latest === null ? 1 : this.complaintStepIndex(latest.status)
+    FloatingCard() {
+      Column({ space: 10 }) {
+        Row() {
+          SectionHeader({ title: '投诉进度', subtitle: '全流程状态闭环跟踪' })
+          Blank()
+          if (latest !== null) {
+            StatusBadge({ label: this.statusLabel(latest.status), tone: 'primary' })
+          }
+        }
+        .width('100%')
+
+        TimelineNode({ title: '已提交', detail: '投诉已进入系统', active: step === 1, completed: step > 1 })
+        TimelineNode({ title: '审批中', detail: '等待审批员处理', active: step === 2, completed: step > 2 })
+        TimelineNode({ title: '处理中', detail: '处理人正在跟进', active: step === 3, completed: step > 3 })
+        TimelineNode({ title: '已结案', detail: '流程已闭环', active: step === 4, completed: step >= 4 })
+
+        Row({ space: 8 }) {
+          TextInput({ placeholder: '满意度（1-5）', text: this.ratingInput })
+            .onChange((value: string) => {
+              this.ratingInput = value
+            })
+            .layoutWeight(1)
+            .backgroundColor('#F8FAFF')
+            .borderRadius(RADIUS_MD)
+            .padding(10)
+          Button('提交评价')
+            .onClick(() => this.rateComplaint())
+            .height(40)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+  }
+
+  @Builder
+  private VisitorHistoryPanel(): void {
+    FloatingCard() {
+      Column({ space: 10 }) {
+        SectionHeader({ title: '历史投诉', subtitle: '按时间倒序展示最近记录' })
+        if (this.loading) {
+          EmptyStateCard({ message: '投诉记录加载中...' })
+        } else if (this.items.length === 0) {
+          EmptyStateCard({ message: '你还没有提交过投诉记录。' })
+        } else {
+          ForEach(this.items, (item: ComplaintItem) => {
+            Column({ space: 6 }) {
+              Row() {
+                Text(item.title)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(THEME_TEXT_PRIMARY)
+                  .layoutWeight(1)
+                StatusBadge({ label: this.statusLabel(item.status), tone: 'primary' })
+              }
+              .width('100%')
+              Text(item.content)
+                .fontSize(12)
+                .fontColor(THEME_TEXT_SECONDARY)
+                .maxLines(2)
+              Text(`更新时间：${item.updatedAt}`)
+                .fontSize(10)
+                .fontColor(THEME_TEXT_TERTIARY)
+            }
+            .width('100%')
+            .padding(10)
+            .backgroundColor(this.selectedId === item.id ? '#EEF4FF' : '#F8FAFF')
+            .borderRadius(RADIUS_MD)
+            .onClick(() => this.selectComplaint(item.id))
+          }, (item: ComplaintItem) => `${item.id}`)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+  }
+
+  @Builder
+  private VisitorView(): void {
+    Scroll() {
+      Column({ space: 12 }) {
+        this.VisitorCreatePanel()
+        this.VisitorProgressPanel()
+        this.VisitorHistoryPanel()
+      }
+      .padding({ left: 12, right: 12, top: 12, bottom: 96 })
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
     .height('100%')
     .backgroundColor(THEME_PAGE_BG)
+  }
+
+  build() {
+    if (this.isVisitorMode()) {
+      this.VisitorView()
+    } else {
+      Scroll() {
+        Column({ space: 10 }) {
+          this.ActionPanel()
+          this.FilterPanel()
+          this.ComplaintListPanel()
+          this.TimelinePanel()
+        }
+        .padding(12)
+        .width('100%')
+      }
+      .height('100%')
+      .backgroundColor(THEME_PAGE_BG)
+    }
   }
 }
