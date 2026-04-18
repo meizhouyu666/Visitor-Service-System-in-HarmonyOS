@@ -1,4 +1,4 @@
-﻿package com.visitor.service.auth.dto;
+package com.visitor.service.auth.dto;
 
 import com.visitor.service.user.UserRole;
 

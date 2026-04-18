@@ -1,4 +1,4 @@
-﻿package com.visitor.service.query.dto;
+package com.visitor.service.query.dto;
 
 public record HotelResponse(
         String id,

@@ -1,4 +1,4 @@
-﻿package com.visitor.service.emergency;
+package com.visitor.service.emergency;
 
 import com.visitor.service.common.ApiResponse;
 import com.visitor.service.emergency.dto.EmergencyRequest;

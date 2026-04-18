@@ -1,4 +1,4 @@
-﻿package com.visitor.service.emergency;
+package com.visitor.service.emergency;
 
 import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;

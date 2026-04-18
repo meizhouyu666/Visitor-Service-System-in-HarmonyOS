@@ -1,4 +1,4 @@
-﻿package com.visitor.service.query;
+package com.visitor.service.query;
 
 import com.visitor.service.query.dto.DiningResponse;
 import com.visitor.service.query.dto.EntertainmentResponse;

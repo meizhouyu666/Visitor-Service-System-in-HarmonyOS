@@ -1,4 +1,4 @@
-﻿package com.visitor.service.common;
+package com.visitor.service.common;
 
 import java.time.Instant;
 

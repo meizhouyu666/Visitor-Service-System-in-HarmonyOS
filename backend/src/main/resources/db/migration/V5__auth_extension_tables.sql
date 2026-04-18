@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS password_reset_codes (
+CREATE TABLE IF NOT EXISTS password_reset_codes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     code VARCHAR(6) NOT NULL,

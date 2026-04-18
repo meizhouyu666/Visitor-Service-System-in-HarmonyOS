@@ -1,4 +1,4 @@
-﻿package com.visitor.service.auth;
+package com.visitor.service.auth;
 
 import com.visitor.service.user.UserAccount;
 import jakarta.persistence.Column;

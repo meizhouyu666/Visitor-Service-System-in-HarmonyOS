@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS query_hotels (
+CREATE TABLE IF NOT EXISTS query_hotels (
     id VARCHAR(32) PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
     address VARCHAR(255) NOT NULL,
