@@ -2,13 +2,15 @@ import { HotelResponse, ScenicSpotResponse, TravelRouteResponse } from '../../co
 import { apiClient } from '../../common/network/ApiClient'
 import {
   RADIUS_MD,
+  RADIUS_PILL,
+  THEME_DANGER,
   THEME_PAGE_BG,
   THEME_PRIMARY,
+  THEME_SURFACE,
   THEME_TEXT_PRIMARY,
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FilterChip, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
 import { DiningShowPage } from './DiningShowPage'
 
 export type VisitorServiceTab = 'routes' | 'dining'
@@ -16,6 +18,26 @@ type ServiceFilter = 'all' | 'hotel' | 'scenic' | 'route'
 type LevelFilter = 'all' | 'high' | 'normal'
 type AreaFilter = 'all' | '古城' | '滨江' | '景区'
 type PriceFilter = 'all' | '0-100' | '100-300' | '300-600' | '600+'
+
+class PriceRangeModel {
+  minPrice: number | undefined
+  maxPrice: number | undefined
+
+  constructor(minPrice: number | undefined, maxPrice: number | undefined) {
+    this.minPrice = minPrice
+    this.maxPrice = maxPrice
+  }
+}
+
+class QueryParam {
+  key: string
+  value: string | number | undefined
+
+  constructor(key: string, value: string | number | undefined) {
+    this.key = key
+    this.value = value
+  }
+}
 
 @Component
 export struct VisitorServicesPage {
@@ -37,20 +59,20 @@ export struct VisitorServicesPage {
     await this.loadRouteData()
   }
 
-  private parsePriceFilter(): { minPrice: number | undefined; maxPrice: number | undefined } {
+  private parsePriceFilter(): PriceRangeModel {
     if (this.priceFilter === '0-100') {
-      return { minPrice: 0, maxPrice: 100 }
+      return new PriceRangeModel(0, 100)
     }
     if (this.priceFilter === '100-300') {
-      return { minPrice: 100, maxPrice: 300 }
+      return new PriceRangeModel(100, 300)
     }
     if (this.priceFilter === '300-600') {
-      return { minPrice: 300, maxPrice: 600 }
+      return new PriceRangeModel(300, 600)
     }
     if (this.priceFilter === '600+') {
-      return { minPrice: 600, maxPrice: undefined }
+      return new PriceRangeModel(600, undefined)
     }
-    return { minPrice: undefined, maxPrice: undefined }
+    return new PriceRangeModel(undefined, undefined)
   }
 
   private areaParam(): string {
@@ -58,17 +80,6 @@ export struct VisitorServicesPage {
       return ''
     }
     return this.areaFilter
-  }
-
-  private buildQuery(params: Record<string, string | number | undefined>): string {
-    const query: string[] = []
-    Object.keys(params).forEach((key: string) => {
-      const value: string | number | undefined = params[key]
-      if (value !== undefined && `${value}`.trim().length > 0) {
-        query.push(`${key}=${encodeURIComponent(`${value}`)}`)
-      }
-    })
-    return query.length > 0 ? `?${query.join('&')}` : ''
   }
 
   private scenicLevelParam(): string {
@@ -91,23 +102,34 @@ export struct VisitorServicesPage {
     return undefined
   }
 
+  private buildQuery(params: QueryParam[]): string {
+    const pairs: string[] = []
+    params.forEach((item: QueryParam) => {
+      const value: string | number | undefined = item.value
+      if (value !== undefined && `${value}`.trim().length > 0) {
+        pairs.push(`${item.key}=${encodeURIComponent(`${value}`)}`)
+      }
+    })
+    return pairs.length > 0 ? `?${pairs.join('&')}` : ''
+  }
+
   private async loadRouteData(): Promise<void> {
     this.loading = true
     this.errorMessage = ''
     try {
-      const priceRange: { minPrice: number | undefined; maxPrice: number | undefined } = this.parsePriceFilter()
-      const hotelsPath: string = `/api/query/hotels${this.buildQuery({
-        area: this.areaParam(),
-        minPrice: priceRange.minPrice,
-        maxPrice: priceRange.maxPrice,
-        minStar: this.hotelMinStarParam()
-      })}`
-      const scenicPath: string = `/api/query/scenic-spots${this.buildQuery({
-        area: this.areaParam(),
-        level: this.scenicLevelParam(),
-        minPrice: priceRange.minPrice,
-        maxPrice: priceRange.maxPrice
-      })}`
+      const range: PriceRangeModel = this.parsePriceFilter()
+      const hotelsPath: string = `/api/query/hotels${this.buildQuery([
+        new QueryParam('area', this.areaParam()),
+        new QueryParam('minPrice', range.minPrice),
+        new QueryParam('maxPrice', range.maxPrice),
+        new QueryParam('minStar', this.hotelMinStarParam())
+      ])}`
+      const scenicPath: string = `/api/query/scenic-spots${this.buildQuery([
+        new QueryParam('area', this.areaParam()),
+        new QueryParam('level', this.scenicLevelParam()),
+        new QueryParam('minPrice', range.minPrice),
+        new QueryParam('maxPrice', range.maxPrice)
+      ])}`
 
       const hotelList: HotelResponse[] = await apiClient.get<HotelResponse[]>(hotelsPath)
       const scenicData: ScenicSpotResponse[] = await apiClient.get<ScenicSpotResponse[]>(scenicPath)
@@ -123,49 +145,43 @@ export struct VisitorServicesPage {
     }
   }
 
-  private hotelCover(index: number): ResourceStr {
-    return index % 2 === 0 ? $r('app.media.hotel_cover_a') : $r('app.media.hotel_cover_b')
+  private cycleLevelFilter(): void {
+    if (this.levelFilter === 'all') {
+      this.levelFilter = 'high'
+    } else if (this.levelFilter === 'high') {
+      this.levelFilter = 'normal'
+    } else {
+      this.levelFilter = 'all'
+    }
+    this.loadRouteData()
   }
 
-  private scenicCover(index: number): ResourceStr {
-    return index % 2 === 0 ? $r('app.media.scenic_cover_a') : $r('app.media.scenic_cover_b')
+  private cycleAreaFilter(): void {
+    if (this.areaFilter === 'all') {
+      this.areaFilter = '古城'
+    } else if (this.areaFilter === '古城') {
+      this.areaFilter = '滨江'
+    } else if (this.areaFilter === '滨江') {
+      this.areaFilter = '景区'
+    } else {
+      this.areaFilter = 'all'
+    }
+    this.loadRouteData()
   }
 
-  private routeCover(index: number): ResourceStr {
-    return index % 2 === 0 ? $r('app.media.route_cover_a') : $r('app.media.route_cover_b')
-  }
-
-  private availabilityTone(status: string | undefined): 'success' | 'warning' | 'neutral' {
-    if (status === 'AVAILABLE') {
-      return 'success'
+  private cyclePriceFilter(): void {
+    if (this.priceFilter === 'all') {
+      this.priceFilter = '0-100'
+    } else if (this.priceFilter === '0-100') {
+      this.priceFilter = '100-300'
+    } else if (this.priceFilter === '100-300') {
+      this.priceFilter = '300-600'
+    } else if (this.priceFilter === '300-600') {
+      this.priceFilter = '600+'
+    } else {
+      this.priceFilter = 'all'
     }
-    if (status === 'LIMITED') {
-      return 'warning'
-    }
-    return 'neutral'
-  }
-
-  private availabilityLabel(status: string | undefined): string {
-    if (status === 'AVAILABLE') {
-      return '有房'
-    }
-    if (status === 'LIMITED') {
-      return '余量紧张'
-    }
-    if (status === 'BUSY' || status === 'FULL') {
-      return '客满'
-    }
-    return '待确认'
-  }
-
-  private crowdHeatValue(item: ScenicSpotResponse): number {
-    if (item.crowdHeat === undefined || item.crowdHeat < 0) {
-      return 0
-    }
-    if (item.crowdHeat > 100) {
-      return 100
-    }
-    return item.crowdHeat
+    this.loadRouteData()
   }
 
   @Builder
@@ -174,7 +190,7 @@ export struct VisitorServicesPage {
       Button('酒店景区线路')
         .layoutWeight(1)
         .height(38)
-        .borderRadius(999)
+        .borderRadius(RADIUS_PILL)
         .fontColor(this.mainTab === 'routes' ? Color.White : THEME_TEXT_SECONDARY)
         .backgroundColor(this.mainTab === 'routes' ? THEME_PRIMARY : '#EEF3FA')
         .onClick(() => {
@@ -184,7 +200,7 @@ export struct VisitorServicesPage {
       Button('餐饮娱乐演出')
         .layoutWeight(1)
         .height(38)
-        .borderRadius(999)
+        .borderRadius(RADIUS_PILL)
         .fontColor(this.mainTab === 'dining' ? Color.White : THEME_TEXT_SECONDARY)
         .backgroundColor(this.mainTab === 'dining' ? THEME_PRIMARY : '#EEF3FA')
         .onClick(() => {
@@ -195,250 +211,212 @@ export struct VisitorServicesPage {
   }
 
   @Builder
-  private FloatingFilterBar(): void {
-    FloatingCard() {
-      Column({ space: 10 }) {
-        SectionHeader({ title: '服务与线路', subtitle: '等级 / 区域 / 价格 快速筛选' })
-        this.MainTabs()
+  private FilterPanel(): void {
+    Column({ space: 8 }) {
+      this.MainTabs()
 
-        if (this.mainTab === 'routes') {
-          Row({ space: 8 }) {
-            FilterChip({
-              label: '全部',
-              selected: this.filter === 'all',
-              onToggle: () => {
-                this.filter = 'all'
-              }
+      if (this.mainTab === 'routes') {
+        Row({ space: 8 }) {
+          Button('全部')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .fontColor(this.filter === 'all' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'all' ? THEME_PRIMARY : '#EEF3FA')
+            .onClick(() => {
+              this.filter = 'all'
             })
-            FilterChip({
-              label: '酒店',
-              selected: this.filter === 'hotel',
-              onToggle: () => {
-                this.filter = 'hotel'
-              }
+          Button('酒店')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .fontColor(this.filter === 'hotel' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'hotel' ? THEME_PRIMARY : '#EEF3FA')
+            .onClick(() => {
+              this.filter = 'hotel'
             })
-            FilterChip({
-              label: '景区',
-              selected: this.filter === 'scenic',
-              onToggle: () => {
-                this.filter = 'scenic'
-              }
+          Button('景区')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .fontColor(this.filter === 'scenic' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'scenic' ? THEME_PRIMARY : '#EEF3FA')
+            .onClick(() => {
+              this.filter = 'scenic'
             })
-            FilterChip({
-              label: '线路',
-              selected: this.filter === 'route',
-              onToggle: () => {
-                this.filter = 'route'
-              }
+          Button('线路')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .fontColor(this.filter === 'route' ? Color.White : THEME_TEXT_SECONDARY)
+            .backgroundColor(this.filter === 'route' ? THEME_PRIMARY : '#EEF3FA')
+            .onClick(() => {
+              this.filter = 'route'
             })
-          }
-          .width('100%')
-
-          Row({ space: 8 }) {
-            FilterChip({
-              label: this.levelFilter === 'all' ? '等级: 全部' : this.levelFilter === 'high' ? '等级: 高等级' : '等级: 标准',
-              selected: this.levelFilter !== 'all',
-              onToggle: () => {
-                this.levelFilter = this.levelFilter === 'all' ? 'high' : this.levelFilter === 'high' ? 'normal' : 'all'
-                this.loadRouteData()
-              }
-            })
-            FilterChip({
-              label: this.areaFilter === 'all' ? '区域: 全部' : `区域: ${this.areaFilter}`,
-              selected: this.areaFilter !== 'all',
-              onToggle: () => {
-                this.areaFilter = this.areaFilter === 'all' ? '古城' : this.areaFilter === '古城' ? '滨江' : this.areaFilter === '滨江' ? '景区' : 'all'
-                this.loadRouteData()
-              }
-            })
-            FilterChip({
-              label: this.priceFilter === 'all' ? '价格: 全部' : `价格: ${this.priceFilter}`,
-              selected: this.priceFilter !== 'all',
-              onToggle: () => {
-                this.priceFilter = this.priceFilter === 'all' ? '0-100' : this.priceFilter === '0-100' ? '100-300' : this.priceFilter === '100-300' ? '300-600' : this.priceFilter === '300-600' ? '600+' : 'all'
-                this.loadRouteData()
-              }
-            })
-            Blank()
-            Button('刷新')
-              .onClick(() => this.loadRouteData())
-              .height(34)
-              .borderRadius(999)
-              .backgroundColor('#EAF2FF')
-              .fontColor(THEME_PRIMARY)
-          }
-          .width('100%')
         }
+        .width('100%')
+
+        Row({ space: 8 }) {
+          Button(this.levelFilter === 'all' ? '等级：全部' : this.levelFilter === 'high' ? '等级：高等级' : '等级：标准')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor('#EEF3FA')
+            .fontColor(THEME_TEXT_SECONDARY)
+            .onClick(() => this.cycleLevelFilter())
+
+          Button(this.areaFilter === 'all' ? '区域：全部' : `区域：${this.areaFilter}`)
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor('#EEF3FA')
+            .fontColor(THEME_TEXT_SECONDARY)
+            .onClick(() => this.cycleAreaFilter())
+
+          Button(this.priceFilter === 'all' ? '价格：全部' : `价格：${this.priceFilter}`)
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor('#EEF3FA')
+            .fontColor(THEME_TEXT_SECONDARY)
+            .onClick(() => this.cyclePriceFilter())
+
+          Blank()
+          Button('刷新')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+            .onClick(() => this.loadRouteData())
+        }
+        .width('100%')
       }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
     }
+    .width('100%')
+    .padding(12)
+    .backgroundColor(THEME_SURFACE)
+    .borderRadius(RADIUS_MD)
   }
 
   @Builder
   private HotelSection(): void {
-    FloatingCard() {
-      Column({ space: 10 }) {
-        SectionHeader({ title: '酒店推荐', subtitle: '房态、评分、价格清晰展示' })
-        if (this.hotels.length === 0) {
-          EmptyStateCard({ message: '暂无酒店数据' })
-        } else {
-          ForEach(this.hotels, (item: HotelResponse, index: number) => {
-            Column({ space: 8 }) {
-              Image(this.hotelCover(index))
-                .width('100%')
-                .height(138)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(RADIUS_MD)
-
-              Row() {
-                Text(item.name)
-                  .fontSize(15)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(THEME_TEXT_PRIMARY)
-                  .layoutWeight(1)
-                StatusBadge({
-                  label: this.availabilityLabel(item.availabilityStatus),
-                  tone: this.availabilityTone(item.availabilityStatus)
-                })
-              }
-              .width('100%')
-
-              Text(`${item.star} 星 · 评分 ${item.score} · ¥${item.price} 起`)
-                .fontSize(12)
-                .fontColor(THEME_TEXT_SECONDARY)
-              Text(item.address)
-                .fontSize(11)
-                .fontColor(THEME_TEXT_TERTIARY)
-                .maxLines(1)
-            }
-            .width('100%')
-            .padding(10)
-            .borderRadius(RADIUS_MD)
-            .backgroundColor('#F8FAFF')
-          }, (item: HotelResponse) => item.id)
+    if (this.hotels.length === 0) {
+      Text('暂无酒店数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.hotels, (item: HotelResponse) => {
+        Column({ space: 6 }) {
+          Text(item.name)
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Text(`${item.star}星 · 评分 ${item.score} · ¥${item.price} 起`)
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+          Text(item.address)
+            .fontSize(11)
+            .fontColor(THEME_TEXT_TERTIARY)
+            .maxLines(1)
         }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+      }, (item: HotelResponse) => item.id)
     }
   }
 
   @Builder
   private ScenicSection(): void {
-    FloatingCard() {
-      Column({ space: 10 }) {
-        SectionHeader({ title: '景区导览', subtitle: '客流热度辅助避峰出行' })
-        if (this.scenicList.length === 0) {
-          EmptyStateCard({ message: '暂无景区数据' })
-        } else {
-          ForEach(this.scenicList, (item: ScenicSpotResponse, index: number) => {
-            Column({ space: 8 }) {
-              Image(this.scenicCover(index))
-                .width('100%')
-                .height(138)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(RADIUS_MD)
-
-              Text(item.name)
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-              Text(`${item.level} · ${item.location} · ¥${item.ticketPrice}`)
-                .fontSize(12)
-                .fontColor(THEME_TEXT_SECONDARY)
-
-              Row({ space: 8 }) {
-                Text('客流热度')
-                  .fontSize(11)
-                  .fontColor(THEME_TEXT_SECONDARY)
-                Progress({ total: 100, value: this.crowdHeatValue(item), type: ProgressType.Linear })
-                  .layoutWeight(1)
-                  .color(THEME_PRIMARY)
-                  .style({ strokeWidth: 6 })
-                Text(`${this.crowdHeatValue(item)}%`)
-                  .fontSize(10)
-                  .fontColor(THEME_TEXT_TERTIARY)
-              }
-              .width('100%')
-            }
-            .width('100%')
-            .padding(10)
-            .borderRadius(RADIUS_MD)
-            .backgroundColor('#F8FAFF')
-          }, (item: ScenicSpotResponse) => item.id)
+    if (this.scenicList.length === 0) {
+      Text('暂无景区数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.scenicList, (item: ScenicSpotResponse) => {
+        Column({ space: 6 }) {
+          Text(item.name)
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Text(`${item.level} · 门票 ¥${item.ticketPrice}`)
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+          Text(item.location)
+            .fontSize(11)
+            .fontColor(THEME_TEXT_TERTIARY)
+            .maxLines(1)
         }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+      }, (item: ScenicSpotResponse) => item.id)
     }
   }
 
   @Builder
   private RouteSection(): void {
-    FloatingCard() {
-      Column({ space: 10 }) {
-        SectionHeader({ title: '线路推荐', subtitle: '难度、时长、适合人群一屏可见' })
-        if (this.routes.length === 0) {
-          EmptyStateCard({ message: '暂无线路数据' })
-        } else {
-          ForEach(this.routes, (item: TravelRouteResponse, index: number) => {
-            Column({ space: 8 }) {
-              Image(this.routeCover(index))
-                .width('100%')
-                .height(138)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(RADIUS_MD)
-
-              Text(item.name)
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-              Text(`时长 ${item.durationHours} 小时 · 难度 ${item.difficulty}`)
-                .fontSize(12)
-                .fontColor(THEME_TEXT_SECONDARY)
-              Text(`适合：${item.suitableFor}`)
-                .fontSize(11)
-                .fontColor(THEME_TEXT_SECONDARY)
-              Text(`覆盖景点：${item.spots}`)
-                .fontSize(11)
-                .fontColor(THEME_TEXT_TERTIARY)
-                .maxLines(1)
-            }
-            .width('100%')
-            .padding(10)
-            .borderRadius(RADIUS_MD)
-            .backgroundColor('#F8FAFF')
-          }, (item: TravelRouteResponse) => item.id)
+    if (this.routes.length === 0) {
+      Text('暂无线路数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.routes, (item: TravelRouteResponse) => {
+        Column({ space: 6 }) {
+          Text(item.name)
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Text(`时长 ${item.durationHours} 小时 · 难度 ${item.difficulty}`)
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+          Text(`适合：${item.suitableFor}`)
+            .fontSize(11)
+            .fontColor(THEME_TEXT_TERTIARY)
+            .maxLines(1)
         }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+      }, (item: TravelRouteResponse) => item.id)
     }
   }
 
   @Builder
   private RouteModeContent(): void {
     if (this.loading) {
-      FloatingCard() {
-        Text('正在加载服务数据...')
-          .fontSize(12)
-          .fontColor(THEME_TEXT_SECONDARY)
-      }
-    } else if (this.errorMessage.length > 0) {
-      FloatingCard() {
-        Column({ space: 8 }) {
-          Text(this.errorMessage).fontSize(12).fontColor('#B42318')
-          Button('重试')
-            .onClick(() => this.loadRouteData())
-            .height(34)
-            .borderRadius(999)
-            .backgroundColor('#FEE4E2')
-            .fontColor('#B42318')
-        }
+      Text('正在加载服务数据...')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else if (this.errorMessage.length > 0) {
+      Column({ space: 8 }) {
+        Text(this.errorMessage)
+          .fontSize(12)
+          .fontColor(THEME_DANGER)
+        Button('重试')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .onClick(() => this.loadRouteData())
       }
+      .width('100%')
+      .padding(12)
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_MD)
+      .alignItems(HorizontalAlign.Start)
     } else {
       if (this.filter === 'all' || this.filter === 'hotel') {
         this.HotelSection()
@@ -454,18 +432,20 @@ export struct VisitorServicesPage {
 
   build() {
     if (this.mainTab === 'dining') {
-      Column({ space: 12 }) {
-        this.FloatingFilterBar()
-        DiningShowPage({ embedded: true })
+      Scroll() {
+        Column({ space: 12 }) {
+          this.FilterPanel()
+          DiningShowPage({ embedded: true })
+        }
+        .padding({ left: 12, right: 12, top: 12, bottom: 0 })
+        .width('100%')
       }
-      .padding({ left: 12, right: 12, top: 12, bottom: 0 })
-      .width('100%')
       .height('100%')
       .backgroundColor(THEME_PAGE_BG)
     } else {
       Scroll() {
         Column({ space: 12 }) {
-          this.FloatingFilterBar()
+          this.FilterPanel()
           this.RouteModeContent()
         }
         .padding({ left: 12, right: 12, top: 12, bottom: 98 })

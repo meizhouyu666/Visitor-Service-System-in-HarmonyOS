@@ -498,7 +498,6 @@ struct Index {
         }
         .width('100%')
         .justifyContent(FlexAlign.Start)
-        .flexWrap(FlexWrap.Wrap)
       }
       .padding({ left: 12, right: 12, top: 6, bottom: 8 })
       .margin({ left: 12, right: 12, bottom: 8 })

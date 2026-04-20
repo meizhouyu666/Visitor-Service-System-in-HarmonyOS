@@ -7,17 +7,36 @@ import {
   THEME_PAGE_BG,
   THEME_PRIMARY,
   THEME_SUCCESS,
+  THEME_SURFACE,
   THEME_SURFACE_MUTED,
   THEME_TEXT_PRIMARY,
   THEME_TEXT_SECONDARY,
-  THEME_TEXT_TERTIARY,
   THEME_WARNING
 } from '../../common/ui/AppTheme'
-import { EmptyStateCard, FilterChip, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
 
 type DiningCategory = 'food' | 'fun' | 'show'
 type AreaFilter = 'all' | '古城' | '滨江' | '景区'
 type PriceFilter = 'all' | '0-100' | '100-300' | '300+'
+
+class PriceRangeModel {
+  minPrice: number | undefined
+  maxPrice: number | undefined
+
+  constructor(minPrice: number | undefined, maxPrice: number | undefined) {
+    this.minPrice = minPrice
+    this.maxPrice = maxPrice
+  }
+}
+
+class QueryParam {
+  key: string
+  value: string | number | undefined
+
+  constructor(key: string, value: string | number | undefined) {
+    this.key = key
+    this.value = value
+  }
+}
 
 @Component
 export struct DiningShowPage {
@@ -49,17 +68,17 @@ export struct DiningShowPage {
     return '文艺演出'
   }
 
-  private parsePriceFilter(): { minPrice: number | undefined; maxPrice: number | undefined } {
+  private parsePriceFilter(): PriceRangeModel {
     if (this.priceFilter === '0-100') {
-      return { minPrice: 0, maxPrice: 100 }
+      return new PriceRangeModel(0, 100)
     }
     if (this.priceFilter === '100-300') {
-      return { minPrice: 100, maxPrice: 300 }
+      return new PriceRangeModel(100, 300)
     }
     if (this.priceFilter === '300+') {
-      return { minPrice: 300, maxPrice: undefined }
+      return new PriceRangeModel(300, undefined)
     }
-    return { minPrice: undefined, maxPrice: undefined }
+    return new PriceRangeModel(undefined, undefined)
   }
 
   private currentArea(): string {
@@ -69,12 +88,12 @@ export struct DiningShowPage {
     return this.areaFilter
   }
 
-  private buildQuery(params: Record<string, string | number | undefined>): string {
+  private buildQuery(params: QueryParam[]): string {
     const pairs: string[] = []
-    Object.keys(params).forEach((key: string) => {
-      const value: string | number | undefined = params[key]
+    params.forEach((item: QueryParam) => {
+      const value: string | number | undefined = item.value
       if (value !== undefined && `${value}`.trim().length > 0) {
-        pairs.push(`${key}=${encodeURIComponent(`${value}`)}`)
+        pairs.push(`${item.key}=${encodeURIComponent(`${value}`)}`)
       }
     })
     return pairs.length > 0 ? `?${pairs.join('&')}` : ''
@@ -84,29 +103,29 @@ export struct DiningShowPage {
     this.loading = true
     this.errorMessage = ''
     try {
-      const range: { minPrice: number | undefined; maxPrice: number | undefined } = this.parsePriceFilter()
+      const range: PriceRangeModel = this.parsePriceFilter()
       const area: string = this.currentArea()
-      const diningPath: string = `/api/query/dining${this.buildQuery({
-        area,
-        minPrice: range.minPrice,
-        maxPrice: range.maxPrice,
-        sortBy: 'distance_asc',
-        limit: 20
-      })}`
-      const entertainmentPath: string = `/api/query/entertainment${this.buildQuery({
-        area,
-        minPrice: range.minPrice,
-        maxPrice: range.maxPrice,
-        sortBy: 'distance_asc',
-        limit: 20
-      })}`
-      const performancePath: string = `/api/query/performances${this.buildQuery({
-        area,
-        minPrice: range.minPrice,
-        maxPrice: range.maxPrice,
-        sortBy: 'time_asc',
-        limit: 20
-      })}`
+      const diningPath: string = `/api/query/dining${this.buildQuery([
+        new QueryParam('area', area),
+        new QueryParam('minPrice', range.minPrice),
+        new QueryParam('maxPrice', range.maxPrice),
+        new QueryParam('sortBy', 'distance_asc'),
+        new QueryParam('limit', 20)
+      ])}`
+      const entertainmentPath: string = `/api/query/entertainment${this.buildQuery([
+        new QueryParam('area', area),
+        new QueryParam('minPrice', range.minPrice),
+        new QueryParam('maxPrice', range.maxPrice),
+        new QueryParam('sortBy', 'distance_asc'),
+        new QueryParam('limit', 20)
+      ])}`
+      const performancePath: string = `/api/query/performances${this.buildQuery([
+        new QueryParam('area', area),
+        new QueryParam('minPrice', range.minPrice),
+        new QueryParam('maxPrice', range.maxPrice),
+        new QueryParam('sortBy', 'time_asc'),
+        new QueryParam('limit', 20)
+      ])}`
 
       const dining: DiningResponse[] = await apiClient.get<DiningResponse[]>(diningPath)
       const entertainment: EntertainmentResponse[] = await apiClient.get<EntertainmentResponse[]>(entertainmentPath)
@@ -126,8 +145,8 @@ export struct DiningShowPage {
     return isOpen === false ? '暂未营业' : '正在营业'
   }
 
-  private isOpenTone(isOpen: boolean | undefined): 'success' | 'warning' {
-    return isOpen === false ? 'warning' : 'success'
+  private isOpenColor(isOpen: boolean | undefined): string {
+    return isOpen === false ? THEME_WARNING : THEME_SUCCESS
   }
 
   private distanceText(distanceMeters: number | undefined): string {
@@ -151,17 +170,17 @@ export struct DiningShowPage {
     return `有票(${remaining ?? 0})`
   }
 
-  private ticketTone(status: string | undefined): 'danger' | 'warning' | 'success' {
+  private ticketColor(status: string | undefined): string {
     if (status === 'SOLD_OUT') {
-      return 'danger'
+      return THEME_DANGER
     }
     if (status === 'LOW_STOCK') {
-      return 'warning'
+      return THEME_WARNING
     }
-    return 'success'
+    return THEME_SUCCESS
   }
 
-  private performanceDateText(showDateTime: string | undefined, showTime: string): string {
+  private performanceTime(showDateTime: string | undefined, showTime: string): string {
     if (showDateTime === undefined || showDateTime.length === 0) {
       return showTime
     }
@@ -176,317 +195,293 @@ export struct DiningShowPage {
     this.actionMessage = `已触发“${name}”预订引导，请继续完成下单`
   }
 
+  private cycleAreaFilter(): void {
+    if (this.areaFilter === 'all') {
+      this.areaFilter = '古城'
+    } else if (this.areaFilter === '古城') {
+      this.areaFilter = '滨江'
+    } else if (this.areaFilter === '滨江') {
+      this.areaFilter = '景区'
+    } else {
+      this.areaFilter = 'all'
+    }
+    this.loadAll()
+  }
+
+  private cyclePriceFilter(): void {
+    if (this.priceFilter === 'all') {
+      this.priceFilter = '0-100'
+    } else if (this.priceFilter === '0-100') {
+      this.priceFilter = '100-300'
+    } else if (this.priceFilter === '100-300') {
+      this.priceFilter = '300+'
+    } else {
+      this.priceFilter = 'all'
+    }
+    this.loadAll()
+  }
+
   @Builder
   private Header(): void {
-    if (!this.embedded) {
-      Row({ space: 8 }) {
-        Text('餐饮娱乐与演出')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(THEME_TEXT_PRIMARY)
-        Blank()
-        Button('刷新')
-          .onClick(() => this.loadAll())
-          .backgroundColor(THEME_PRIMARY)
-          .fontColor(Color.White)
-          .borderRadius(RADIUS_MD)
-      }
-      .width('100%')
-    }
-
-    FloatingCard() {
-      Column({ space: 10 }) {
-        SectionHeader({ title: '分类导航', subtitle: '支持美食 / 娱乐 / 演出快速切换' })
+    Column({ space: 10 }) {
+      if (!this.embedded) {
         Row({ space: 8 }) {
-          FilterChip({
-            label: '特色美食',
-            selected: this.category === 'food',
-            onToggle: () => {
-              this.category = 'food'
-            }
-          })
-          FilterChip({
-            label: '休闲娱乐',
-            selected: this.category === 'fun',
-            onToggle: () => {
-              this.category = 'fun'
-            }
-          })
-          FilterChip({
-            label: '文艺演出',
-            selected: this.category === 'show',
-            onToggle: () => {
-              this.category = 'show'
-            }
-          })
-        }
-        .width('100%')
-
-        Row({ space: 8 }) {
-          FilterChip({
-            label: this.areaFilter === 'all' ? '区域: 全部' : `区域: ${this.areaFilter}`,
-            selected: this.areaFilter !== 'all',
-            onToggle: () => {
-              this.areaFilter = this.areaFilter === 'all' ? '古城' : this.areaFilter === '古城' ? '滨江' : this.areaFilter === '滨江' ? '景区' : 'all'
-              this.loadAll()
-            }
-          })
-          FilterChip({
-            label: this.priceFilter === 'all' ? '价格: 全部' : `价格: ${this.priceFilter}`,
-            selected: this.priceFilter !== 'all',
-            onToggle: () => {
-              this.priceFilter = this.priceFilter === 'all' ? '0-100' : this.priceFilter === '0-100' ? '100-300' : this.priceFilter === '100-300' ? '300+' : 'all'
-              this.loadAll()
-            }
-          })
+          Text('餐饮娱乐与演出')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
           Blank()
-          Button('应用')
+          Button('刷新')
             .onClick(() => this.loadAll())
-            .height(34)
-            .borderRadius(RADIUS_PILL)
             .backgroundColor(THEME_PRIMARY)
             .fontColor(Color.White)
+            .borderRadius(RADIUS_MD)
         }
         .width('100%')
       }
+
+      Row({ space: 8 }) {
+        Button(this.category === 'food' ? '美食' : '美食')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .fontColor(this.category === 'food' ? Color.White : THEME_TEXT_SECONDARY)
+          .backgroundColor(this.category === 'food' ? THEME_PRIMARY : '#EEF3FA')
+          .onClick(() => {
+            this.category = 'food'
+          })
+        Button('娱乐')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .fontColor(this.category === 'fun' ? Color.White : THEME_TEXT_SECONDARY)
+          .backgroundColor(this.category === 'fun' ? THEME_PRIMARY : '#EEF3FA')
+          .onClick(() => {
+            this.category = 'fun'
+          })
+        Button('演出')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .fontColor(this.category === 'show' ? Color.White : THEME_TEXT_SECONDARY)
+          .backgroundColor(this.category === 'show' ? THEME_PRIMARY : '#EEF3FA')
+          .onClick(() => {
+            this.category = 'show'
+          })
+      }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
+
+      Row({ space: 8 }) {
+        Button(this.areaFilter === 'all' ? '区域：全部' : `区域：${this.areaFilter}`)
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor('#EEF3FA')
+          .fontColor(THEME_TEXT_SECONDARY)
+          .onClick(() => this.cycleAreaFilter())
+        Button(this.priceFilter === 'all' ? '价格：全部' : `价格：${this.priceFilter}`)
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor('#EEF3FA')
+          .fontColor(THEME_TEXT_SECONDARY)
+          .onClick(() => this.cyclePriceFilter())
+        Blank()
+        Button('应用')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .onClick(() => this.loadAll())
+      }
+      .width('100%')
     }
+    .width('100%')
+    .padding(12)
+    .backgroundColor(THEME_SURFACE)
+    .borderRadius(RADIUS_MD)
   }
 
   @Builder
   private DiningList(): void {
     if (this.diningList.length === 0) {
-      EmptyStateCard({ message: '暂无餐饮数据' })
-      return
-    }
-    ForEach(this.diningList, (item: DiningResponse) => {
-      FloatingCard() {
+      Text('暂无餐饮数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.diningList, (item: DiningResponse) => {
         Column({ space: 8 }) {
-          Row({ space: 10 }) {
-            if (item.logoUrl !== undefined && item.logoUrl.length > 0) {
-              Image(item.logoUrl)
-                .width(48)
-                .height(48)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(RADIUS_PILL)
-            } else {
-              Text('🍜')
-                .fontSize(20)
-                .width(48)
-                .height(48)
-                .textAlign(TextAlign.Center)
-                .lineHeight(48)
-                .backgroundColor('#EAF2FF')
-                .borderRadius(RADIUS_PILL)
-            }
-            Column({ space: 4 }) {
-              Text(item.name)
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-              Text(`${item.type} · 人均 ¥${item.avgPrice}`)
-                .fontSize(12)
-                .fontColor(THEME_TEXT_SECONDARY)
-            }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
-            StatusBadge({ label: this.isOpenLabel(item.isOpen), tone: this.isOpenTone(item.isOpen) })
+          Row({ space: 8 }) {
+            Text(item.name)
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(THEME_TEXT_PRIMARY)
+              .layoutWeight(1)
+            Text(this.isOpenLabel(item.isOpen))
+              .fontSize(11)
+              .fontColor(this.isOpenColor(item.isOpen))
           }
           .width('100%')
 
-          Text(`营业时间：${item.businessHours}`)
+          Text(`${item.type} · 人均 ¥${item.avgPrice}`)
             .fontSize(12)
             .fontColor(THEME_TEXT_SECONDARY)
-          Text(`推荐菜：${item.recommendFood}`)
+          Text(item.recommendFood)
             .fontSize(11)
             .fontColor(THEME_TEXT_SECONDARY)
             .maxLines(1)
-          Text(item.detailDesc)
+          Text(this.distanceText(item.distanceMeters))
             .fontSize(11)
-            .fontColor(THEME_TEXT_TERTIARY)
-            .maxLines(2)
+            .fontColor(THEME_PRIMARY)
 
           Row({ space: 8 }) {
-            Button('一键导航')
-              .onClick(() => this.hintNavigation(item.address))
+            Button('导航')
               .height(34)
               .borderRadius(RADIUS_PILL)
               .backgroundColor(THEME_PRIMARY)
               .fontColor(Color.White)
+              .onClick(() => this.hintNavigation(item.address))
             Blank()
-            Text(`📍 ${this.distanceText(item.distanceMeters)}`)
-              .fontSize(11)
-              .fontColor(THEME_PRIMARY)
           }
           .width('100%')
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
-      }
-    }, (item: DiningResponse) => item.id)
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+      }, (item: DiningResponse) => item.id)
+    }
   }
 
   @Builder
   private EntertainmentList(): void {
     if (this.entertainmentList.length === 0) {
-      EmptyStateCard({ message: '暂无娱乐数据' })
-      return
-    }
-    ForEach(this.entertainmentList, (item: EntertainmentResponse) => {
-      FloatingCard() {
+      Text('暂无娱乐数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.entertainmentList, (item: EntertainmentResponse) => {
         Column({ space: 8 }) {
-          Row({ space: 10 }) {
-            if (item.logoUrl !== undefined && item.logoUrl.length > 0) {
-              Image(item.logoUrl)
-                .width(48)
-                .height(48)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(RADIUS_PILL)
-            } else {
-              Text('🎭')
-                .fontSize(20)
-                .width(48)
-                .height(48)
-                .textAlign(TextAlign.Center)
-                .lineHeight(48)
-                .backgroundColor('#EAF2FF')
-                .borderRadius(RADIUS_PILL)
-            }
-            Column({ space: 4 }) {
-              Text(item.name)
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-              Text(`${item.type} · ¥${item.price}`)
-                .fontSize(12)
-                .fontColor(THEME_TEXT_SECONDARY)
-            }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
-            StatusBadge({ label: this.isOpenLabel(item.isOpen), tone: this.isOpenTone(item.isOpen) })
+          Row({ space: 8 }) {
+            Text(item.name)
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(THEME_TEXT_PRIMARY)
+              .layoutWeight(1)
+            Text(this.isOpenLabel(item.isOpen))
+              .fontSize(11)
+              .fontColor(this.isOpenColor(item.isOpen))
           }
           .width('100%')
 
-          Text(`营业时间：${item.openTime}`)
+          Text(`${item.type} · 参考价 ¥${item.price}`)
             .fontSize(12)
             .fontColor(THEME_TEXT_SECONDARY)
           Text(item.description)
             .fontSize(11)
-            .fontColor(THEME_TEXT_TERTIARY)
+            .fontColor(THEME_TEXT_SECONDARY)
             .maxLines(2)
+          Text(this.distanceText(item.distanceMeters))
+            .fontSize(11)
+            .fontColor(THEME_PRIMARY)
 
           Row({ space: 8 }) {
-            Button('一键导航')
-              .onClick(() => this.hintNavigation(item.location))
+            Button('导航')
               .height(34)
               .borderRadius(RADIUS_PILL)
               .backgroundColor(THEME_PRIMARY)
               .fontColor(Color.White)
+              .onClick(() => this.hintNavigation(item.location))
             Blank()
-            Text(`📍 ${this.distanceText(item.distanceMeters)}`)
-              .fontSize(11)
-              .fontColor(THEME_PRIMARY)
           }
           .width('100%')
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
-      }
-    }, (item: EntertainmentResponse) => item.id)
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+      }, (item: EntertainmentResponse) => item.id)
+    }
   }
 
   @Builder
   private PerformanceList(): void {
     if (this.performanceList.length === 0) {
-      EmptyStateCard({ message: '暂无演出数据' })
-      return
-    }
-    ForEach(this.performanceList, (item: PerformanceResponse) => {
-      FloatingCard() {
+      Text('暂无演出数据')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      ForEach(this.performanceList, (item: PerformanceResponse) => {
         Row({ space: 10 }) {
-          Column({ space: 2 }) {
-            Text('演出日历')
-              .fontSize(10)
-              .fontColor(THEME_TEXT_TERTIARY)
-            Text(this.performanceDateText(item.showDateTime, item.showTime))
-              .fontSize(12)
+          Column({ space: 4 }) {
+            Text(item.name)
+              .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor(THEME_PRIMARY)
-              .maxLines(2)
-          }
-          .width(90)
-          .padding(8)
-          .backgroundColor('#EEF4FF')
-          .borderRadius(RADIUS_MD)
-
-          Column({ space: 6 }) {
-            Row({ space: 8 }) {
-              Text(item.name)
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-                .layoutWeight(1)
-              StatusBadge({
-                label: this.ticketLabel(item.ticketStatus, item.remainingTickets),
-                tone: this.ticketTone(item.ticketStatus)
-              })
-            }
-            .width('100%')
-
-            Text(`场馆：${item.venue ?? item.location}`)
+              .fontColor(THEME_TEXT_PRIMARY)
+            Text(this.performanceTime(item.showDateTime, item.showTime))
               .fontSize(12)
               .fontColor(THEME_TEXT_SECONDARY)
-            Text(`票价：¥${item.price} · 团体：${item.team}`)
+            Text(`票务：${this.ticketLabel(item.ticketStatus, item.remainingTickets)}`)
               .fontSize(11)
-              .fontColor(THEME_TEXT_SECONDARY)
-
-            Row({ space: 8 }) {
-              Button('预订引导')
-                .onClick(() => this.hintBooking(item.name))
-                .height(34)
-                .borderRadius(RADIUS_PILL)
-                .backgroundColor(THEME_PRIMARY)
-                .fontColor(Color.White)
-              Blank()
-              Text(`📍 ${this.distanceText(item.distanceMeters)}`)
-                .fontSize(11)
-                .fontColor(THEME_PRIMARY)
-            }
-            .width('100%')
+              .fontColor(this.ticketColor(item.ticketStatus))
+            Text(this.distanceText(item.distanceMeters))
+              .fontSize(11)
+              .fontColor(THEME_PRIMARY)
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Start)
+
+          Button('预订')
+            .height(34)
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor(THEME_PRIMARY)
+            .fontColor(Color.White)
+            .onClick(() => this.hintBooking(item.name))
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
-      }
-    }, (item: PerformanceResponse) => item.id)
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+        .alignItems(VerticalAlign.Top)
+      }, (item: PerformanceResponse) => item.id)
+    }
   }
 
   @Builder
   private CategoryContent(): void {
     if (this.loading) {
-      EmptyStateCard({ message: '数据加载中...' })
-      return
-    }
-    if (this.errorMessage.length > 0) {
-      FloatingCard() {
-        Column({ space: 8 }) {
-          Text(this.errorMessage).fontColor(THEME_DANGER).fontSize(12)
-          Button('重试')
-            .onClick(() => this.loadAll())
-            .backgroundColor(THEME_PRIMARY)
-            .fontColor(Color.White)
-            .borderRadius(RADIUS_PILL)
-        }
+      Text('数据加载中...')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else if (this.errorMessage.length > 0) {
+      Column({ space: 8 }) {
+        Text(this.errorMessage)
+          .fontSize(12)
+          .fontColor(THEME_DANGER)
+        Button('重试')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor(Color.White)
+          .onClick(() => this.loadAll())
       }
-      return
-    }
-
-    if (this.category === 'food') {
+      .width('100%')
+      .padding(12)
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_MD)
+      .alignItems(HorizontalAlign.Start)
+    } else if (this.category === 'food') {
       this.DiningList()
     } else if (this.category === 'fun') {
       this.EntertainmentList()
@@ -500,20 +495,20 @@ export struct DiningShowPage {
       Column({ space: 12 }) {
         this.Header()
 
-        FloatingCard() {
-          SectionHeader({
-            title: this.categoryLabel(this.category),
-            subtitle: this.category === 'show' ? '演出日历与票务状态' : '支持营业状态、导航和距离提示'
-          })
-        }
+        Text(this.categoryLabel(this.category))
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(THEME_TEXT_PRIMARY)
+          .padding({ left: 4 })
 
         this.CategoryContent()
 
         if (this.actionMessage.length > 0) {
           Text(this.actionMessage)
             .fontSize(12)
-            .fontColor(this.actionMessage.includes('预订') ? THEME_SUCCESS : THEME_WARNING)
-            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .fontColor(THEME_TEXT_SECONDARY)
+            .padding(10)
+            .width('100%')
             .backgroundColor(THEME_SURFACE_MUTED)
             .borderRadius(RADIUS_MD)
         }
