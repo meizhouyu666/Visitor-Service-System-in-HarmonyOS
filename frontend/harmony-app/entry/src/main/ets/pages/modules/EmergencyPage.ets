@@ -258,6 +258,16 @@ export struct EmergencyPage {
     return '🟡'
   }
 
+  private trafficStatusIcon(status: string): string {
+    if (status.indexOf('封闭') >= 0) {
+      return '⛔'
+    }
+    if (status.indexOf('拥堵') >= 0 || status.indexOf('缓行') >= 0) {
+      return '🚧'
+    }
+    return '🟦'
+  }
+
   @Builder
   private VisitorAlertCards(): void {
     FloatingCard() {
@@ -324,7 +334,7 @@ export struct EmergencyPage {
           ForEach(this.trafficList, (item: TrafficResponse, index: number) => {
             if (index < 2) {
               Row() {
-                Text(this.severityIcon(item.severityLevel))
+                Text(item.status.indexOf('封闭') >= 0 ? this.trafficStatusIcon(item.status) : this.severityIcon(item.severityLevel))
                   .fontSize(14)
                 Text(`${item.fromLocation} → ${item.toLocation}`)
                   .fontSize(12)
@@ -332,7 +342,7 @@ export struct EmergencyPage {
                   .layoutWeight(1)
                 Text(item.status)
                   .fontSize(11)
-                  .fontColor(item.severityLevel === 'HIGH' ? THEME_DANGER : item.severityLevel === 'LOW' ? THEME_SUCCESS : THEME_WARNING)
+                  .fontColor(item.status.indexOf('封闭') >= 0 ? THEME_DANGER : item.severityLevel === 'HIGH' ? THEME_DANGER : item.severityLevel === 'LOW' ? THEME_SUCCESS : THEME_WARNING)
               }
               .padding(10)
               .width('100%')

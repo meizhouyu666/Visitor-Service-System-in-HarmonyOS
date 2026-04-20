@@ -33,8 +33,13 @@ public class QueryController {
 
     @Operation(summary = "酒店查询")
     @GetMapping("/hotels")
-    public ApiResponse<List<HotelResponse>> hotels(@RequestParam(required = false) String keyword) {
-        return ApiResponse.success(queryService.hotels(keyword));
+    public ApiResponse<List<HotelResponse>> hotels(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer minStar,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice) {
+        return ApiResponse.success(queryService.hotels(keyword, minStar, area, minPrice, maxPrice));
     }
 
     @Operation(summary = "星级酒店查询（兼容）")
@@ -51,8 +56,13 @@ public class QueryController {
 
     @Operation(summary = "景区查询")
     @GetMapping("/scenic-spots")
-    public ApiResponse<List<ScenicSpotResponse>> scenicSpots(@RequestParam(required = false) String keyword) {
-        return ApiResponse.success(queryService.scenicSpots(keyword));
+    public ApiResponse<List<ScenicSpotResponse>> scenicSpots(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice) {
+        return ApiResponse.success(queryService.scenicSpots(keyword, level, area, minPrice, maxPrice));
     }
 
     @Operation(summary = "线路查询")
@@ -63,14 +73,26 @@ public class QueryController {
 
     @Operation(summary = "餐饮查询")
     @GetMapping("/dining")
-    public ApiResponse<List<DiningResponse>> dining(@RequestParam(required = false) String keyword) {
-        return ApiResponse.success(queryService.dining(keyword));
+    public ApiResponse<List<DiningResponse>> dining(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) Integer limit) {
+        return ApiResponse.success(queryService.dining(keyword, area, minPrice, maxPrice, sortBy, limit));
     }
 
     @Operation(summary = "娱乐查询")
     @GetMapping("/entertainment")
-    public ApiResponse<List<EntertainmentResponse>> entertainment(@RequestParam(required = false) String keyword) {
-        return ApiResponse.success(queryService.entertainment(keyword));
+    public ApiResponse<List<EntertainmentResponse>> entertainment(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) Integer limit) {
+        return ApiResponse.success(queryService.entertainment(keyword, area, minPrice, maxPrice, sortBy, limit));
     }
 
     @Operation(summary = "餐饮娱乐综合查询（兼容）")
@@ -81,8 +103,14 @@ public class QueryController {
 
     @Operation(summary = "演出查询")
     @GetMapping("/performances")
-    public ApiResponse<List<PerformanceResponse>> performances(@RequestParam(required = false) String keyword) {
-        return ApiResponse.success(queryService.performances(keyword));
+    public ApiResponse<List<PerformanceResponse>> performances(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) Integer limit) {
+        return ApiResponse.success(queryService.performances(keyword, area, minPrice, maxPrice, sortBy, limit));
     }
 
     @Operation(summary = "天气查询")

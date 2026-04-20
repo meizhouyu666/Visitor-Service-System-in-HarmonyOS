@@ -7,7 +7,7 @@ import { ScenicRoutePage } from './modules/ScenicRoutePage'
 import { DiningShowPage } from './modules/DiningShowPage'
 import { WeatherTrafficPage } from './modules/WeatherTrafficPage'
 import { VisitorHomePage } from './modules/VisitorHomePage'
-import { VisitorServicesPage } from './modules/VisitorServicesPage'
+import { VisitorServiceTab, VisitorServicesPage } from './modules/VisitorServicesPage'
 import {
   RADIUS_LG,
   RADIUS_MD,
@@ -45,6 +45,7 @@ struct Index {
   @State private selectedTabKey: string = ''
   @State private authMode: AuthMode = 'login'
   @State private visitorNav: VisitorNav = 'home'
+  @State private visitorServiceTab: VisitorServiceTab = 'routes'
 
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
@@ -75,6 +76,7 @@ struct Index {
       const tabs: TabItem[] = this.getRoleTabs()
       this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
       this.visitorNav = 'home'
+      this.visitorServiceTab = 'routes'
     }
   }
 
@@ -517,10 +519,11 @@ struct Index {
     if (this.visitorNav === 'home') {
       VisitorHomePage({
         displayName: this.authStore.currentUser?.displayName ?? '游客',
-        navKey: this.visitorNav
+        navKey: this.visitorNav,
+        serviceTab: this.visitorServiceTab
       })
     } else if (this.visitorNav === 'services') {
-      VisitorServicesPage()
+      VisitorServicesPage({ mainTab: this.visitorServiceTab })
     } else if (this.visitorNav === 'complaint') {
       ComplaintPage({ mode: 'visitor' })
     } else {

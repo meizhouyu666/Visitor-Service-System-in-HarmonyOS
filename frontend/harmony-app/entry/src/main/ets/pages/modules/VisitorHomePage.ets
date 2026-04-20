@@ -1,4 +1,4 @@
-import { ComplaintItem, WeatherResponse } from '../../common/model/ApiModels'
+import { ComplaintItem, PerformanceResponse, WeatherResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 import {
   RADIUS_MD,
@@ -12,11 +12,13 @@ import {
   THEME_TEXT_TERTIARY
 } from '../../common/ui/AppTheme'
 import { EmptyStateCard, FloatingCard, SectionHeader, StatusBadge } from '../../common/ui/UiKit'
+import { VisitorServiceTab } from './VisitorServicesPage'
 
 interface QuickServiceItem {
   key: VisitorNav
   icon: string
   title: string
+  serviceTab?: VisitorServiceTab
 }
 
 type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
@@ -25,17 +27,19 @@ type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
 export struct VisitorHomePage {
   @Prop displayName: string = '游客'
   @Link navKey: VisitorNav
+  @Link serviceTab: VisitorServiceTab
 
   @State private weatherToday: WeatherResponse | null = null
   @State private complaintList: ComplaintItem[] = []
+  @State private topPerformance: PerformanceResponse | null = null
   @State private loading: boolean = false
   @State private errorMessage: string = ''
 
   private quickServices: QuickServiceItem[] = [
     { key: 'complaint', icon: '💬', title: '投诉建议' },
     { key: 'emergency', icon: '🚨', title: '应急信息' },
-    { key: 'services', icon: '🏨', title: '酒店查询' },
-    { key: 'services', icon: '🗺', title: '景区导览' }
+    { key: 'services', icon: '🏨', title: '酒店查询', serviceTab: 'routes' },
+    { key: 'services', icon: '🍜', title: '餐饮娱乐', serviceTab: 'dining' }
   ]
 
   async aboutToAppear(): Promise<void> {
@@ -48,8 +52,10 @@ export struct VisitorHomePage {
     try {
       const weather: WeatherResponse[] = await apiClient.get<WeatherResponse[]>('/api/query/weather')
       const complaints: ComplaintItem[] = await apiClient.get<ComplaintItem[]>('/api/complaints')
+      const performances: PerformanceResponse[] = await apiClient.get<PerformanceResponse[]>('/api/query/performances?sortBy=time_asc&limit=1')
       this.weatherToday = weather.length > 0 ? weather[0] : null
       this.complaintList = [...complaints]
+      this.topPerformance = performances.length > 0 ? performances[0] : null
     } catch (_error) {
       this.errorMessage = '首页数据加载失败，请稍后重试'
     } finally {
@@ -104,7 +110,10 @@ export struct VisitorHomePage {
     return `${this.weatherToday.weather} · ${this.weatherToday.temperature} · ${this.weatherToday.wind}`
   }
 
-  private navigateTo(target: VisitorNav): void {
+  private navigateTo(target: VisitorNav, tab: VisitorServiceTab = 'routes'): void {
+    if (target === 'services') {
+      this.serviceTab = tab
+    }
     if (this.navKey === target) {
       return
     }
@@ -141,9 +150,9 @@ export struct VisitorHomePage {
           .alignItems(HorizontalAlign.End)
         }
 
-        Button('开始新的出行计划')
+        Button('Start a New Journey')
           .onClick(() => {
-            this.navigateTo('services')
+            this.navigateTo('services', 'routes')
           })
           .width('100%')
           .height(44)
@@ -186,7 +195,7 @@ export struct VisitorHomePage {
               .borderRadius(RADIUS_MD)
               .backgroundColor(THEME_SURFACE)
               .onClick(() => {
-                this.navigateTo(item.key)
+                this.navigateTo(item.key, item.serviceTab ?? 'routes')
               })
             }
           }, (item: QuickServiceItem) => `${item.title}-${item.icon}`)
@@ -201,7 +210,10 @@ export struct VisitorHomePage {
   private RecommendCard(): void {
     FloatingCard() {
       Column({ space: 8 }) {
-        SectionHeader({ title: '今日推荐景点', subtitle: '高质量风景卡片（本地资源）' })
+        SectionHeader({
+          title: this.topPerformance === null ? '今日推荐景点' : '热门演出预告',
+          subtitle: this.topPerformance === null ? '高质量风景卡片（本地资源）' : '点击服务页可查看更多场次'
+        })
 
         Stack({ alignContent: Alignment.BottomStart }) {
           Image($r('app.media.home_recommend'))
@@ -211,13 +223,23 @@ export struct VisitorHomePage {
             .borderRadius(RADIUS_MD)
 
           Column({ space: 4 }) {
-            Text('北屿湖湾')
-              .fontSize(17)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-            Text('日落摄影热门景点，建议 17:30 前到达')
-              .fontSize(11)
-              .fontColor('#E8F0FF')
+            if (this.topPerformance === null) {
+              Text('北屿湖湾')
+                .fontSize(17)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(Color.White)
+              Text('日落摄影热门景点，建议 17:30 前到达')
+                .fontSize(11)
+                .fontColor('#E8F0FF')
+            } else {
+              Text(this.topPerformance.name)
+                .fontSize(17)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(Color.White)
+              Text(`场馆 ${this.topPerformance.venue ?? this.topPerformance.location} · ${this.topPerformance.showDateTime ?? this.topPerformance.showTime}`)
+                .fontSize(11)
+                .fontColor('#E8F0FF')
+            }
           }
           .padding(12)
           .width('100%')
@@ -328,3 +350,4 @@ export struct VisitorHomePage {
     .backgroundColor(THEME_PAGE_BG)
   }
 }
+

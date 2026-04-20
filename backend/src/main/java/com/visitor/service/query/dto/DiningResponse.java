@@ -8,7 +8,12 @@ public record DiningResponse(
         String businessHours,
         String address,
         String recommendFood,
-        String detailDesc
+        String detailDesc,
+        String logoUrl,
+        Integer distanceMeters,
+        Boolean isOpen,
+        Double navLat,
+        Double navLng
 ) {
 }
 

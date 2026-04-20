@@ -186,6 +186,11 @@ export interface DiningResponse {
   address: string
   recommendFood: string
   detailDesc: string
+  logoUrl?: string
+  distanceMeters?: number
+  isOpen?: boolean
+  navLat?: number
+  navLng?: number
 }
 
 export interface EntertainmentResponse {
@@ -196,6 +201,11 @@ export interface EntertainmentResponse {
   openTime: string
   price: number
   description: string
+  logoUrl?: string
+  distanceMeters?: number
+  isOpen?: boolean
+  navLat?: number
+  navLng?: number
 }
 
 export interface PerformanceResponse {
@@ -206,6 +216,13 @@ export interface PerformanceResponse {
   price: number
   team: string
   detail: string
+  venue?: string
+  showDateTime?: string
+  remainingTickets?: number
+  ticketStatus?: string
+  distanceMeters?: number
+  navLat?: number
+  navLng?: number
 }
 
 export interface WeatherResponse {

@@ -7,7 +7,14 @@ public record PerformanceResponse(
         String showTime,
         int price,
         String team,
-        String detail
+        String detail,
+        String venue,
+        String showDateTime,
+        Integer remainingTickets,
+        String ticketStatus,
+        Integer distanceMeters,
+        Double navLat,
+        Double navLng
 ) {
 }
 

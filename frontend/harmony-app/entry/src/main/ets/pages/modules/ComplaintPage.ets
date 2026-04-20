@@ -44,7 +44,6 @@ export struct ComplaintPage {
 
   @State private titleInput: string = ''
   @State private contentInput: string = ''
-  @State private attachmentInput: string = ''
 
   @State private selectedId: number = 0
   @State private commentInput: string = ''
@@ -237,13 +236,11 @@ export struct ComplaintPage {
     try {
       const payload: ComplaintCreateRequest = {
         title: this.titleInput,
-        content: this.contentInput,
-        attachmentUrls: this.attachmentInput
+        content: this.contentInput
       }
       await apiClient.post<ComplaintCreateRequest, ComplaintItem>('/api/complaints', payload)
       this.titleInput = ''
       this.contentInput = ''
-      this.attachmentInput = ''
       this.actionMessage = '投诉已提交'
       await this.loadComplaints()
     } catch (_error) {
@@ -566,14 +563,6 @@ export struct ComplaintPage {
           .height(90)
           .padding(10)
 
-        TextInput({ placeholder: '附件链接（可选）', text: this.attachmentInput })
-          .onChange((value: string) => {
-            this.attachmentInput = value
-          })
-          .backgroundColor(THEME_SURFACE)
-          .borderRadius(RADIUS_MD)
-          .padding(10)
-
         Button('提交投诉')
           .onClick(() => this.submitComplaint())
           .backgroundColor(THEME_PRIMARY)
@@ -768,7 +757,7 @@ export struct ComplaintPage {
   private VisitorCreatePanel(): void {
     FloatingCard() {
       Column({ space: 10 }) {
-        SectionHeader({ title: '提交投诉', subtitle: '支持文字描述与附件留痕' })
+        SectionHeader({ title: '提交投诉', subtitle: '支持文字描述与流程留痕' })
 
         TextInput({ placeholder: '投诉标题', text: this.titleInput })
           .onChange((value: string) => {
@@ -786,46 +775,6 @@ export struct ComplaintPage {
           .borderRadius(RADIUS_MD)
           .height(96)
           .padding(10)
-
-        Row({ space: 8 }) {
-          Text('上传证据（图片/视频）')
-            .fontSize(12)
-            .fontColor(THEME_TEXT_SECONDARY)
-          Blank()
-          Text('可选')
-            .fontSize(11)
-            .fontColor(THEME_TEXT_TERTIARY)
-        }
-        .width('100%')
-
-        Row({ space: 10 }) {
-          Column({ space: 6 }) {
-            Text('+')
-              .fontSize(26)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(THEME_PRIMARY)
-            Text('添加附件')
-              .fontSize(11)
-              .fontColor(THEME_TEXT_SECONDARY)
-          }
-          .width(88)
-          .height(88)
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .backgroundColor('#F0F5FF')
-          .borderRadius(RADIUS_MD)
-          .border({ width: 1, color: '#CAD9F7' })
-
-          TextInput({ placeholder: '附件链接（可选）', text: this.attachmentInput })
-            .onChange((value: string) => {
-              this.attachmentInput = value
-            })
-            .layoutWeight(1)
-            .backgroundColor('#F8FAFF')
-            .borderRadius(RADIUS_MD)
-            .padding(10)
-        }
-        .width('100%')
 
         Button(this.loading ? '提交中...' : '提交投诉')
           .enabled(!this.loading)
