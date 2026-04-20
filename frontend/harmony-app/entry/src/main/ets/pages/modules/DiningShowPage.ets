@@ -53,9 +53,43 @@ export struct DiningShowPage {
   @State private loading: boolean = false
   @State private errorMessage: string = ''
   @State private actionMessage: string = ''
+  @State private contentOpacity: number = 1
+  @State private contentOffsetY: number = 0
+  @State private contentSwitching: boolean = false
 
   async aboutToAppear(): Promise<void> {
     await this.loadAll()
+  }
+
+  private runContentSwitch(onSwitched: () => void): void {
+    if (this.contentSwitching) {
+      onSwitched()
+      return
+    }
+    this.contentSwitching = true
+    animateTo({ duration: 100, curve: Curve.EaseOut }, () => {
+      this.contentOpacity = 0
+      this.contentOffsetY = 8
+    })
+    setTimeout(() => {
+      onSwitched()
+      animateTo({ duration: 170, curve: Curve.EaseInOut }, () => {
+        this.contentOpacity = 1
+        this.contentOffsetY = 0
+      })
+      setTimeout(() => {
+        this.contentSwitching = false
+      }, 170)
+    }, 100)
+  }
+
+  private switchCategory(nextCategory: DiningCategory): void {
+    if (this.category === nextCategory) {
+      return
+    }
+    this.runContentSwitch(() => {
+      this.category = nextCategory
+    })
   }
 
   private categoryLabel(item: DiningCategory): string {
@@ -246,25 +280,19 @@ export struct DiningShowPage {
           .borderRadius(RADIUS_PILL)
           .fontColor(this.category === 'food' ? Color.White : THEME_TEXT_SECONDARY)
           .backgroundColor(this.category === 'food' ? THEME_PRIMARY : '#EEF3FA')
-          .onClick(() => {
-            this.category = 'food'
-          })
+          .onClick(() => this.switchCategory('food'))
         Button('娱乐')
           .height(34)
           .borderRadius(RADIUS_PILL)
           .fontColor(this.category === 'fun' ? Color.White : THEME_TEXT_SECONDARY)
           .backgroundColor(this.category === 'fun' ? THEME_PRIMARY : '#EEF3FA')
-          .onClick(() => {
-            this.category = 'fun'
-          })
+          .onClick(() => this.switchCategory('fun'))
         Button('演出')
           .height(34)
           .borderRadius(RADIUS_PILL)
           .fontColor(this.category === 'show' ? Color.White : THEME_TEXT_SECONDARY)
           .backgroundColor(this.category === 'show' ? THEME_PRIMARY : '#EEF3FA')
-          .onClick(() => {
-            this.category = 'show'
-          })
+          .onClick(() => this.switchCategory('show'))
       }
       .width('100%')
 
@@ -501,17 +529,21 @@ export struct DiningShowPage {
           .fontColor(THEME_TEXT_PRIMARY)
           .padding({ left: 4 })
 
-        this.CategoryContent()
+        Column({ space: 10 }) {
+          this.CategoryContent()
 
-        if (this.actionMessage.length > 0) {
-          Text(this.actionMessage)
-            .fontSize(12)
-            .fontColor(THEME_TEXT_SECONDARY)
-            .padding(10)
-            .width('100%')
-            .backgroundColor(THEME_SURFACE_MUTED)
-            .borderRadius(RADIUS_MD)
+          if (this.actionMessage.length > 0) {
+            Text(this.actionMessage)
+              .fontSize(12)
+              .fontColor(THEME_TEXT_SECONDARY)
+              .padding(10)
+              .width('100%')
+              .backgroundColor(THEME_SURFACE_MUTED)
+              .borderRadius(RADIUS_MD)
+          }
         }
+        .opacity(this.contentOpacity)
+        .translate({ x: 0, y: this.contentOffsetY })
       }
       .alignItems(HorizontalAlign.Start)
       .padding(this.embedded ? { left: 0, right: 0, top: 0, bottom: 80 } : { left: 12, right: 12, top: 12, bottom: 20 })

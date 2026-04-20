@@ -46,6 +46,9 @@ struct Index {
   @State private authMode: AuthMode = 'login'
   @State private visitorNav: VisitorNav = 'home'
   @State private visitorServiceTab: VisitorServiceTab = 'routes'
+  @State private pageOpacity: number = 1
+  @State private pageOffsetY: number = 0
+  @State private switching: boolean = false
 
   @State private username: string = 'visitor'
   @State private password: string = 'visitor123'
@@ -62,20 +65,58 @@ struct Index {
     { key: 'emergency', icon: '🚨', title: '应急' }
   ]
 
+  private runPageSwitch(onSwitched: () => void): void {
+    if (this.switching) {
+      onSwitched()
+      return
+    }
+    this.switching = true
+    animateTo({ duration: 120, curve: Curve.EaseOut }, () => {
+      this.pageOpacity = 0
+      this.pageOffsetY = 12
+    })
+    setTimeout(() => {
+      onSwitched()
+      animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+        this.pageOpacity = 1
+        this.pageOffsetY = 0
+      })
+      setTimeout(() => {
+        this.switching = false
+      }, 200)
+    }, 120)
+  }
+
   private switchAuthMode(mode: AuthMode): void {
-    this.authMode = mode
-    this.authStore.errorMessage = ''
-    this.authStore.infoMessage = ''
-    this.resetCode = ''
-    this.newPassword = ''
+    if (this.authMode === mode) {
+      return
+    }
+    this.runPageSwitch(() => {
+      this.authMode = mode
+      this.authStore.errorMessage = ''
+      this.authStore.infoMessage = ''
+      this.resetCode = ''
+      this.newPassword = ''
+    })
+  }
+
+  private doLogout(): void {
+    this.runPageSwitch(() => {
+      this.authStore.logout()
+      this.authMode = 'login'
+      this.username = 'visitor'
+      this.password = 'visitor123'
+    })
   }
 
   private async doLogin(): Promise<void> {
     const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
     if (ok) {
-      this.resetRoleTabSelection()
-      this.visitorNav = 'home'
-      this.visitorServiceTab = 'routes'
+      this.runPageSwitch(() => {
+        this.resetRoleTabSelection()
+        this.visitorNav = 'home'
+        this.visitorServiceTab = 'routes'
+      })
     }
   }
 
@@ -185,14 +226,16 @@ struct Index {
     if (this.selectedTabKey === key) {
       return
     }
-    this.selectedTabKey = key
+    this.runPageSwitch(() => {
+      this.selectedTabKey = key
+    })
   }
 
   private switchVisitorNav(key: VisitorNav): void {
     if (this.visitorNav === key) {
       return
     }
-    animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
+    this.runPageSwitch(() => {
       this.visitorNav = key
     })
   }
@@ -412,7 +455,7 @@ struct Index {
           .borderRadius(RADIUS_PILL)
           .backgroundColor(THEME_PRIMARY_SOFT)
           .fontColor(THEME_PRIMARY)
-          .onClick(() => this.authStore.logout())
+          .onClick(() => this.doLogout())
       }
       .padding(12)
       .margin({ left: 12, right: 12, top: 12 })
@@ -472,7 +515,7 @@ struct Index {
           .borderRadius(RADIUS_PILL)
           .backgroundColor(THEME_PRIMARY_SOFT)
           .fontColor(THEME_PRIMARY)
-          .onClick(() => this.authStore.logout())
+          .onClick(() => this.doLogout())
       }
       .padding(12)
       .margin({ left: 12, right: 12, top: 12, bottom: 8 })
@@ -553,12 +596,18 @@ struct Index {
   }
 
   build() {
-    if (this.authStore.currentUser === null) {
-      this.LoginView()
-    } else if (this.isVisitor()) {
-      this.VisitorShellView()
-    } else {
-      this.RoleHomeView()
+    Column() {
+      if (this.authStore.currentUser === null) {
+        this.LoginView()
+      } else if (this.isVisitor()) {
+        this.VisitorShellView()
+      } else {
+        this.RoleHomeView()
+      }
     }
+    .width('100%')
+    .height('100%')
+    .opacity(this.pageOpacity)
+    .translate({ x: 0, y: this.pageOffsetY })
   }
 }

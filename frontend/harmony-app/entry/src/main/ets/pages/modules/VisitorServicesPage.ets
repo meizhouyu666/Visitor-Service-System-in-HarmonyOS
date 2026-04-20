@@ -50,6 +50,9 @@ export struct VisitorServicesPage {
 
   @State private loading: boolean = false
   @State private errorMessage: string = ''
+  @State private contentOpacity: number = 1
+  @State private contentOffsetY: number = 0
+  @State private contentSwitching: boolean = false
 
   @State private hotels: HotelResponse[] = []
   @State private scenicList: ScenicSpotResponse[] = []
@@ -57,6 +60,40 @@ export struct VisitorServicesPage {
 
   async aboutToAppear(): Promise<void> {
     await this.loadRouteData()
+  }
+
+  private runContentSwitch(onSwitched: () => void): void {
+    if (this.contentSwitching) {
+      onSwitched()
+      return
+    }
+    this.contentSwitching = true
+    animateTo({ duration: 110, curve: Curve.EaseOut }, () => {
+      this.contentOpacity = 0
+      this.contentOffsetY = 10
+    })
+    setTimeout(() => {
+      onSwitched()
+      animateTo({ duration: 180, curve: Curve.EaseInOut }, () => {
+        this.contentOpacity = 1
+        this.contentOffsetY = 0
+      })
+      setTimeout(() => {
+        this.contentSwitching = false
+      }, 180)
+    }, 110)
+  }
+
+  private switchMainTab(tab: VisitorServiceTab): void {
+    if (this.mainTab === tab) {
+      return
+    }
+    this.runContentSwitch(() => {
+      this.mainTab = tab
+      if (tab === 'routes') {
+        this.loadRouteData()
+      }
+    })
   }
 
   private parsePriceFilter(): PriceRangeModel {
@@ -193,19 +230,14 @@ export struct VisitorServicesPage {
         .borderRadius(RADIUS_PILL)
         .fontColor(this.mainTab === 'routes' ? Color.White : THEME_TEXT_SECONDARY)
         .backgroundColor(this.mainTab === 'routes' ? THEME_PRIMARY : '#EEF3FA')
-        .onClick(() => {
-          this.mainTab = 'routes'
-          this.loadRouteData()
-        })
+        .onClick(() => this.switchMainTab('routes'))
       Button('餐饮娱乐演出')
         .layoutWeight(1)
         .height(38)
         .borderRadius(RADIUS_PILL)
         .fontColor(this.mainTab === 'dining' ? Color.White : THEME_TEXT_SECONDARY)
         .backgroundColor(this.mainTab === 'dining' ? THEME_PRIMARY : '#EEF3FA')
-        .onClick(() => {
-          this.mainTab = 'dining'
-        })
+        .onClick(() => this.switchMainTab('dining'))
     }
     .width('100%')
   }
@@ -435,7 +467,11 @@ export struct VisitorServicesPage {
       Scroll() {
         Column({ space: 12 }) {
           this.FilterPanel()
-          DiningShowPage({ embedded: true })
+          Column() {
+            DiningShowPage({ embedded: true })
+          }
+          .opacity(this.contentOpacity)
+          .translate({ x: 0, y: this.contentOffsetY })
         }
         .padding({ left: 12, right: 12, top: 12, bottom: 0 })
         .width('100%')
@@ -446,7 +482,11 @@ export struct VisitorServicesPage {
       Scroll() {
         Column({ space: 12 }) {
           this.FilterPanel()
-          this.RouteModeContent()
+          Column() {
+            this.RouteModeContent()
+          }
+          .opacity(this.contentOpacity)
+          .translate({ x: 0, y: this.contentOffsetY })
         }
         .padding({ left: 12, right: 12, top: 12, bottom: 98 })
         .width('100%')
