@@ -73,8 +73,7 @@ struct Index {
   private async doLogin(): Promise<void> {
     const ok: boolean = await this.authStore.login({ username: this.username, password: this.password })
     if (ok) {
-      const tabs: TabItem[] = this.getRoleTabs()
-      this.selectedTabKey = tabs.length > 0 ? tabs[0].key : ''
+      this.resetRoleTabSelection()
       this.visitorNav = 'home'
       this.visitorServiceTab = 'routes'
     }
@@ -152,6 +151,16 @@ struct Index {
     return this.tabsForRole(this.authStore.getRole())
   }
 
+  private resetRoleTabSelection(): void {
+    const tabs: TabItem[] = this.getRoleTabs()
+    if (tabs.length === 0) {
+      this.selectedTabKey = ''
+      return
+    }
+    const exists: boolean = tabs.some((tab: TabItem) => tab.key === this.selectedTabKey)
+    this.selectedTabKey = exists ? this.selectedTabKey : tabs[0].key
+  }
+
   private getSafeSelectedTabKey(): string {
     const tabs: TabItem[] = this.getRoleTabs()
     if (tabs.length === 0) {
@@ -176,9 +185,7 @@ struct Index {
     if (this.selectedTabKey === key) {
       return
     }
-    animateTo({ duration: 220, curve: Curve.EaseInOut }, () => {
-      this.selectedTabKey = key
-    })
+    this.selectedTabKey = key
   }
 
   private switchVisitorNav(key: VisitorNav): void {
@@ -474,7 +481,7 @@ struct Index {
       .shadow(SHADOW_CARD)
       .width('100%')
 
-      Scroll() {
+      Column() {
         Row({ space: 8 }) {
           ForEach(this.getRoleTabs(), (tab: TabItem) => {
             Button(tab.title)
@@ -486,16 +493,14 @@ struct Index {
               .borderRadius(RADIUS_PILL)
               .height(40)
               .stateEffect(true)
-              .onClick(() => {
-                this.switchTab(tab.key)
-              })
+              .onClick(() => this.switchTab(tab.key))
           }, (tab: TabItem) => tab.key)
         }
-        .padding({ left: 12, right: 12, top: 6, bottom: 8 })
+        .width('100%')
+        .justifyContent(FlexAlign.Start)
+        .flexWrap(FlexWrap.Wrap)
       }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .height(64)
+      .padding({ left: 12, right: 12, top: 6, bottom: 8 })
       .margin({ left: 12, right: 12, bottom: 8 })
       .backgroundColor(THEME_SURFACE)
       .borderRadius(RADIUS_LG)
