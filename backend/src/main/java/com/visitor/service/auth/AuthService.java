@@ -11,8 +11,10 @@ import com.visitor.service.auth.dto.ResetPasswordRequest;
 import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;
 import com.visitor.service.config.JwtTokenProvider;
-import com.visitor.service.user.UserAccount;
+import com.visitor.service.system.AuditLogService;
+import com.visitor.service.system.SystemSettingService;
 import com.visitor.service.user.RoleAuthorities;
+import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import com.visitor.service.user.UserRole;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,22 +28,28 @@ import java.time.Instant;
 @Service
 public class AuthService {
 
-    private static final int RESET_CODE_EXPIRE_SECONDS = 10 * 60;
+    private static final int DEFAULT_RESET_CODE_EXPIRE_SECONDS = 10 * 60;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final PasswordResetCodeRepository passwordResetCodeRepository;
+    private final SystemSettingService systemSettingService;
+    private final AuditLogService auditLogService;
     private final SecureRandom secureRandom;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider tokenProvider,
-                       PasswordResetCodeRepository passwordResetCodeRepository) {
+                       PasswordResetCodeRepository passwordResetCodeRepository,
+                       SystemSettingService systemSettingService,
+                       AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.passwordResetCodeRepository = passwordResetCodeRepository;
+        this.systemSettingService = systemSettingService;
+        this.auditLogService = auditLogService;
         this.secureRandom = new SecureRandom();
     }
 
@@ -53,11 +61,16 @@ public class AuthService {
         UserAccount user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误"));
 
+        if (!user.isEnabled()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "账号已停用");
+        }
+
         if (!matchesPassword(rawPassword, user)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
         String token = tokenProvider.generateToken(user);
+        auditLogService.record(user.getUsername(), "AUTH", "LOGIN", "USER", user.getId(), "用户登录成功");
         return new LoginResponse(
                 token,
                 user.getUsername(),
@@ -82,8 +95,10 @@ public class AuthService {
         user.setUsername(username);
         user.setDisplayName(displayName);
         user.setRole(UserRole.VISITOR);
+        user.setEnabled(true);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         UserAccount saved = userRepository.save(user);
+        auditLogService.record(saved.getUsername(), "AUTH", "REGISTER", "USER", saved.getId(), "游客注册成功");
 
         return new RegisterResponse(saved.getUsername(), saved.getDisplayName(), saved.getRole());
     }
@@ -93,7 +108,6 @@ public class AuthService {
         UserAccount user = userRepository.findByUsername(request.username().trim())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
 
-        // 仅最新验证码有效：生成新码时，旧的未使用验证码立即失效。
         passwordResetCodeRepository.findTopByUserUsernameOrderByCreatedAtDesc(user.getUsername())
                 .ifPresent(last -> {
                     if (!last.isUsed()) {
@@ -102,13 +116,15 @@ public class AuthService {
                     }
                 });
 
+        int expireSeconds = systemSettingService.resolveInt("PASSWORD_RESET_CODE_EXPIRE_SECONDS", DEFAULT_RESET_CODE_EXPIRE_SECONDS);
         String code = generateCode();
         PasswordResetCode resetCode = new PasswordResetCode();
         resetCode.setUser(user);
         resetCode.setCode(code);
         resetCode.setUsed(false);
-        resetCode.setExpiresAt(Instant.now().plusSeconds(RESET_CODE_EXPIRE_SECONDS));
+        resetCode.setExpiresAt(Instant.now().plusSeconds(expireSeconds));
         PasswordResetCode saved = passwordResetCodeRepository.save(resetCode);
+        auditLogService.record(user.getUsername(), "AUTH", "REQUEST_RESET_CODE", "USER", user.getId(), "申请找回密码验证码");
 
         return new RequestResetCodeResponse(user.getUsername(), saved.getCode(), saved.getExpiresAt());
     }
@@ -136,6 +152,7 @@ public class AuthService {
 
         latestCode.setUsed(true);
         passwordResetCodeRepository.save(latestCode);
+        auditLogService.record(user.getUsername(), "AUTH", "RESET_PASSWORD", "USER", user.getId(), "通过验证码重置密码");
     }
 
     public CurrentUserResponse currentUser() {
@@ -165,7 +182,6 @@ public class AuthService {
             return passwordEncoder.matches(rawPassword, stored);
         }
 
-        // 兼容历史明文存储：首次成功登录后自动迁移为 BCrypt。
         if (stored.equals(rawPassword)) {
             user.setPasswordHash(passwordEncoder.encode(rawPassword));
             userRepository.save(user);

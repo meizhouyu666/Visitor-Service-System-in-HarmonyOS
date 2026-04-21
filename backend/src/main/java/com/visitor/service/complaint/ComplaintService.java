@@ -9,6 +9,7 @@ import com.visitor.service.complaint.dto.ComplaintQueryFilter;
 import com.visitor.service.complaint.dto.ComplaintRatingRequest;
 import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.complaint.dto.ComplaintTimelineResponse;
+import com.visitor.service.system.AuditLogService;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import com.visitor.service.user.UserRole;
@@ -29,13 +30,16 @@ public class ComplaintService {
     private final ComplaintRepository complaintRepository;
     private final ComplaintTimelineRepository complaintTimelineRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public ComplaintService(ComplaintRepository complaintRepository,
                             ComplaintTimelineRepository complaintTimelineRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            AuditLogService auditLogService) {
         this.complaintRepository = complaintRepository;
         this.complaintTimelineRepository = complaintTimelineRepository;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     public ComplaintResponse create(String username, ComplaintCreateRequest request) {
@@ -48,6 +52,7 @@ public class ComplaintService {
         complaint.setCreatedBy(creator);
         Complaint saved = complaintRepository.save(complaint);
         addTimeline(saved, "CREATE", creator, "投诉已提交");
+        auditLogService.record(username, "COMPLAINT", "CREATE", "COMPLAINT", saved.getId(), "游客提交投诉");
         return ComplaintResponse.from(saved);
     }
 
@@ -116,6 +121,7 @@ public class ComplaintService {
         Complaint saved = complaintRepository.save(complaint);
 
         addTimeline(saved, "APPROVE", actor, request.comment());
+        auditLogService.record(approverUsername, "COMPLAINT", "APPROVE", "COMPLAINT", saved.getId(), "管理员审批通过投诉");
         return ComplaintResponse.from(saved);
     }
 
@@ -130,6 +136,7 @@ public class ComplaintService {
         Complaint saved = complaintRepository.save(complaint);
 
         addTimeline(saved, "REJECT", actor, request.comment());
+        auditLogService.record(approverUsername, "COMPLAINT", "REJECT", "COMPLAINT", saved.getId(), "管理员驳回投诉");
         return ComplaintResponse.from(saved);
     }
 
@@ -149,6 +156,7 @@ public class ComplaintService {
                 ? "已分派给：" + assignee.getUsername()
                 : request.comment();
         addTimeline(saved, "ASSIGN", actor, detail);
+        auditLogService.record(assignerUsername, "COMPLAINT", "ASSIGN", "COMPLAINT", saved.getId(), "管理员分派投诉给 " + assignee.getUsername());
         return ComplaintResponse.from(saved);
     }
 
@@ -166,6 +174,7 @@ public class ComplaintService {
         Complaint saved = complaintRepository.save(complaint);
 
         addTimeline(saved, "PROCESS", actor, request.comment());
+        auditLogService.record(handlerUsername, "COMPLAINT", "PROCESS", "COMPLAINT", saved.getId(), "处理员提交处理结果");
         return ComplaintResponse.from(saved);
     }
 
@@ -180,6 +189,7 @@ public class ComplaintService {
         Complaint saved = complaintRepository.save(complaint);
 
         addTimeline(saved, "CLOSE", actor, request.comment());
+        auditLogService.record(handlerUsername, "COMPLAINT", "CLOSE", "COMPLAINT", saved.getId(), "管理员完成结案");
         return ComplaintResponse.from(saved);
     }
 
@@ -195,6 +205,7 @@ public class ComplaintService {
         Complaint saved = complaintRepository.save(complaint);
 
         addTimeline(saved, "RATE", findUser(username), "评分：" + request.rating());
+        auditLogService.record(username, "COMPLAINT", "RATE", "COMPLAINT", saved.getId(), "游客提交投诉评价");
         return ComplaintResponse.from(saved);
     }
 

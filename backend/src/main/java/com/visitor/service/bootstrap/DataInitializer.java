@@ -25,15 +25,21 @@ public class DataInitializer implements CommandLineRunner {
         upsertDemoUser("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
         upsertDemoUser("writer", "writer123", "Platform Admin Demo", UserRole.ADMIN);
         upsertDemoUser("approver", "approver123", "Platform Admin Demo", UserRole.ADMIN);
-        upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Admin Demo", UserRole.HOTEL_ADMIN);
+        upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Admin Demo", UserRole.HOTEL_ADMIN, "h-1");
         upsertDemoUser("sysadmin", "sysadmin123", "System Admin Demo", UserRole.SYSTEM_ADMIN);
     }
 
     private void upsertDemoUser(String username, String rawPassword, String displayName, UserRole role) {
+        upsertDemoUser(username, rawPassword, displayName, role, null);
+    }
+
+    private void upsertDemoUser(String username, String rawPassword, String displayName, UserRole role, String managedHotelId) {
         UserAccount user = userRepository.findByUsername(username).orElseGet(UserAccount::new);
         user.setUsername(username);
         user.setDisplayName(displayName);
         user.setRole(role);
+        user.setEnabled(true);
+        user.setManagedHotelId(managedHotelId);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         userRepository.save(user);
     }

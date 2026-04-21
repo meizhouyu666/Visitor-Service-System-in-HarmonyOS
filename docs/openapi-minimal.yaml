@@ -1,7 +1,7 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: 游客服务系统 API（最小契约）
-  version: 2.4.0
+  version: 2.5.0
 servers:
   - url: http://localhost:8081
 components:
@@ -39,7 +39,6 @@ components:
           type: string
     AuthUserResponse:
       type: object
-      description: 登录与当前用户信息。正式角色为 VISITOR、ADMIN、COMPLAINT_HANDLER、HOTEL_ADMIN、SYSTEM_ADMIN。
       properties:
         username:
           type: string
@@ -50,19 +49,8 @@ components:
           enum: [VISITOR, ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
         permissions:
           type: array
-          description: 由角色派生的权限，不单独落权限表。
           items:
             type: string
-            enum:
-              - COMPLAINT_MANAGE
-              - COMPLAINT_PROCESS
-              - EMERGENCY_MANAGE
-              - MARKETING_MANAGE
-              - RESOURCE_MANAGE
-              - HOTEL_ROOM_MANAGE
-              - USER_MANAGE
-              - SYSTEM_CONFIG_MANAGE
-              - AUDIT_LOG_VIEW
     LoginResponse:
       allOf:
         - $ref: '#/components/schemas/AuthUserResponse'
@@ -70,22 +58,6 @@ components:
           properties:
             token:
               type: string
-    RequestResetCodeRequest:
-      type: object
-      required: [username]
-      properties:
-        username:
-          type: string
-    ResetPasswordRequest:
-      type: object
-      required: [username, code, newPassword]
-      properties:
-        username:
-          type: string
-        code:
-          type: string
-        newPassword:
-          type: string
     ComplaintCreateRequest:
       type: object
       required: [title, content]
@@ -120,20 +92,34 @@ components:
           type: integer
           minimum: 1
           maximum: 5
-    HotelResponse:
+    EmergencyRequest:
       type: object
+      required: [title, content]
       properties:
-        id:
+        title:
           type: string
-        name:
+        content:
           type: string
-        availabilityStatus:
+        validFrom:
           type: string
-          description: 可选，房态标签（AVAILABLE/LIMITED/BUSY/FULL）
-        coverImageUrl:
+          format: date-time
+          nullable: true
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        alertLevel:
           type: string
           nullable: true
-          description: 可选，酒店封面图标识
+        alertType:
+          type: string
+          nullable: true
+    EmergencyReviewRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          nullable: true
     HotelAdminRequest:
       type: object
       required: [name, address, star, price, phone, score, hasBreakfast, facility, introduction]
@@ -162,53 +148,69 @@ components:
         coverImageUrl:
           type: string
           nullable: true
-    ScenicSpotResponse:
+    ResourceItemRequest:
       type: object
+      required: [title, location, description]
       properties:
-        id:
+        title:
           type: string
-        name:
+        subtitle:
           type: string
-        crowdHeat:
-          type: integer
           nullable: true
-          description: 可选，客流热度百分比（0-100）
+        location:
+          type: string
+        schedule:
+          type: string
+          nullable: true
+        description:
+          type: string
         coverImageUrl:
           type: string
           nullable: true
-          description: 可选，景区封面图标识
-    EmergencyResponse:
+        online:
+          type: boolean
+          nullable: true
+    SystemUserCreateRequest:
       type: object
+      required: [username, displayName, role, password]
       properties:
-        id:
-          type: integer
-          format: int64
-        title:
+        username:
           type: string
-        alertLevel:
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        password:
+          type: string
+        managedHotelId:
           type: string
           nullable: true
-          description: 可选，预警等级（HIGH/MEDIUM/LOW）
-        alertType:
-          type: string
-          nullable: true
-          description: 可选，预警类型（WEATHER/TRAFFIC/GENERAL）
-    TrafficResponse:
+    SystemUserUpdateRequest:
       type: object
+      required: [displayName, role]
       properties:
-        fromLocation:
+        displayName:
           type: string
-        toLocation:
+        role:
           type: string
-        severityLevel:
+          enum: [ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        managedHotelId:
           type: string
           nullable: true
-          description: 可选，路况告警级别（HIGH/MEDIUM/LOW）
+    SystemSettingUpdateRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+        description:
+          type: string
+          nullable: true
 paths:
   /api/auth/login:
     post:
       summary: 登录
-      description: 旧 writer/approver 账号登录后按 ADMIN 返回；旧 HOTEL_MANAGER/HOTELADMIN 按 HOTEL_ADMIN 返回。
       requestBody:
         required: true
         content:
@@ -218,10 +220,6 @@ paths:
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
   /api/auth/register:
     post:
       summary: 注册游客账号
@@ -236,77 +234,34 @@ paths:
           description: OK
   /api/auth/forgot-password/request-code:
     post:
-      summary: 申请找回密码验证码（站内 debugCode）
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RequestResetCodeRequest'
+      summary: 申请找回密码验证码
       responses:
         '200':
           description: OK
   /api/auth/forgot-password/reset:
     post:
       summary: 使用验证码重置密码
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
       responses:
         '200':
           description: OK
   /api/auth/me:
     get:
       summary: 获取当前用户
-      description: 返回 role 与角色派生 permissions，供前端菜单和按钮显隐使用。
       security:
         - bearerAuth: []
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthUserResponse'
   /api/complaints:
     get:
       summary: 投诉列表（支持筛选）
       security:
         - bearerAuth: []
-      parameters:
-        - in: query
-          name: status
-          schema:
-            type: string
-        - in: query
-          name: createdBy
-          schema:
-            type: string
-        - in: query
-          name: assignee
-          schema:
-            type: string
-        - in: query
-          name: keyword
-          schema:
-            type: string
-        - in: query
-          name: from
-          schema:
-            type: string
-        - in: query
-          name: to
-          schema:
-            type: string
       responses:
         '200':
           description: OK
     post:
-      summary: 提交投诉
-      description: 仅 VISITOR 可提交投诉。
+      summary: 游客提交投诉
       security:
         - bearerAuth: []
       requestBody:
@@ -356,8 +311,7 @@ paths:
           description: OK
   /api/complaints/admin/{id}/approve:
     post:
-      summary: 审批通过
-      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
+      summary: 管理员审批通过投诉
       security:
         - bearerAuth: []
       parameters:
@@ -373,8 +327,7 @@ paths:
           description: OK
   /api/complaints/admin/{id}/reject:
     post:
-      summary: 驳回投诉
-      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
+      summary: 管理员驳回投诉
       security:
         - bearerAuth: []
       parameters:
@@ -390,8 +343,7 @@ paths:
           description: OK
   /api/complaints/admin/{id}/assign:
     post:
-      summary: 分派投诉
-      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
+      summary: 管理员分派投诉
       security:
         - bearerAuth: []
       parameters:
@@ -407,8 +359,7 @@ paths:
           description: OK
   /api/complaints/admin/{id}/process:
     post:
-      summary: 处理投诉
-      description: 需要 COMPLAINT_PROCESS 权限；COMPLAINT_HANDLER 只能处理分派给自己的投诉。
+      summary: 处理员处理投诉
       security:
         - bearerAuth: []
       parameters:
@@ -424,8 +375,7 @@ paths:
           description: OK
   /api/complaints/admin/{id}/close:
     post:
-      summary: 结案投诉
-      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
+      summary: 管理员结案投诉
       security:
         - bearerAuth: []
       parameters:
@@ -441,7 +391,7 @@ paths:
           description: OK
   /api/emergency:
     get:
-      summary: 游客侧应急列表（仅有效窗口内已发布）
+      summary: 游客侧应急列表（仅有效期内已发布）
       security:
         - bearerAuth: []
       responses:
@@ -450,7 +400,6 @@ paths:
   /api/emergency/admin:
     get:
       summary: 管理侧应急列表
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -458,24 +407,33 @@ paths:
           description: OK
     post:
       summary: 新建应急草稿
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
       responses:
         '200':
           description: OK
   /api/emergency/admin/{id}:
     put:
       summary: 更新应急草稿
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
       responses:
         '200':
           description: OK
     delete:
       summary: 删除应急信息
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -484,7 +442,6 @@ paths:
   /api/emergency/admin/{id}/submit:
     post:
       summary: 提交应急审批
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -493,16 +450,29 @@ paths:
   /api/emergency/admin/{id}/approve:
     post:
       summary: 审批并发布应急信息
-      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/emergency/admin/{id}/reject:
+    post:
+      summary: 驳回应急信息
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyReviewRequest'
       responses:
         '200':
           description: OK
   /api/hotels/admin:
     get:
       summary: 管理侧酒店列表
-      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      description: HOTEL_ADMIN 仅查看自己绑定酒店，SYSTEM_ADMIN 可查看全量，ADMIN 无权访问。
       security:
         - bearerAuth: []
       responses:
@@ -510,7 +480,7 @@ paths:
           description: OK
     post:
       summary: 新增酒店
-      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      description: 仅 SYSTEM_ADMIN 可访问。
       security:
         - bearerAuth: []
       requestBody:
@@ -525,7 +495,7 @@ paths:
   /api/hotels/admin/{id}:
     put:
       summary: 编辑酒店
-      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      description: HOTEL_ADMIN 仅可编辑自己绑定酒店，SYSTEM_ADMIN 可维护全量。
       security:
         - bearerAuth: []
       requestBody:
@@ -539,9 +509,163 @@ paths:
           description: OK
     delete:
       summary: 删除酒店
-      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      description: 仅 SYSTEM_ADMIN 可访问。
       security:
         - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}:
+    get:
+      summary: 平台管理员查询资源库列表
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 平台管理员新增资源
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceItemRequest'
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}:
+    get:
+      summary: 平台管理员查询资源详情
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: 平台管理员更新资源
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceItemRequest'
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: 平台管理员删除资源
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}/online:
+    post:
+      summary: 资源上架
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}/offline:
+    post:
+      summary: 资源下架
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users:
+    get:
+      summary: 系统管理员查询账号列表
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 系统管理员创建账号
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemUserCreateRequest'
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}:
+    put:
+      summary: 系统管理员更新账号
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemUserUpdateRequest'
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/reset-password:
+    post:
+      summary: 系统管理员重置账号密码
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/enable:
+    post:
+      summary: 启用账号
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/disable:
+    post:
+      summary: 停用账号
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/audit-logs:
+    get:
+      summary: 系统管理员查询审计日志
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/settings:
+    get:
+      summary: 系统管理员查询系统参数
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/settings/{key}:
+    put:
+      summary: 系统管理员更新系统参数
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingUpdateRequest'
       responses:
         '200':
           description: OK
@@ -550,85 +674,28 @@ paths:
       summary: 酒店查询
       security:
         - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-  /api/query/hotels/star:
-    get:
-      summary: 星级酒店查询（兼容）
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-  /api/query/hotels/non-star:
-    get:
-      summary: 非星级/乡村酒店查询（兼容）
-      security:
-        - bearerAuth: []
       responses:
         '200':
           description: OK
   /api/query/scenic-spots:
     get:
-      summary: 景区查询
+      summary: 景区查询（仅返回上架资源）
       security:
         - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
       responses:
         '200':
           description: OK
   /api/query/routes:
     get:
-      summary: 线路查询
+      summary: 线路查询（仅返回上架资源）
       security:
         - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
       responses:
         '200':
           description: OK
   /api/query/dining:
     get:
-      summary: 餐饮查询
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-  /api/query/entertainment:
-    get:
-      summary: 娱乐查询
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-  /api/query/dining-entertainment:
-    get:
-      summary: 餐饮娱乐综合查询（兼容）
+      summary: 餐饮查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:
@@ -636,36 +703,7 @@ paths:
           description: OK
   /api/query/performances:
     get:
-      summary: 演出查询
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: keyword
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-  /api/query/weather:
-    get:
-      summary: 天气查询
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-  /api/query/traffic:
-    get:
-      summary: 路况查询
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-  /api/query/weather-traffic:
-    get:
-      summary: 天气路况综合查询（兼容）
+      summary: 演出查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:

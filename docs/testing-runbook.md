@@ -1,19 +1,16 @@
-﻿# 游客服务系统测试与运行手册（P4 五角色 RBAC 收敛）
+# 游客服务系统测试与运行手册（P5 后端全链路补齐版）
 
 本手册面向测试与联调组员，覆盖当前交付范围：
-- 认证扩展：注册、忘记密码（站内验证码）
-- 投诉筛选：多条件筛选与权限边界
-- 查询持久化：`/api/query/*` 改为 MySQL 数据源（保留兼容路由）
-- 五角色 RBAC 收敛：游客、平台管理员、投诉处理员、酒店管理员、系统管理员
-
-补充 P2（游客端 UI 大改）：
-- 游客端导航重构为：首页 / 服务 / 投诉 / 应急
-- 查询/应急新增可选展示字段：房态、封面图、客流热度、预警等级/类型、路况告警级别
+- 五角色 RBAC：游客、平台管理员、投诉处理员、酒店管理员、系统管理员
+- 投诉主链路：提交、审批、驳回、分派、处理、结案、评价、时间线
+- 应急主链路：草稿、提交审批、审批发布、驳回修改、游客侧有效期过滤
+- 酒店隔离：酒店管理员一账号一酒店
+- 旅游资源库：平台管理员四类资源内容管理
+- 系统管理：账号管理、审计日志、系统参数
 
 ## 1. 环境准备
 
 ### 1.1 必备软件
-
 - Git
 - JDK 17
 - Maven 3.8+
@@ -25,8 +22,8 @@
 ```bash
 git clone https://github.com/meizhouyu666/Visitor-Service-System-in-HarmonyOS.git
 cd Visitor-Service-System-in-HarmonyOS
-git checkout main
-git pull origin main
+git checkout meizhouyu666-p1-core-package
+git pull origin meizhouyu666-p1-core-package
 ```
 
 ## 2. 后端运行
@@ -45,15 +42,6 @@ docker compose up -d
 - 端口：`3306`
 
 ### 2.2 启动后端
-
-推荐（含 MySQL 连通性前置检查）：
-
-```powershell
-cd backend
-./scripts/start-backend.ps1
-```
-
-或直接启动：
 
 ```bash
 cd backend
@@ -74,122 +62,95 @@ mvn spring-boot:run
 - `V7__dining_performance_extensions.sql`
 - `V8__merge_system_admin_role.sql`
 - `V9__normalize_five_roles.sql`
+- `V10__system_resource_backend_extensions.sql`
 
 ## 3. 前端运行（DevEco）
 
 ### 3.1 打开工程
-
 在 DevEco Studio 打开：
 - `frontend/harmony-app`
 
 ### 3.2 后端地址
-
 文件：
 - `frontend/harmony-app/entry/src/main/ets/common/network/ApiClient.ets`
 
 团队默认值：
 - `http://10.0.2.2:8081`
 
-说明：
-- 模拟器通常使用 `10.0.2.2` 访问宿主机后端。
-- 真机调试可临时改本机局域网 IP，但禁止提交个人 IP 到仓库。
-
 ## 4. 演示账号
-
 - 游客：`visitor / visitor123`
 - 平台管理员：`admin / admin123`
 - 投诉处理员：`handler / handler123`
 - 酒店管理员：`hoteladmin / hoteladmin123`
 - 系统管理员：`sysadmin / sysadmin123`
-- 兼容账号：`writer / writer123`、`approver / approver123` 仍可登录，但角色已并入平台管理员 `ADMIN`。
+- 兼容账号：`writer / writer123`、`approver / approver123` 仍可登录，但角色已并入平台管理员 `ADMIN`
 
-## 4.1 五角色权限路径
-
+## 5. 五角色权限路径
 1. `VISITOR`：查询游客服务、查看应急、提交投诉、查看本人投诉、结案后评价。
-2. `ADMIN`：平台运营后台，负责投诉审批/驳回/分派/结案、应急发布审批、导流营销、旅游资源库入口。
+2. `ADMIN`：平台运营后台，负责投诉审批/驳回/分派/结案、应急发布审批、导流营销、旅游资源库管理。
 3. `COMPLAINT_HANDLER`：一线处理人员，只查看和处理分派给自己的投诉任务。
-4. `HOTEL_ADMIN`：酒店管理员，只进入酒店房态/酒店信息维护页面。
-5. `SYSTEM_ADMIN`：系统管理员，只进入用户、角色、权限、日志类系统管理入口；本轮为占位入口。
+4. `HOTEL_ADMIN`：酒店管理员，只能查看并维护自己绑定酒店的资料与房态。
+5. `SYSTEM_ADMIN`：系统管理员，负责账号、审计日志、系统参数，不参与投诉/应急/导流营销业务操作。
 
-## 5. P4 测试清单
+## 6. 核心测试清单
 
-### 5.1 认证扩展（必测）
-
+### 6.1 认证与账号
 1. 注册：新用户名注册成功，角色默认为 `VISITOR`。
 2. 重复用户名注册：被拦截并返回业务错误。
-3. 忘记密码申请验证码：返回 `debugCode`，有效期 10 分钟。
-4. 同账号重复申请验证码：仅最新验证码可用。
-5. 使用错误验证码重置：失败。
-6. 使用过期验证码重置：失败。
-7. 使用正确验证码重置：成功，新密码可登录、旧密码失效。
+3. 忘记密码申请验证码：返回 `debugCode`，有效期取系统参数 `PASSWORD_RESET_CODE_EXPIRE_SECONDS`。
+4. 使用错误验证码重置：失败。
+5. 使用正确验证码重置：成功，新密码可登录、旧密码失效。
+6. 系统管理员可新增平台管理员、投诉处理员、酒店管理员、系统管理员账号。
+7. 系统管理员可停用账号；被停用账号登录应失败。
 
-### 5.2 投诉筛选（必测）
+### 6.2 投诉链路
+1. 游客提交投诉成功。
+2. 管理员审批通过/驳回成功。
+3. 管理员分派处理人成功。
+4. 处理员只能处理分派给自己的投诉。
+5. 管理员结案成功。
+6. 游客只能评价自己且已结案的投诉。
+7. 时间线包含 `CREATE / APPROVE / REJECT / ASSIGN / PROCESS / CLOSE / RATE`。
+8. 审计日志中可以看到投诉相关关键动作。
 
-1. 游客登录请求 `/api/complaints`：仅返回本人数据。
-2. 管理侧按 `status` 筛选：结果正确。
-3. 管理侧按 `createdBy`、`assignee` 筛选：结果正确。
-4. 按 `keyword`、`from`、`to` 组合筛选：结果正确。
-5. 空参请求：行为与旧版本一致（返回当前角色可见列表）。
+### 6.3 应急链路
+1. 平台管理员创建草稿成功。
+2. 提交审批成功。
+3. 审批发布成功。
+4. 驳回修改成功，状态回到 `REJECTED`。
+5. 驳回后的应急信息可再次编辑并重新提交审批。
+6. 游客侧 `/api/emergency` 仅返回 `PUBLISHED` 且在有效期窗口内的数据。
 
-### 5.3 投诉主链路回归（必测）
+### 6.4 旅游资源库链路
+1. 平台管理员可管理四类资源：
+   - 景区景点
+   - 游览线路
+   - 餐饮
+   - 演出
+2. 支持列表、详情、新增、编辑、上架、下架、删除。
+3. 下架后游客侧 `/api/query/scenic-spots`、`/routes`、`/dining`、`/performances` 不再返回该资源。
+4. 重新上架后游客侧再次可见。
+5. 资源管理动作写入审计日志。
 
-1. 提交投诉。
-2. 审批通过/驳回。
-3. 分派处理人。
-4. 处理并结案。
-5. 游客评价。
-6. 时间线包含 `CREATE/APPROVE/REJECT/ASSIGN/PROCESS/CLOSE/RATE`。
+### 6.5 酒店链路
+1. `hoteladmin` 登录后调用 `/api/hotels/admin` 仅返回自己绑定酒店。
+2. `hoteladmin` 仅可更新自己绑定酒店，不可越权更新其他酒店。
+3. `hoteladmin` 不可新增/删除酒店。
+4. `sysadmin` 可新增/删除酒店，并可为酒店管理员绑定酒店。
+5. `admin` 不可调用酒店管理写接口。
 
-### 5.4 查询持久化（必测）
+### 6.6 系统管理链路
+1. 系统管理员可查询账号列表。
+2. 系统管理员可创建账号、修改角色、重置密码、启停账号。
+3. 系统管理员可查询审计日志，并按时间、操作者、模块、动作过滤。
+4. 系统管理员可查询和更新系统参数。
+5. 固定五角色权限展示需与实际权限保持一致。
 
-以下接口均应返回数据，且不依赖内存硬编码：
-- `/api/query/hotels`
-- `/api/query/scenic-spots`
-- `/api/query/routes`
-- `/api/query/dining`
-- `/api/query/entertainment`
-- `/api/query/performances`
-- `/api/query/weather`
-- `/api/query/traffic`
-
-兼容接口也需可用：
-- `/api/query/hotels/star`
-- `/api/query/hotels/non-star`
-- `/api/query/dining-entertainment`
-- `/api/query/weather-traffic`
-
-### 5.5 应急链路回归（必测）
-
-1. 平台管理员创建草稿并提交审批。
-2. 平台管理员审批发布。
-3. 游客侧 `/api/emergency` 仅返回 `PUBLISHED` 且在有效期窗口内的数据。
-
-### 5.5.1 五角色回归（必测）
-
-1. `admin` 登录后进入平台工作台，可进入投诉管理、应急信息、导流营销、旅游资源库入口。
-2. `writer/approver` 登录后也进入平台工作台，不再出现独立发布员/审批员首页。
-3. `handler` 登录后只进入投诉处理页，不能进入应急、酒店、导流营销后台。
-4. `hoteladmin` 登录后只进入酒店管理页，可调用 `/api/hotels/admin`。
-5. `admin` 调用 `/api/hotels/admin` 新增/编辑/删除应返回无权限。
-6. `sysadmin` 登录后进入系统管理中心，不参与投诉、应急、酒店、营销业务操作。
-
-### 5.6 异常映射（必测）
-
-1. 查询不存在资源（如不存在的投诉 ID）。
-2. 返回 `404/NOT_FOUND`，不应返回 `500`。
-
-## 6. 仓库卫生检查
-
+## 7. 仓库卫生检查
 合并前请确认：
 - 不提交 `frontend/harmony-app/entry/.preview/**`
 - 不提交 `frontend/harmony-app/oh_modules/.ohpm/**`
 - 不提交个人 IP、个人数据库密码
-
-可使用：
-
-```bash
-git ls-files | grep -E "entry/.preview|oh_modules/.ohpm"
-```
 
 Windows PowerShell：
 
@@ -197,14 +158,14 @@ Windows PowerShell：
 git ls-files | Select-String "entry/.preview|oh_modules/.ohpm"
 ```
 
-## 7. 常见问题排查
-
+## 8. 常见问题排查
 - 后端启动失败：检查 JDK 17、8081 端口占用、MySQL 容器状态。
 - 数据库连接失败：先执行 `docker compose up -d`，再检查 `backend/src/main/resources/application.yml` 与 Docker 账号密码是否一致。
-- 前端请求失败：确认后端已启动，`API_BASE_URL` 与当前运行环境一致。
-- 权限报错：确认登录账号角色与目标操作匹配。
+- 酒店管理员看不到数据：确认 `users.managed_hotel_id` 已正确绑定酒店。
+- 游客看不到资源：检查对应资源是否处于上架状态。
+- 审计日志为空：确认实际发生了登录、投诉、应急、资源或系统管理操作。
 
-## 8. 反馈模板
+## 9. 反馈模板
 
 ```text
 【环境】
@@ -213,7 +174,6 @@ DevEco 版本：
 运行方式：模拟器/真机
 
 【测试项】
-（例如：投诉筛选 by status + keyword）
 
 【步骤】
 1.
@@ -225,8 +185,6 @@ DevEco 版本：
 【实际结果】
 
 【日志/报错】
-（包含接口路径与时间）
 
 【截图】
-（可选）
 ```

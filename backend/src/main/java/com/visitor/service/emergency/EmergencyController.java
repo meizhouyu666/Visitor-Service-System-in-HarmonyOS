@@ -3,6 +3,7 @@ package com.visitor.service.emergency;
 import com.visitor.service.common.ApiResponse;
 import com.visitor.service.emergency.dto.EmergencyRequest;
 import com.visitor.service.emergency.dto.EmergencyResponse;
+import com.visitor.service.emergency.dto.EmergencyReviewRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -53,23 +54,25 @@ public class EmergencyController {
     @Operation(summary = "更新应急草稿")
     @PutMapping("/admin/{id}")
     @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
-    public ApiResponse<EmergencyResponse> update(@PathVariable Long id, @Valid @RequestBody EmergencyRequest request) {
-        return ApiResponse.success(emergencyService.update(id, request));
+    public ApiResponse<EmergencyResponse> update(@PathVariable Long id,
+                                                 @Valid @RequestBody EmergencyRequest request,
+                                                 Authentication authentication) {
+        return ApiResponse.success(emergencyService.update(id, request, authentication.getName()));
     }
 
     @Operation(summary = "删除应急信息")
     @DeleteMapping("/admin/{id}")
     @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        emergencyService.delete(id);
+    public ApiResponse<Void> delete(@PathVariable Long id, Authentication authentication) {
+        emergencyService.delete(id, authentication.getName());
         return ApiResponse.successMessage("删除成功");
     }
 
     @Operation(summary = "提交应急信息待审批")
     @PostMapping("/admin/{id}/submit")
     @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
-    public ApiResponse<EmergencyResponse> submit(@PathVariable Long id) {
-        return ApiResponse.success(emergencyService.submitForApproval(id));
+    public ApiResponse<EmergencyResponse> submit(@PathVariable Long id, Authentication authentication) {
+        return ApiResponse.success(emergencyService.submitForApproval(id, authentication.getName()));
     }
 
     @Operation(summary = "审批并发布应急信息")
@@ -77,5 +80,14 @@ public class EmergencyController {
     @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<EmergencyResponse> approve(@PathVariable Long id, Authentication authentication) {
         return ApiResponse.success(emergencyService.approve(id, authentication.getName()));
+    }
+
+    @Operation(summary = "驳回应急信息")
+    @PostMapping("/admin/{id}/reject")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
+    public ApiResponse<EmergencyResponse> reject(@PathVariable Long id,
+                                                 @RequestBody(required = false) EmergencyReviewRequest request,
+                                                 Authentication authentication) {
+        return ApiResponse.success(emergencyService.reject(id, request, authentication.getName()));
     }
 }

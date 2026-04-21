@@ -1,4 +1,4 @@
-import { HotelAdminRequest, HotelResponse } from '../../common/model/ApiModels'
+﻿import { HotelAdminRequest, HotelResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 import {
   RADIUS_LG,
@@ -22,13 +22,30 @@ import {
 
 export type HotelMode = 'visitor' | 'manager' | 'admin'
 
-interface HotelRoomItem {
+@Observed
+class HotelRoomItem {
   id: string
   name: string
   totalRooms: number
   availableRooms: number
   price: number
   imageUrl: string
+
+  constructor(
+    id: string,
+    name: string,
+    totalRooms: number,
+    availableRooms: number,
+    price: number,
+    imageUrl: string
+  ) {
+    this.id = id
+    this.name = name
+    this.totalRooms = totalRooms
+    this.availableRooms = availableRooms
+    this.price = price
+    this.imageUrl = imageUrl
+  }
 }
 
 @Component
@@ -70,30 +87,30 @@ export struct HotelPage {
   @State private formAvailability: string = 'AVAILABLE'
   @State private formCoverImageUrl: string = ''
   @State private roomItems: HotelRoomItem[] = [
-    {
-      id: 'deluxe-king',
-      name: '豪华大床房',
-      totalRooms: 50,
-      availableRooms: 12,
-      price: 599,
-      imageUrl: 'https://images.unsplash.com/photo-1590490359683-658d3d23f972?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      id: 'standard-twin',
-      name: '双人标准间',
-      totalRooms: 80,
-      availableRooms: 5,
-      price: 450,
-      imageUrl: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      id: 'family-suite',
-      name: '全景家庭套房',
-      totalRooms: 15,
-      availableRooms: 0,
-      price: 1299,
-      imageUrl: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=400&q=80'
-    }
+    new HotelRoomItem(
+      'deluxe-king',
+      '豪华大床房',
+      50,
+      12,
+      599,
+      'https://images.unsplash.com/photo-1590490359683-658d3d23f972?auto=format&fit=crop&w=400&q=80'
+    ),
+    new HotelRoomItem(
+      'standard-twin',
+      '双人标准间',
+      80,
+      5,
+      450,
+      'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80'
+    ),
+    new HotelRoomItem(
+      'family-suite',
+      '全景家庭套房',
+      15,
+      0,
+      1299,
+      'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=400&q=80'
+    )
   ]
 
   async aboutToAppear(): Promise<void> {
@@ -477,19 +494,17 @@ export struct HotelPage {
 
   private changeRoomAvailable(id: string, delta: number): void {
     this.roomItems = this.roomItems.map((item: HotelRoomItem) => {
-      if (item.id !== id) {
-        return item
-      }
-      const nextValue: number = Math.max(0, Math.min(item.totalRooms, item.availableRooms + delta))
-      const nextItem: HotelRoomItem = {
-        id: item.id,
-        name: item.name,
-        totalRooms: item.totalRooms,
-        availableRooms: nextValue,
-        price: item.price,
-        imageUrl: item.imageUrl
-      }
-      return nextItem
+      const nextValue: number = item.id === id
+        ? Math.max(0, Math.min(item.totalRooms, item.availableRooms + delta))
+        : item.availableRooms
+      return new HotelRoomItem(
+        item.id,
+        item.name,
+        item.totalRooms,
+        nextValue,
+        item.price,
+        item.imageUrl
+      )
     })
     this.actionMessage = ''
   }

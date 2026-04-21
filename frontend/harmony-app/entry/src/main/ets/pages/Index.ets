@@ -98,6 +98,7 @@ struct Index {
   @State private adminSection: AdminSection = 'home'
   @State private systemAdminSection: SystemAdminSection = 'home'
   @State private pressedAdminSection: string = ''
+  @State private pressedSystemSection: string = ''
   @State private marketingMessage: string = ''
   @State private systemRoleInput: SystemAccountRole = 'ADMIN'
   @State private systemUsernameInput: string = ''
@@ -129,10 +130,10 @@ struct Index {
   ]
 
   private systemManageItems: SystemManageItem[] = [
-    { key: 'account', icon: '人', title: '账号与权限', subtitle: '新增酒店 / 平台人员', iconColor: THEME_PRIMARY, iconBg: THEME_PRIMARY_SOFT },
-    { key: 'logs', icon: '审', title: '操作日志审计', subtitle: '全局行为追踪', iconColor: '#EA580C', iconBg: '#FFF4E6' },
-    { key: 'rbac', icon: '权', title: 'RBAC 角色配置', subtitle: '系统级权限映射', iconColor: '#7C3AED', iconBg: '#F3E8FF' },
-    { key: 'settings', icon: '参', title: '系统参数设置', subtitle: '接口 / 缓存 / 字典维护', iconColor: THEME_TEXT_SECONDARY, iconBg: THEME_SURFACE_MUTED }
+    { key: 'account', icon: '👥', title: '账号与权限', subtitle: '新增酒店 / 平台人员', iconColor: THEME_PRIMARY, iconBg: THEME_PRIMARY_SOFT },
+    { key: 'logs', icon: '🧾', title: '操作日志审计', subtitle: '全局行为追踪', iconColor: '#EA580C', iconBg: '#FFF4E6' },
+    { key: 'rbac', icon: '🛡', title: 'RBAC 角色配置', subtitle: '系统级权限映射', iconColor: '#7C3AED', iconBg: '#F3E8FF' },
+    { key: 'settings', icon: '⚙', title: '系统参数设置', subtitle: '接口 / 缓存 / 字典维护', iconColor: THEME_TEXT_SECONDARY, iconBg: THEME_SURFACE_MUTED }
   ]
 
   private systemLogs: SystemLogItem[] = [
@@ -326,6 +327,19 @@ struct Index {
   private switchSystemAdminSection(section: SystemAdminSection): void {
     this.systemAdminSection = section
     this.systemMessage = ''
+    this.pressedSystemSection = ''
+  }
+
+  private systemCardScale(key: SystemAdminSection): number {
+    return this.pressedSystemSection === key ? 0.97 : 1
+  }
+
+  private systemCardBg(key: SystemAdminSection): string {
+    return this.pressedSystemSection === key ? '#F8FBFF' : THEME_SURFACE
+  }
+
+  private updatePressedSystemSection(key: SystemAdminSection, pressed: boolean): void {
+    this.pressedSystemSection = pressed ? key : ''
   }
 
   private selectSystemRole(role: SystemAccountRole): void {
@@ -355,12 +369,12 @@ struct Index {
 
   private systemUsernameHint(): string {
     if (this.systemRoleInput === 'HOTEL_ADMIN') {
-      return '鐧诲綍璐﹀彿锛屽锛歨otel_holiday'
+      return '登录账号，如：hotel_holiday'
     }
     if (this.systemRoleInput === 'COMPLAINT_HANDLER') {
-      return '鐧诲綍璐﹀彿锛屽锛歨andler_wang'
+      return '登录账号，如：handler_wang'
     }
-    return '鐧诲綍璐﹀彿锛屽锛歛dmin_zhang'
+    return '登录账号，如：admin_zhang'
   }
 
   private systemRoleButtonBg(role: SystemAccountRole): string {
@@ -463,7 +477,7 @@ struct Index {
       case 'HOTEL_ADMIN':
         return [{ key: 'hotel-manager', title: '閰掑簵绠＄悊' }]
       case 'SYSTEM_ADMIN':
-        return [{ key: 'system-admin', title: '绯荤粺绠＄悊' }]
+        return [{ key: 'system-admin', title: '系统管理' }]
       case 'ADMIN':
         return [
           { key: 'complaint-admin', title: '鎶曡瘔绠＄悊' },
@@ -891,14 +905,14 @@ struct Index {
           .width('100%')
 
         Row({ space: 18 }) {
-          this.AdminModuleCard('complaints', '诉', '投诉管理', '审批 / 结案 / 分派', THEME_PRIMARY, THEME_PRIMARY_SOFT)
-          this.AdminModuleCard('emergency', '警', '应急信息', '发布 / 审批预警', THEME_WARNING, '#FFF4E6')
+          this.AdminModuleCard('complaints', '📝', '投诉管理', '审批 / 结案 / 分派', THEME_PRIMARY, THEME_PRIMARY_SOFT)
+          this.AdminModuleCard('emergency', '🚨', '应急信息', '发布 / 审批预警', THEME_WARNING, '#FFF4E6')
         }
         .width('100%')
 
         Row({ space: 18 }) {
-          this.AdminModuleCard('marketing', '营', '导流营销', '酒店推荐配置', THEME_SUCCESS, '#EAF8EF')
-          this.AdminModuleCard('resources', '资', '旅游资源库', '景点 / 餐饮维护', THEME_PRIMARY, THEME_PRIMARY_SOFT)
+          this.AdminModuleCard('marketing', '📈', '导流营销', '酒店推荐配置', THEME_SUCCESS, '#EAF8EF')
+          this.AdminModuleCard('resources', '🗺', '旅游资源库', '景点 / 餐饮维护', THEME_PRIMARY, THEME_PRIMARY_SOFT)
         }
         .width('100%')
       }
@@ -1300,7 +1314,7 @@ struct Index {
           .backgroundColor(THEME_PRIMARY_SOFT)
           .borderRadius(RADIUS_PILL)
         Column({ space: 3 }) {
-          Text('绯荤粺绠＄悊涓績')
+          Text('系统管理中心')
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(THEME_TEXT_PRIMARY)
@@ -1334,13 +1348,13 @@ struct Index {
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
             .fontColor(Color.White)
-          Text('宸茬ǔ瀹氳繍琛?128 澶?14 灏忔椂')
+          Text('已稳定运行 128 天 14 小时')
             .fontSize(13)
             .fontColor('#EAF2FF')
         }
         .alignItems(HorizontalAlign.Start)
         Blank()
-        Text('瀹夊叏')
+        Text('安全')
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
           .fontColor(Color.White)
@@ -1351,9 +1365,9 @@ struct Index {
       .width('100%')
 
       Row() {
-        this.SystemStatusMetric('245', '娉ㄥ唽鍚庡彴璐﹀彿鎬绘暟')
+        this.SystemStatusMetric('245', '注册后台账号总数')
         Blank().width(1).height(42).backgroundColor('#52A7FF')
-        this.SystemStatusMetric('42', '浠婃棩娲昏穬璐﹀彿')
+        this.SystemStatusMetric('42', '今日活跃账号')
       }
       .width('100%')
       .padding(18)
@@ -1386,9 +1400,7 @@ struct Index {
   private SystemModuleCard(item: SystemManageItem): void {
     Column({ space: 18 }) {
       Text(item.icon)
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(item.iconColor)
+        .fontSize(19)
         .textAlign(TextAlign.Center)
         .width(48)
         .height(48)
@@ -1411,9 +1423,18 @@ struct Index {
     .height(148)
     .padding(18)
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(THEME_SURFACE)
+    .backgroundColor(this.systemCardBg(item.key))
     .borderRadius(RADIUS_LG)
     .shadow(SHADOW_CARD)
+    .scale({ x: this.systemCardScale(item.key), y: this.systemCardScale(item.key) })
+    .animation({ duration: 120, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.updatePressedSystemSection(item.key, true)
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.updatePressedSystemSection(item.key, false)
+      }
+    })
     .onClick(() => this.switchSystemAdminSection(item.key))
   }
 
@@ -1421,12 +1442,12 @@ struct Index {
   private SystemSecurityLogsPreview(): void {
     Column({ space: 12 }) {
       Row() {
-        Text('瀹炴椂瀹夊叏棰勮')
+        Text('实时安全预警')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)
         Blank()
-        Text('瀹屾暣鏃ュ織')
+        Text('完整日志')
           .fontSize(12)
           .fontColor(THEME_PRIMARY)
           .onClick(() => this.switchSystemAdminSection('logs'))
@@ -1485,7 +1506,7 @@ struct Index {
       }
       .alignItems(HorizontalAlign.Start)
       Blank()
-      Button('杩斿洖')
+      Button('返回')
         .height(34)
         .padding({ left: 14, right: 14 })
         .borderRadius(RADIUS_PILL)
@@ -1508,7 +1529,7 @@ struct Index {
           .fontColor(THEME_TEXT_PRIMARY)
           .width('100%')
 
-        Text('閫夋嫨璐﹀彿瑙掕壊')
+        Text('选择账号角色')
           .fontSize(12)
           .fontColor(THEME_TEXT_SECONDARY)
           .width('100%')
@@ -1544,7 +1565,7 @@ struct Index {
           .backgroundColor(THEME_SURFACE_MUTED)
           .borderRadius(RADIUS_PILL)
 
-        TextInput({ placeholder: '澶囨敞锛屽锛氬叆鑱岄儴闂?/ 鍟嗘埛鑱旂郴浜?/ 鏉冮檺璇存槑', text: this.systemRemarkInput })
+        TextInput({ placeholder: '备注，如：入职部门 / 商户联系人 / 权限说明', text: this.systemRemarkInput })
           .onChange((value: string) => {
             this.systemRemarkInput = value
           })
@@ -1581,7 +1602,7 @@ struct Index {
   @Builder
   private SystemLogsView(): void {
     Column({ space: 18 }) {
-      this.SystemSectionTitle('鎿嶄綔鏃ュ織瀹¤', '璁板綍璐﹀彿銆佹潈闄愩€佸弬鏁板彉鏇翠笌寮傚父璁块棶')
+      this.SystemSectionTitle('操作日志审计', '记录账号、权限、参数变更与异常访问')
       Column() {
         ForEach(this.systemLogs, (item: SystemLogItem) => {
           this.SystemLogRow(item)
@@ -1621,9 +1642,9 @@ struct Index {
   @Builder
   private SystemSettingsView(): void {
     Column({ space: 18 }) {
-      this.SystemSectionTitle('绯荤粺鍙傛暟璁剧疆', '鎺ュ彛銆佺紦瀛樸€佸瓧鍏镐笌瀹夊叏绛栫暐缁存姢')
+      this.SystemSectionTitle('系统参数设置', '接口、缓存、字典与安全策略维护')
       Column({ space: 12 }) {
-        Text('鍙傛暟缁存姢鍏ュ彛')
+        Text('参数维护入口')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)

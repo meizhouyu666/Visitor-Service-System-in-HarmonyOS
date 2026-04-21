@@ -66,7 +66,7 @@ public class QueryService {
                 SELECT id, name, scenic_area, location, open_time, ticket_price, level, type, is_free, description,
                        crowd_heat, cover_image_url
                 FROM query_scenic_spots
-                WHERE 1 = 1
+                WHERE online_status = 'ONLINE'
                 """);
         List<Object> args = new ArrayList<>();
         appendKeyword(sql, args, keyword, "name", "location", "description", "scenic_area");
@@ -96,10 +96,14 @@ public class QueryService {
     }
 
     public List<TravelRouteResponse> routes(String keyword) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
                 SELECT id, name, duration_hours, difficulty, suitable_for, spots, detail
                 FROM query_routes
-                """;
+                WHERE online_status = 'ONLINE'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "spots", "detail");
+        sql.append(" ORDER BY id ASC");
         RowMapper<TravelRouteResponse> mapper = (rs, rowNum) -> new TravelRouteResponse(
                 rs.getString("id"),
                 rs.getString("name"),
@@ -109,7 +113,7 @@ public class QueryService {
                 rs.getString("spots"),
                 rs.getString("detail")
         );
-        return queryByKeyword(sql, mapper, keyword, "name", "spots", "detail");
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
     public List<DiningResponse> dining(String keyword,
@@ -122,7 +126,7 @@ public class QueryService {
                 SELECT id, name, type, avg_price, business_hours, address, recommend_food, detail_desc,
                        logo_url, distance_meters, is_open, nav_lat, nav_lng
                 FROM query_dining
-                WHERE 1 = 1
+                WHERE online_status = 'ONLINE'
                 """);
         List<Object> args = new ArrayList<>();
         appendKeyword(sql, args, keyword, "name", "type", "recommend_food", "address");
@@ -193,7 +197,7 @@ public class QueryService {
                 SELECT id, name, location, show_time, price, team, detail,
                        venue, show_datetime, remaining_tickets, ticket_status, distance_meters, nav_lat, nav_lng
                 FROM query_performances
-                WHERE 1 = 1
+                WHERE online_status = 'ONLINE'
                 """);
         List<Object> args = new ArrayList<>();
         appendKeyword(sql, args, keyword, "name", "team", "location", "venue");
