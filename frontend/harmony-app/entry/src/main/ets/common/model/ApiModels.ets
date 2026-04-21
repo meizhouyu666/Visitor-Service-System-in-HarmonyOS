@@ -9,9 +9,7 @@ export type UserRole =
   | 'VISITOR'
   | 'ADMIN'
   | 'COMPLAINT_HANDLER'
-  | 'EMERGENCY_WRITER'
-  | 'APPROVER'
-  | 'HOTEL_MANAGER'
+  | 'HOTEL_ADMIN'
   | 'SYSTEM_ADMIN'
 
 export interface LoginRequest {
@@ -24,6 +22,7 @@ export interface LoginResponse {
   username: string
   displayName: string
   role: UserRole | string
+  permissions?: string[]
 }
 
 export interface RegisterRequest {
@@ -36,6 +35,7 @@ export interface RegisterResponse {
   username: string
   displayName: string
   role: UserRole | string
+  permissions?: string[]
 }
 
 export interface RequestResetCodeRequest {
@@ -58,6 +58,7 @@ export interface CurrentUser {
   username: string
   displayName: string
   role: UserRole | string
+  permissions?: string[]
 }
 
 export interface ComplaintItem {
@@ -139,6 +140,20 @@ export interface EmergencyRequest {
 
 export interface HotelResponse {
   id: string
+  name: string
+  address: string
+  star: number
+  price: number
+  phone: string
+  score: number
+  hasBreakfast: boolean
+  facility: string
+  introduction: string
+  availabilityStatus?: string
+  coverImageUrl?: string
+}
+
+export interface HotelAdminRequest {
   name: string
   address: string
   star: number

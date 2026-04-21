@@ -36,6 +36,7 @@ public class ComplaintController {
 
     @Operation(summary = "游客提交投诉")
     @PostMapping
+    @PreAuthorize("hasRole('VISITOR')")
     public ApiResponse<ComplaintResponse> create(@Valid @RequestBody ComplaintCreateRequest request,
                                                  Authentication authentication) {
         return ApiResponse.success(complaintService.create(authentication.getName(), request));
@@ -51,31 +52,31 @@ public class ComplaintController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
-        boolean canReadAll = hasAnyRole(authentication,
-                "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN", "ROLE_COMPLAINT_HANDLER", "ROLE_APPROVER");
+        boolean canReadAll = hasAuthority(authentication, "COMPLAINT_MANAGE");
+        boolean canReadAssigned = hasAuthority(authentication, "COMPLAINT_PROCESS");
         ComplaintQueryFilter filter = new ComplaintQueryFilter(status, createdBy, assignee, keyword, from, to);
-        return ApiResponse.success(complaintService.listForUser(authentication.getName(), canReadAll, filter));
+        return ApiResponse.success(complaintService.listForUser(authentication.getName(), canReadAll, canReadAssigned, filter));
     }
 
     @Operation(summary = "投诉详情")
     @GetMapping("/{id}")
     public ApiResponse<ComplaintResponse> detail(@PathVariable Long id, Authentication authentication) {
-        boolean canReadAll = hasAnyRole(authentication,
-                "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN", "ROLE_COMPLAINT_HANDLER", "ROLE_APPROVER");
-        return ApiResponse.success(complaintService.detail(authentication.getName(), id, canReadAll));
+        boolean canReadAll = hasAuthority(authentication, "COMPLAINT_MANAGE");
+        boolean canReadAssigned = hasAuthority(authentication, "COMPLAINT_PROCESS");
+        return ApiResponse.success(complaintService.detail(authentication.getName(), id, canReadAll, canReadAssigned));
     }
 
     @Operation(summary = "投诉时间线")
     @GetMapping("/{id}/timeline")
     public ApiResponse<List<ComplaintTimelineResponse>> timeline(@PathVariable Long id, Authentication authentication) {
-        boolean canReadAll = hasAnyRole(authentication,
-                "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN", "ROLE_COMPLAINT_HANDLER", "ROLE_APPROVER");
-        return ApiResponse.success(complaintService.timeline(authentication.getName(), id, canReadAll));
+        boolean canReadAll = hasAuthority(authentication, "COMPLAINT_MANAGE");
+        boolean canReadAssigned = hasAuthority(authentication, "COMPLAINT_PROCESS");
+        return ApiResponse.success(complaintService.timeline(authentication.getName(), id, canReadAll, canReadAssigned));
     }
 
     @Operation(summary = "结案后评价")
     @PostMapping("/{id}/rating")
-    @PreAuthorize("hasAnyRole('VISITOR','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasRole('VISITOR')")
     public ApiResponse<ComplaintResponse> rate(@PathVariable Long id,
                                                @Valid @RequestBody ComplaintRatingRequest request,
                                                Authentication authentication) {
@@ -84,7 +85,7 @@ public class ComplaintController {
 
     @Operation(summary = "审批通过")
     @PostMapping("/admin/{id}/approve")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('COMPLAINT_MANAGE')")
     public ApiResponse<ComplaintResponse> approve(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
@@ -93,7 +94,7 @@ public class ComplaintController {
 
     @Operation(summary = "驳回投诉")
     @PostMapping("/admin/{id}/reject")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('COMPLAINT_MANAGE')")
     public ApiResponse<ComplaintResponse> reject(@PathVariable Long id,
                                                  @Valid @RequestBody ComplaintActionRequest request,
                                                  Authentication authentication) {
@@ -102,7 +103,7 @@ public class ComplaintController {
 
     @Operation(summary = "分派投诉")
     @PostMapping("/admin/{id}/assign")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('COMPLAINT_MANAGE')")
     public ApiResponse<ComplaintResponse> assign(@PathVariable Long id,
                                                  @Valid @RequestBody ComplaintAssignRequest request,
                                                  Authentication authentication) {
@@ -111,7 +112,7 @@ public class ComplaintController {
 
     @Operation(summary = "处理投诉")
     @PostMapping("/admin/{id}/process")
-    @PreAuthorize("hasAnyRole('COMPLAINT_HANDLER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('COMPLAINT_PROCESS')")
     public ApiResponse<ComplaintResponse> process(@PathVariable Long id,
                                                   @Valid @RequestBody ComplaintActionRequest request,
                                                   Authentication authentication) {
@@ -120,23 +121,16 @@ public class ComplaintController {
 
     @Operation(summary = "结案投诉")
     @PostMapping("/admin/{id}/close")
-    @PreAuthorize("hasAnyRole('COMPLAINT_HANDLER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('COMPLAINT_MANAGE')")
     public ApiResponse<ComplaintResponse> close(@PathVariable Long id,
                                                 @Valid @RequestBody ComplaintActionRequest request,
                                                 Authentication authentication) {
         return ApiResponse.success(complaintService.close(authentication.getName(), id, request));
     }
 
-    private boolean hasAnyRole(Authentication authentication, String... roles) {
+    private boolean hasAuthority(Authentication authentication, String authorityName) {
         return authentication.getAuthorities().stream()
                 .map(authority -> authority.getAuthority())
-                .anyMatch(authority -> {
-                    for (String role : roles) {
-                        if (authority.equals(role)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
+                .anyMatch(authority -> authority.equals(authorityName));
     }
 }

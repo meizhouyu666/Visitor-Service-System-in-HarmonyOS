@@ -12,6 +12,7 @@ import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;
 import com.visitor.service.config.JwtTokenProvider;
 import com.visitor.service.user.UserAccount;
+import com.visitor.service.user.RoleAuthorities;
 import com.visitor.service.user.UserRepository;
 import com.visitor.service.user.UserRole;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,14 +45,26 @@ public class AuthService {
         this.secureRandom = new SecureRandom();
     }
 
+    @Transactional
     public LoginResponse login(LoginRequest request) {
-        UserAccount user = userRepository.findByUsername(request.username())
+        String username = request.username() == null ? "" : request.username().trim();
+        String rawPassword = request.password() == null ? "" : request.password();
+
+        UserAccount user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误"));
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+
+        if (!matchesPassword(rawPassword, user)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
+
         String token = tokenProvider.generateToken(user);
-        return new LoginResponse(token, user.getUsername(), user.getDisplayName(), user.getRole());
+        return new LoginResponse(
+                token,
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getRole(),
+                RoleAuthorities.permissionsFor(user.getRole())
+        );
     }
 
     @Transactional
@@ -80,7 +93,7 @@ public class AuthService {
         UserAccount user = userRepository.findByUsername(request.username().trim())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
 
-        // 仅最新验证码有效：旧的未使用验证码在生成新码时立即失效。
+        // 仅最新验证码有效：生成新码时，旧的未使用验证码立即失效。
         passwordResetCodeRepository.findTopByUserUsernameOrderByCreatedAtDesc(user.getUsername())
                 .ifPresent(last -> {
                     if (!last.isUsed()) {
@@ -129,11 +142,40 @@ public class AuthService {
         String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         UserAccount user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "用户不存在"));
-        return new CurrentUserResponse(user.getUsername(), user.getDisplayName(), user.getRole());
+        return new CurrentUserResponse(
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getRole(),
+                RoleAuthorities.permissionsFor(user.getRole())
+        );
     }
 
     private String generateCode() {
         int value = 100000 + secureRandom.nextInt(900000);
         return String.valueOf(value);
+    }
+
+    private boolean matchesPassword(String rawPassword, UserAccount user) {
+        String stored = user.getPasswordHash();
+        if (stored == null || stored.isBlank()) {
+            return false;
+        }
+
+        if (isBcryptHash(stored)) {
+            return passwordEncoder.matches(rawPassword, stored);
+        }
+
+        // 兼容历史明文存储：首次成功登录后自动迁移为 BCrypt。
+        if (stored.equals(rawPassword)) {
+            user.setPasswordHash(passwordEncoder.encode(rawPassword));
+            userRepository.save(user);
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean isBcryptHash(String value) {
+        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
     }
 }

@@ -1,0 +1,3 @@
+UPDATE users
+SET role = 'ADMIN'
+WHERE UPPER(role) = 'SYSTEM_ADMIN';

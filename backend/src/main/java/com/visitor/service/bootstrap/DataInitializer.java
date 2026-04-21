@@ -23,9 +23,9 @@ public class DataInitializer implements CommandLineRunner {
         upsertDemoUser("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
         upsertDemoUser("admin", "admin123", "Admin Demo", UserRole.ADMIN);
         upsertDemoUser("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
-        upsertDemoUser("writer", "writer123", "Emergency Writer Demo", UserRole.EMERGENCY_WRITER);
-        upsertDemoUser("approver", "approver123", "Approver Demo", UserRole.APPROVER);
-        upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Manager Demo", UserRole.HOTEL_MANAGER);
+        upsertDemoUser("writer", "writer123", "Platform Admin Demo", UserRole.ADMIN);
+        upsertDemoUser("approver", "approver123", "Platform Admin Demo", UserRole.ADMIN);
+        upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Admin Demo", UserRole.HOTEL_ADMIN);
         upsertDemoUser("sysadmin", "sysadmin123", "System Admin Demo", UserRole.SYSTEM_ADMIN);
     }
 

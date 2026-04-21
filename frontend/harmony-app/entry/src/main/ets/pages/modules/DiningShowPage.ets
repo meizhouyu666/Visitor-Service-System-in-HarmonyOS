@@ -67,20 +67,16 @@ export struct DiningShowPage {
       return
     }
     this.contentSwitching = true
-    animateTo({ duration: 100, curve: Curve.EaseOut }, () => {
-      this.contentOpacity = 0
-      this.contentOffsetY = 8
+    this.contentOpacity = 0
+    this.contentOffsetY = 8
+    onSwitched()
+    animateTo({ duration: 170, curve: Curve.EaseInOut }, () => {
+      this.contentOpacity = 1
+      this.contentOffsetY = 0
     })
     setTimeout(() => {
-      onSwitched()
-      animateTo({ duration: 170, curve: Curve.EaseInOut }, () => {
-        this.contentOpacity = 1
-        this.contentOffsetY = 0
-      })
-      setTimeout(() => {
-        this.contentSwitching = false
-      }, 170)
-    }, 100)
+      this.contentSwitching = false
+    }, 170)
   }
 
   private switchCategory(nextCategory: DiningCategory): void {
@@ -519,36 +515,44 @@ export struct DiningShowPage {
   }
 
   build() {
-    Scroll() {
-      Column({ space: 12 }) {
-        this.Header()
+    Column({ space: 12 }) {
+      this.Header()
 
-        Text(this.categoryLabel(this.category))
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(THEME_TEXT_PRIMARY)
-          .padding({ left: 4 })
-
+      Scroll() {
         Column({ space: 10 }) {
-          this.CategoryContent()
+          Text(this.categoryLabel(this.category))
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+            .padding({ left: 4 })
 
-          if (this.actionMessage.length > 0) {
-            Text(this.actionMessage)
-              .fontSize(12)
-              .fontColor(THEME_TEXT_SECONDARY)
-              .padding(10)
-              .width('100%')
-              .backgroundColor(THEME_SURFACE_MUTED)
-              .borderRadius(RADIUS_MD)
+          Column({ space: 10 }) {
+            this.CategoryContent()
+
+            if (this.actionMessage.length > 0) {
+              Text(this.actionMessage)
+                .fontSize(12)
+                .fontColor(THEME_TEXT_SECONDARY)
+                .padding(10)
+                .width('100%')
+                .backgroundColor(THEME_SURFACE_MUTED)
+                .borderRadius(RADIUS_MD)
+            }
           }
+          .opacity(this.contentOpacity)
+          .translate({ x: 0, y: this.contentOffsetY })
         }
-        .opacity(this.contentOpacity)
-        .translate({ x: 0, y: this.contentOffsetY })
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding({ left: 0, right: 0, top: 0, bottom: this.embedded ? 80 : 20 })
       }
-      .alignItems(HorizontalAlign.Start)
-      .padding(this.embedded ? { left: 0, right: 0, top: 0, bottom: 80 } : { left: 12, right: 12, top: 12, bottom: 20 })
+      .layoutWeight(1)
       .width('100%')
+      .scrollBar(BarState.Off)
     }
+    .alignItems(HorizontalAlign.Start)
+    .padding(this.embedded ? { left: 0, right: 0, top: 0, bottom: 0 } : { left: 12, right: 12, top: 12, bottom: 20 })
+    .width('100%')
     .height('100%')
     .backgroundColor(this.embedded ? Color.Transparent : THEME_PAGE_BG)
   }

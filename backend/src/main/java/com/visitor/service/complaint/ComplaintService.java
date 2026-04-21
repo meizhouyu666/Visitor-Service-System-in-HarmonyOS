@@ -11,7 +11,9 @@ import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.complaint.dto.ComplaintTimelineResponse;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
+import com.visitor.service.user.UserRole;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+@Transactional
 public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
@@ -48,8 +51,9 @@ public class ComplaintService {
         return ComplaintResponse.from(saved);
     }
 
-    public List<ComplaintResponse> listForUser(String username, boolean canReadAll, ComplaintQueryFilter filter) {
-        List<Complaint> source = canReadAll
+    @Transactional(readOnly = true)
+    public List<ComplaintResponse> listForUser(String username, boolean canReadAll, boolean canReadAssigned, ComplaintQueryFilter filter) {
+        List<Complaint> source = canReadAll || canReadAssigned
                 ? complaintRepository.findAllByOrderByCreatedAtDesc()
                 : complaintRepository.findByCreatedByUsernameOrderByCreatedAtDesc(username);
 
@@ -65,6 +69,9 @@ public class ComplaintService {
         String keywordFilter = normalize(filter.keyword());
 
         return source.stream()
+                .filter(item -> canReadAll
+                        || !canReadAssigned
+                        || (item.getAssignee() != null && item.getAssignee().getUsername().equals(username)))
                 .filter(item -> statusFilter == null || item.getStatus() == statusFilter)
                 .filter(item -> createdByFilter == null || containsIgnoreCase(item.getCreatedBy().getUsername(), createdByFilter))
                 .filter(item -> assigneeFilter == null || (item.getAssignee() != null && containsIgnoreCase(item.getAssignee().getUsername(), assigneeFilter)))
@@ -77,17 +84,19 @@ public class ComplaintService {
                 .toList();
     }
 
-    public ComplaintResponse detail(String username, Long id, boolean canReadAll) {
+    @Transactional(readOnly = true)
+    public ComplaintResponse detail(String username, Long id, boolean canReadAll, boolean canReadAssigned) {
         Complaint complaint = findComplaint(id);
-        if (!canReadAll && !complaint.getCreatedBy().getUsername().equals(username)) {
+        if (!canReadAll && !isOwnComplaint(complaint, username) && !(canReadAssigned && isAssignedTo(complaint, username))) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看该投诉");
         }
         return ComplaintResponse.from(complaint);
     }
 
-    public List<ComplaintTimelineResponse> timeline(String username, Long id, boolean canReadAll) {
+    @Transactional(readOnly = true)
+    public List<ComplaintTimelineResponse> timeline(String username, Long id, boolean canReadAll, boolean canReadAssigned) {
         Complaint complaint = findComplaint(id);
-        if (!canReadAll && !complaint.getCreatedBy().getUsername().equals(username)) {
+        if (!canReadAll && !isOwnComplaint(complaint, username) && !(canReadAssigned && isAssignedTo(complaint, username))) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看该投诉时间线");
         }
         return complaintTimelineRepository.findByComplaintIdOrderByCreatedAtAsc(id).stream()
@@ -147,6 +156,9 @@ public class ComplaintService {
         Complaint complaint = findComplaint(id);
         assertStatus(complaint, ComplaintStatus.APPROVED, "投诉需先审批通过后才能处理");
         UserAccount actor = findUser(handlerUsername);
+        if (actor.getRole() == UserRole.COMPLAINT_HANDLER && !isAssignedTo(complaint, handlerUsername)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "只能处理分派给自己的投诉");
+        }
 
         complaint.setStatus(ComplaintStatus.RESOLVED);
         complaint.setHandlerComment(request.comment());
@@ -209,6 +221,14 @@ public class ComplaintService {
     private UserAccount findUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
+    }
+
+    private boolean isOwnComplaint(Complaint complaint, String username) {
+        return complaint.getCreatedBy().getUsername().equals(username);
+    }
+
+    private boolean isAssignedTo(Complaint complaint, String username) {
+        return complaint.getAssignee() != null && complaint.getAssignee().getUsername().equals(username);
     }
 
     private ComplaintStatus parseStatus(String rawStatus) {

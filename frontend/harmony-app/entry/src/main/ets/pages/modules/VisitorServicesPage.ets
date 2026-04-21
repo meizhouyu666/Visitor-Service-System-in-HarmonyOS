@@ -68,20 +68,16 @@ export struct VisitorServicesPage {
       return
     }
     this.contentSwitching = true
-    animateTo({ duration: 110, curve: Curve.EaseOut }, () => {
-      this.contentOpacity = 0
-      this.contentOffsetY = 10
+    this.contentOpacity = 0
+    this.contentOffsetY = 10
+    onSwitched()
+    animateTo({ duration: 180, curve: Curve.EaseInOut }, () => {
+      this.contentOpacity = 1
+      this.contentOffsetY = 0
     })
     setTimeout(() => {
-      onSwitched()
-      animateTo({ duration: 180, curve: Curve.EaseInOut }, () => {
-        this.contentOpacity = 1
-        this.contentOffsetY = 0
-      })
-      setTimeout(() => {
-        this.contentSwitching = false
-      }, 180)
-    }, 110)
+      this.contentSwitching = false
+    }, 180)
   }
 
   private switchMainTab(tab: VisitorServiceTab): void {
@@ -182,6 +178,23 @@ export struct VisitorServicesPage {
     }
   }
 
+  private hasVisibleRouteContent(): boolean {
+    if (this.filter === 'hotel') {
+      return this.hotels.length > 0
+    }
+    if (this.filter === 'scenic') {
+      return this.scenicList.length > 0
+    }
+    if (this.filter === 'route') {
+      return this.routes.length > 0
+    }
+    return this.hotels.length > 0 || this.scenicList.length > 0 || this.routes.length > 0
+  }
+
+  private refreshRouteData(): void {
+    this.loadRouteData()
+  }
+
   private cycleLevelFilter(): void {
     if (this.levelFilter === 'all') {
       this.levelFilter = 'high'
@@ -190,7 +203,7 @@ export struct VisitorServicesPage {
     } else {
       this.levelFilter = 'all'
     }
-    this.loadRouteData()
+    this.refreshRouteData()
   }
 
   private cycleAreaFilter(): void {
@@ -203,7 +216,7 @@ export struct VisitorServicesPage {
     } else {
       this.areaFilter = 'all'
     }
-    this.loadRouteData()
+    this.refreshRouteData()
   }
 
   private cyclePriceFilter(): void {
@@ -218,7 +231,25 @@ export struct VisitorServicesPage {
     } else {
       this.priceFilter = 'all'
     }
-    this.loadRouteData()
+    this.refreshRouteData()
+  }
+
+  private levelFilterLabel(): string {
+    if (this.levelFilter === 'high') {
+      return '等级：高等级'
+    }
+    if (this.levelFilter === 'normal') {
+      return '等级：标准'
+    }
+    return '等级：全部'
+  }
+
+  private areaFilterLabel(): string {
+    return this.areaFilter === 'all' ? '区域：全部' : `区域：${this.areaFilter}`
+  }
+
+  private priceFilterLabel(): string {
+    return this.priceFilter === 'all' ? '价格：全部' : `价格：${this.priceFilter}`
   }
 
   @Builder
@@ -285,34 +316,44 @@ export struct VisitorServicesPage {
         .width('100%')
 
         Row({ space: 8 }) {
-          Button(this.levelFilter === 'all' ? '等级：全部' : this.levelFilter === 'high' ? '等级：高等级' : '等级：标准')
+          Button(this.levelFilterLabel())
             .height(34)
+            .layoutWeight(1)
             .borderRadius(RADIUS_PILL)
             .backgroundColor('#EEF3FA')
             .fontColor(THEME_TEXT_SECONDARY)
+            .fontSize(12)
             .onClick(() => this.cycleLevelFilter())
 
-          Button(this.areaFilter === 'all' ? '区域：全部' : `区域：${this.areaFilter}`)
+          Button(this.areaFilterLabel())
             .height(34)
+            .layoutWeight(1)
             .borderRadius(RADIUS_PILL)
             .backgroundColor('#EEF3FA')
             .fontColor(THEME_TEXT_SECONDARY)
+            .fontSize(12)
             .onClick(() => this.cycleAreaFilter())
+        }
+        .width('100%')
 
-          Button(this.priceFilter === 'all' ? '价格：全部' : `价格：${this.priceFilter}`)
+        Row({ space: 8 }) {
+          Button(this.priceFilterLabel())
             .height(34)
+            .layoutWeight(1)
             .borderRadius(RADIUS_PILL)
             .backgroundColor('#EEF3FA')
             .fontColor(THEME_TEXT_SECONDARY)
+            .fontSize(12)
             .onClick(() => this.cyclePriceFilter())
 
-          Blank()
-          Button('刷新')
+          Button('刷新结果')
             .height(34)
+            .layoutWeight(1)
             .borderRadius(RADIUS_PILL)
             .backgroundColor(THEME_PRIMARY)
             .fontColor(Color.White)
-            .onClick(() => this.loadRouteData())
+            .fontSize(12)
+            .onClick(() => this.refreshRouteData())
         }
         .width('100%')
       }
@@ -424,7 +465,7 @@ export struct VisitorServicesPage {
 
   @Builder
   private RouteModeContent(): void {
-    if (this.loading) {
+    if (this.loading && !this.hasVisibleRouteContent()) {
       Text('正在加载服务数据...')
         .fontSize(12)
         .fontColor(THEME_TEXT_SECONDARY)
@@ -464,35 +505,45 @@ export struct VisitorServicesPage {
 
   build() {
     if (this.mainTab === 'dining') {
-      Scroll() {
-        Column({ space: 12 }) {
-          this.FilterPanel()
-          Column() {
-            DiningShowPage({ embedded: true })
-          }
-          .opacity(this.contentOpacity)
-          .translate({ x: 0, y: this.contentOffsetY })
+      Column({ space: 12 }) {
+        this.FilterPanel()
+        Column() {
+          DiningShowPage({ embedded: true })
         }
-        .padding({ left: 12, right: 12, top: 12, bottom: 0 })
+        .layoutWeight(1)
         .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Start)
+        .opacity(this.contentOpacity)
+        .translate({ x: 0, y: this.contentOffsetY })
       }
       .height('100%')
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 12, bottom: 0 })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
       .backgroundColor(THEME_PAGE_BG)
     } else {
-      Scroll() {
-        Column({ space: 12 }) {
-          this.FilterPanel()
+      Column({ space: 12 }) {
+        this.FilterPanel()
+        Scroll() {
           Column() {
             this.RouteModeContent()
           }
-          .opacity(this.contentOpacity)
-          .translate({ x: 0, y: this.contentOffsetY })
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
         }
-        .padding({ left: 12, right: 12, top: 12, bottom: 98 })
+        .layoutWeight(1)
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
+        .scrollBar(BarState.Off)
+        .opacity(this.contentOpacity)
+        .translate({ x: 0, y: this.contentOffsetY })
       }
       .height('100%')
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 12, bottom: 98 })
+      .alignItems(HorizontalAlign.Start)
+      .justifyContent(FlexAlign.Start)
       .backgroundColor(THEME_PAGE_BG)
     }
   }

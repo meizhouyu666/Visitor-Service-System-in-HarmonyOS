@@ -7,11 +7,13 @@ import com.visitor.service.emergency.dto.EmergencyResponse;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Transactional
 public class EmergencyService {
 
     private final EmergencyInfoRepository emergencyInfoRepository;
@@ -48,7 +50,8 @@ public class EmergencyService {
     }
 
     public void delete(Long id) {
-        emergencyInfoRepository.deleteById(id);
+        EmergencyInfo info = findEmergency(id);
+        emergencyInfoRepository.delete(info);
     }
 
     public EmergencyResponse submitForApproval(Long id) {
@@ -64,6 +67,7 @@ public class EmergencyService {
         return EmergencyResponse.from(emergencyInfoRepository.save(info));
     }
 
+    @Transactional(readOnly = true)
     public List<EmergencyResponse> listPublished() {
         LocalDateTime now = LocalDateTime.now();
         return emergencyInfoRepository.findByStatusOrderByCreatedAtDesc(EmergencyStatus.PUBLISHED)
@@ -74,6 +78,7 @@ public class EmergencyService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<EmergencyResponse> listAll() {
         return emergencyInfoRepository.findAll().stream().map(EmergencyResponse::from).toList();
     }

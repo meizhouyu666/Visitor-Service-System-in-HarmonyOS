@@ -15,6 +15,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
+        if (ex.getCode() == ErrorCode.UNAUTHORIZED) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
+        if (ex.getCode() == ErrorCode.FORBIDDEN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
+        if (ex.getCode() == ErrorCode.NOT_FOUND) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
         return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
     }
 

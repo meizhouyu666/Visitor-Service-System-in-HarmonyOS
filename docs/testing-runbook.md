@@ -1,9 +1,10 @@
-﻿# 游客服务系统测试与运行手册（P1 核心包）
+﻿# 游客服务系统测试与运行手册（P4 五角色 RBAC 收敛）
 
-本手册面向测试与联调组员，覆盖当前 P1 交付范围：
+本手册面向测试与联调组员，覆盖当前交付范围：
 - 认证扩展：注册、忘记密码（站内验证码）
 - 投诉筛选：多条件筛选与权限边界
 - 查询持久化：`/api/query/*` 改为 MySQL 数据源（保留兼容路由）
+- 五角色 RBAC 收敛：游客、平台管理员、投诉处理员、酒店管理员、系统管理员
 
 补充 P2（游客端 UI 大改）：
 - 游客端导航重构为：首页 / 服务 / 投诉 / 应急
@@ -45,12 +46,21 @@ docker compose up -d
 
 ### 2.2 启动后端
 
+推荐（含 MySQL 连通性前置检查）：
+
+```powershell
+cd backend
+./scripts/start-backend.ps1
+```
+
+或直接启动：
+
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-默认端口：`8080`
+默认端口：`8081`
 
 ### 2.3 Flyway 迁移验证
 
@@ -61,6 +71,9 @@ mvn spring-boot:run
 - `V4__query_domain_tables.sql`
 - `V5__auth_extension_tables.sql`
 - `V6__ui_enhancement_fields.sql`
+- `V7__dining_performance_extensions.sql`
+- `V8__merge_system_admin_role.sql`
+- `V9__normalize_five_roles.sql`
 
 ## 3. 前端运行（DevEco）
 
@@ -75,7 +88,7 @@ mvn spring-boot:run
 - `frontend/harmony-app/entry/src/main/ets/common/network/ApiClient.ets`
 
 团队默认值：
-- `http://10.0.2.2:8080`
+- `http://10.0.2.2:8081`
 
 说明：
 - 模拟器通常使用 `10.0.2.2` 访问宿主机后端。
@@ -86,12 +99,19 @@ mvn spring-boot:run
 - 游客：`visitor / visitor123`
 - 平台管理员：`admin / admin123`
 - 投诉处理员：`handler / handler123`
-- 应急发布员：`writer / writer123`
-- 审批员：`approver / approver123`
 - 酒店管理员：`hoteladmin / hoteladmin123`
 - 系统管理员：`sysadmin / sysadmin123`
+- 兼容账号：`writer / writer123`、`approver / approver123` 仍可登录，但角色已并入平台管理员 `ADMIN`。
 
-## 5. P1 测试清单
+## 4.1 五角色权限路径
+
+1. `VISITOR`：查询游客服务、查看应急、提交投诉、查看本人投诉、结案后评价。
+2. `ADMIN`：平台运营后台，负责投诉审批/驳回/分派/结案、应急发布审批、导流营销、旅游资源库入口。
+3. `COMPLAINT_HANDLER`：一线处理人员，只查看和处理分派给自己的投诉任务。
+4. `HOTEL_ADMIN`：酒店管理员，只进入酒店房态/酒店信息维护页面。
+5. `SYSTEM_ADMIN`：系统管理员，只进入用户、角色、权限、日志类系统管理入口；本轮为占位入口。
+
+## 5. P4 测试清单
 
 ### 5.1 认证扩展（必测）
 
@@ -140,9 +160,18 @@ mvn spring-boot:run
 
 ### 5.5 应急链路回归（必测）
 
-1. 发布员创建草稿并提交审批。
-2. 审批员审批发布。
+1. 平台管理员创建草稿并提交审批。
+2. 平台管理员审批发布。
 3. 游客侧 `/api/emergency` 仅返回 `PUBLISHED` 且在有效期窗口内的数据。
+
+### 5.5.1 五角色回归（必测）
+
+1. `admin` 登录后进入平台工作台，可进入投诉管理、应急信息、导流营销、旅游资源库入口。
+2. `writer/approver` 登录后也进入平台工作台，不再出现独立发布员/审批员首页。
+3. `handler` 登录后只进入投诉处理页，不能进入应急、酒店、导流营销后台。
+4. `hoteladmin` 登录后只进入酒店管理页，可调用 `/api/hotels/admin`。
+5. `admin` 调用 `/api/hotels/admin` 新增/编辑/删除应返回无权限。
+6. `sysadmin` 登录后进入系统管理中心，不参与投诉、应急、酒店、营销业务操作。
 
 ### 5.6 异常映射（必测）
 
@@ -170,8 +199,8 @@ git ls-files | Select-String "entry/.preview|oh_modules/.ohpm"
 
 ## 7. 常见问题排查
 
-- 后端启动失败：检查 JDK 17、8080 端口占用、MySQL 容器状态。
-- 数据库连接失败：检查 `backend/src/main/resources/application.yml` 与 Docker 账号密码是否一致。
+- 后端启动失败：检查 JDK 17、8081 端口占用、MySQL 容器状态。
+- 数据库连接失败：先执行 `docker compose up -d`，再检查 `backend/src/main/resources/application.yml` 与 Docker 账号密码是否一致。
 - 前端请求失败：确认后端已启动，`API_BASE_URL` 与当前运行环境一致。
 - 权限报错：确认登录账号角色与目标操作匹配。
 

@@ -1,9 +1,9 @@
 ﻿openapi: 3.0.3
 info:
   title: 游客服务系统 API（最小契约）
-  version: 2.2.0
+  version: 2.4.0
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:8081
 components:
   securitySchemes:
     bearerAuth:
@@ -37,6 +37,39 @@ components:
           type: string
         displayName:
           type: string
+    AuthUserResponse:
+      type: object
+      description: 登录与当前用户信息。正式角色为 VISITOR、ADMIN、COMPLAINT_HANDLER、HOTEL_ADMIN、SYSTEM_ADMIN。
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [VISITOR, ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        permissions:
+          type: array
+          description: 由角色派生的权限，不单独落权限表。
+          items:
+            type: string
+            enum:
+              - COMPLAINT_MANAGE
+              - COMPLAINT_PROCESS
+              - EMERGENCY_MANAGE
+              - MARKETING_MANAGE
+              - RESOURCE_MANAGE
+              - HOTEL_ROOM_MANAGE
+              - USER_MANAGE
+              - SYSTEM_CONFIG_MANAGE
+              - AUDIT_LOG_VIEW
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/AuthUserResponse'
+        - type: object
+          properties:
+            token:
+              type: string
     RequestResetCodeRequest:
       type: object
       required: [username]
@@ -101,6 +134,34 @@ components:
           type: string
           nullable: true
           description: 可选，酒店封面图标识
+    HotelAdminRequest:
+      type: object
+      required: [name, address, star, price, phone, score, hasBreakfast, facility, introduction]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        star:
+          type: integer
+        price:
+          type: integer
+        phone:
+          type: string
+        score:
+          type: number
+        hasBreakfast:
+          type: boolean
+        facility:
+          type: string
+        introduction:
+          type: string
+        availabilityStatus:
+          type: string
+          nullable: true
+        coverImageUrl:
+          type: string
+          nullable: true
     ScenicSpotResponse:
       type: object
       properties:
@@ -147,6 +208,7 @@ paths:
   /api/auth/login:
     post:
       summary: 登录
+      description: 旧 writer/approver 账号登录后按 ADMIN 返回；旧 HOTEL_MANAGER/HOTELADMIN 按 HOTEL_ADMIN 返回。
       requestBody:
         required: true
         content:
@@ -156,6 +218,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
   /api/auth/register:
     post:
       summary: 注册游客账号
@@ -195,11 +261,16 @@ paths:
   /api/auth/me:
     get:
       summary: 获取当前用户
+      description: 返回 role 与角色派生 permissions，供前端菜单和按钮显隐使用。
       security:
         - bearerAuth: []
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserResponse'
   /api/complaints:
     get:
       summary: 投诉列表（支持筛选）
@@ -235,6 +306,7 @@ paths:
           description: OK
     post:
       summary: 提交投诉
+      description: 仅 VISITOR 可提交投诉。
       security:
         - bearerAuth: []
       requestBody:
@@ -285,6 +357,7 @@ paths:
   /api/complaints/admin/{id}/approve:
     post:
       summary: 审批通过
+      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       parameters:
@@ -301,6 +374,7 @@ paths:
   /api/complaints/admin/{id}/reject:
     post:
       summary: 驳回投诉
+      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       parameters:
@@ -317,6 +391,7 @@ paths:
   /api/complaints/admin/{id}/assign:
     post:
       summary: 分派投诉
+      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       parameters:
@@ -333,6 +408,7 @@ paths:
   /api/complaints/admin/{id}/process:
     post:
       summary: 处理投诉
+      description: 需要 COMPLAINT_PROCESS 权限；COMPLAINT_HANDLER 只能处理分派给自己的投诉。
       security:
         - bearerAuth: []
       parameters:
@@ -349,6 +425,7 @@ paths:
   /api/complaints/admin/{id}/close:
     post:
       summary: 结案投诉
+      description: 需要 COMPLAINT_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       parameters:
@@ -373,6 +450,7 @@ paths:
   /api/emergency/admin:
     get:
       summary: 管理侧应急列表
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -380,6 +458,7 @@ paths:
           description: OK
     post:
       summary: 新建应急草稿
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -388,6 +467,7 @@ paths:
   /api/emergency/admin/{id}:
     put:
       summary: 更新应急草稿
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -395,6 +475,7 @@ paths:
           description: OK
     delete:
       summary: 删除应急信息
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -403,6 +484,7 @@ paths:
   /api/emergency/admin/{id}/submit:
     post:
       summary: 提交应急审批
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
       security:
         - bearerAuth: []
       responses:
@@ -411,6 +493,53 @@ paths:
   /api/emergency/admin/{id}/approve:
     post:
       summary: 审批并发布应急信息
+      description: 需要 EMERGENCY_MANAGE 权限（ADMIN）。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/hotels/admin:
+    get:
+      summary: 管理侧酒店列表
+      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 新增酒店
+      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelAdminRequest'
+      responses:
+        '200':
+          description: OK
+  /api/hotels/admin/{id}:
+    put:
+      summary: 编辑酒店
+      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelAdminRequest'
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: 删除酒店
+      description: 仅 HOTEL_ADMIN 可访问；ADMIN 不再拥有酒店资料维护权限。
       security:
         - bearerAuth: []
       responses:

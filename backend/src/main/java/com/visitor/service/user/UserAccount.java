@@ -20,8 +20,8 @@ public class UserAccount {
     @Column(name = "display_name", nullable = false, length = 128)
     private String displayName;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
+    @Convert(converter = UserRoleConverter.class)
     private UserRole role;
 
     @Column(name = "created_at", nullable = false, updatable = false)

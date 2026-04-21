@@ -24,12 +24,12 @@ mvn spring-boot:run
 ```
 
 Swagger：
-- http://localhost:8080/swagger-ui.html
+- http://localhost:8081/swagger-ui.html
 
 ## 前端说明
 
 - 在 DevEco Studio 打开 `frontend/harmony-app`。
-- 默认后端地址：`http://10.0.2.2:8080`（模拟器访问宿主机）。
+- 默认后端地址：`http://10.0.2.2:8081`（模拟器访问宿主机）。
 - 真机联调可本地改为局域网地址，但禁止提交个人 IP。
 
 ## 演示账号
@@ -37,10 +37,9 @@ Swagger：
 - 游客：`visitor / visitor123`
 - 平台管理员：`admin / admin123`
 - 投诉处理员：`handler / handler123`
-- 应急发布员：`writer / writer123`
-- 审批员：`approver / approver123`
 - 酒店管理员：`hoteladmin / hoteladmin123`
 - 系统管理员：`sysadmin / sysadmin123`
+- 兼容账号：`writer / writer123`、`approver / approver123` 仍可登录，但已并入平台管理员角色。
 
 ## 分支协作规范
 
@@ -56,8 +55,9 @@ Swagger：
 
 - 投诉链路补齐：新增驳回、分派、时间线，状态扩展 `REJECTED`。
 - 权限收口：
-  - `approve/reject/assign`：`APPROVER | ADMIN | SYSTEM_ADMIN`
-  - `process/close`：`COMPLAINT_HANDLER | ADMIN | SYSTEM_ADMIN`
+  - `approve/reject/assign`：`ADMIN`
+  - `process`：`COMPLAINT_HANDLER | ADMIN`
+  - `close`：`ADMIN`
   - `VISITOR`：创建、查看本人、结案后评分
 - 应急游客列表加入有效期过滤（仅返回有效窗口内 `PUBLISHED`）。
 - Flyway 增量迁移落地：`V2`、`V3`。
@@ -114,3 +114,24 @@ Swagger：
 - 同版本缺陷修复：修复 `admin/approver/sysadmin` 角色标签页切换不稳定问题（页签状态重置 + 交互容器优化）。
 - 同版本缺陷修复：演示账号改为启动时校准（含 `hoteladmin / hoteladmin123`），避免历史数据导致默认口令无法登录。
 - 本版本明确不包含：原子服务卡片、负一屏能力、跨端设备流转、媒体上传能力。
+
+### 2026-04-20（P4 五角色 RBAC 收敛）
+
+- 角色模型收敛为五类：`VISITOR`、`ADMIN`、`COMPLAINT_HANDLER`、`HOTEL_ADMIN`、`SYSTEM_ADMIN`。
+- 旧 `writer/approver` 演示账号保留，但统一并入 `ADMIN` 平台管理员；旧 `HOTEL_MANAGER/HOTELADMIN` 兼容映射为 `HOTEL_ADMIN`。
+- 后端登录与 `/api/auth/me` 增加 `permissions` 返回，由角色派生权限，不新增权限表。
+- 权限边界调整：
+  - `ADMIN`：投诉审批/驳回/分派/结案、应急管理、导流营销、旅游资源库入口。
+  - `COMPLAINT_HANDLER`：仅处理分派给自己的投诉。
+  - `HOTEL_ADMIN`：酒店房态/酒店信息维护，不进入平台运营后台。
+  - `SYSTEM_ADMIN`：系统管理入口，当前保留用户/角色/权限/日志占位。
+- 酒店管理接口 `/api/hotels/admin` 收紧为仅 `HOTEL_ADMIN` 可调用，平台管理员不再拥有酒店资料新增/编辑/删除权限。
+- 前端入口同步为五角色：首页不再展示独立 `writer/approver` 分支，`admin` 进入平台工作台，`sysadmin` 进入系统管理中心。
+- Flyway 新增：`V9__normalize_five_roles.sql`，用于历史角色值和演示账号角色归一。
+
+### 2026-04-21（分支整理与远程发布）
+
+- 完成当前 `meizhouyu666-p1-core-package` 分支代码整理并推送远程，保留五角色 RBAC 收敛方案与兼容迁移。
+- 权限主线保持“角色 + 权限点”双层控制：后端统一鉴权，前端按角色动态收敛标签页与功能入口。
+- 演示账号与历史角色值保持兼容：`writer/approver` 兼容登录并归并为 `ADMIN`，酒店角色统一为 `HOTEL_ADMIN`。
+- 文档同步更新：接口地址、演示账号、角色边界、测试要点与回归说明均与当前分支实现对齐。

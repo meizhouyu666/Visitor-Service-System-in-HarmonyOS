@@ -38,28 +38,28 @@ public class EmergencyController {
 
     @Operation(summary = "管理侧应急列表")
     @GetMapping("/admin")
-    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<List<EmergencyResponse>> listAll() {
         return ApiResponse.success(emergencyService.listAll());
     }
 
     @Operation(summary = "创建应急草稿")
     @PostMapping("/admin")
-    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<EmergencyResponse> create(@Valid @RequestBody EmergencyRequest request, Authentication authentication) {
         return ApiResponse.success(emergencyService.create(authentication.getName(), request));
     }
 
     @Operation(summary = "更新应急草稿")
     @PutMapping("/admin/{id}")
-    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<EmergencyResponse> update(@PathVariable Long id, @Valid @RequestBody EmergencyRequest request) {
         return ApiResponse.success(emergencyService.update(id, request));
     }
 
     @Operation(summary = "删除应急信息")
     @DeleteMapping("/admin/{id}")
-    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         emergencyService.delete(id);
         return ApiResponse.successMessage("删除成功");
@@ -67,14 +67,14 @@ public class EmergencyController {
 
     @Operation(summary = "提交应急信息待审批")
     @PostMapping("/admin/{id}/submit")
-    @PreAuthorize("hasAnyRole('EMERGENCY_WRITER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<EmergencyResponse> submit(@PathVariable Long id) {
         return ApiResponse.success(emergencyService.submitForApproval(id));
     }
 
     @Operation(summary = "审批并发布应急信息")
     @PostMapping("/admin/{id}/approve")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAuthority('EMERGENCY_MANAGE')")
     public ApiResponse<EmergencyResponse> approve(@PathVariable Long id, Authentication authentication) {
         return ApiResponse.success(emergencyService.approve(id, authentication.getName()));
     }

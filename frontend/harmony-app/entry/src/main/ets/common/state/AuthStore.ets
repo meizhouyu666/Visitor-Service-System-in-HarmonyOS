@@ -30,8 +30,12 @@ export class AuthStore {
       this.currentUser = await apiClient.get<CurrentUser>('/api/auth/me')
       this.infoMessage = '登录成功'
       return true
-    } catch (_error) {
-      this.errorMessage = '登录失败：账号或密码错误'
+    } catch (error) {
+      if (error instanceof Error && error.message.trim().length > 0) {
+        this.errorMessage = `登录失败：${error.message}`
+      } else {
+        this.errorMessage = '登录失败：账号或密码错误'
+      }
       return false
     } finally {
       this.loading = false
@@ -102,15 +106,24 @@ export class AuthStore {
     switch (role) {
       case 'ADMIN':
       case 'COMPLAINT_HANDLER':
-      case 'EMERGENCY_WRITER':
-      case 'APPROVER':
-      case 'HOTEL_MANAGER':
+      case 'HOTEL_ADMIN':
       case 'SYSTEM_ADMIN':
       case 'VISITOR':
         return role
+      case 'EMERGENCY_WRITER':
+      case 'APPROVER':
+        return 'ADMIN'
+      case 'HOTEL_MANAGER':
+      case 'HOTELADMIN':
+        return 'HOTEL_ADMIN'
       default:
         return 'VISITOR'
     }
+  }
+
+  hasPermission(permission: string): boolean {
+    const permissions: string[] = this.currentUser?.permissions ?? []
+    return permissions.includes(permission)
   }
 
   hasRole(role: UserRole): boolean {
@@ -128,11 +141,7 @@ export class AuthStore {
         return '游客'
       case 'COMPLAINT_HANDLER':
         return '投诉处理员'
-      case 'EMERGENCY_WRITER':
-        return '应急发布员'
-      case 'APPROVER':
-        return '审批员'
-      case 'HOTEL_MANAGER':
+      case 'HOTEL_ADMIN':
         return '酒店管理员'
       case 'SYSTEM_ADMIN':
         return '系统管理员'
