@@ -1,8 +1,8 @@
 package com.visitor.service.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visitor.service.common.ApiResponse;
 import com.visitor.service.common.ErrorCode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -34,7 +34,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health")
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/forgot-password/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/actuator/health"
+                        )
                         .permitAll()
                         .anyRequest()
                         .authenticated()
@@ -44,7 +52,7 @@ public class SecurityConfig {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write(objectMapper.writeValueAsString(
-                                    ApiResponse.failure(ErrorCode.UNAUTHORIZED, "Please login first")));
+                                    ApiResponse.failure(ErrorCode.UNAUTHORIZED, "请先登录")));
                         }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

@@ -20,9 +20,15 @@ public class UserAccount {
     @Column(name = "display_name", nullable = false, length = 128)
     private String displayName;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
+    @Convert(converter = UserRoleConverter.class)
     private UserRole role;
+
+    @Column(nullable = false)
+    private boolean enabled = true;
+
+    @Column(name = "managed_hotel_id", length = 32)
+    private String managedHotelId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -80,5 +86,29 @@ public class UserAccount {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getManagedHotelId() {
+        return managedHotelId;
+    }
+
+    public void setManagedHotelId(String managedHotelId) {
+        this.managedHotelId = managedHotelId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

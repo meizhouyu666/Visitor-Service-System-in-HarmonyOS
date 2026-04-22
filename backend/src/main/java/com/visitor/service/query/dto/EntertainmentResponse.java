@@ -6,7 +6,13 @@ public record EntertainmentResponse(
         String type,
         String location,
         String openTime,
-        double price,
-        String description
+        int price,
+        String description,
+        String logoUrl,
+        Integer distanceMeters,
+        Boolean isOpen,
+        Double navLat,
+        Double navLng
 ) {
 }
+

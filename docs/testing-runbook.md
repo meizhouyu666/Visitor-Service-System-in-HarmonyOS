@@ -1,39 +1,34 @@
-# 游客服务系统测试与运行手册（P0 闭环版）
+# 游客服务系统测试与运行手册（P5 后端全链路补齐版）
 
-本手册面向负责测试与联调的组员，覆盖当前 P0 交付范围：投诉与应急主链路可演示、六角色权限可验证、数据库增量迁移可执行。
+本手册面向测试与联调组员，覆盖当前交付范围：
+- 五角色 RBAC：游客、平台管理员、投诉处理员、酒店管理员、系统管理员
+- 投诉主链路：提交、审批、驳回、分派、处理、结案、评价、时间线
+- 应急主链路：草稿、提交审批、审批发布、驳回修改、游客侧有效期过滤
+- 酒店隔离：酒店管理员一账号一酒店
+- 旅游资源库：平台管理员四类资源内容管理
+- 系统管理：账号管理、审计日志、系统参数
 
-## 1. 当前版本范围
+## 1. 环境准备
 
-- 前端：HarmonyOS（ArkTS + ArkUI + Stage Model）
-- 后端：Spring Boot 3 + Spring Security + JWT + JPA + Flyway
-- 数据库：MySQL 8（Docker）
-- 本轮重点：
-  - 投诉：提交、审批、驳回、分派、处理、结案、评价、时间线
-  - 应急：建稿、提交、审批发布、游客查询（有效期过滤）
-  - 查询：保留现有接口，不破坏兼容路径
-
-## 2. 环境初始化
-
-### 2.1 必备软件
-
+### 1.1 必备软件
 - Git
 - JDK 17
 - Maven 3.8+
 - Docker Desktop
 - DevEco Studio
 
-### 2.2 拉取代码
+### 1.2 拉取代码
 
 ```bash
 git clone https://github.com/meizhouyu666/Visitor-Service-System-in-HarmonyOS.git
 cd Visitor-Service-System-in-HarmonyOS
-git checkout main
-git pull origin main
+git checkout meizhouyu666-p1-core-package
+git pull origin meizhouyu666-p1-core-package
 ```
 
-## 3. 后端运行
+## 2. 后端运行
 
-### 3.1 启动 MySQL
+### 2.1 启动 MySQL（Docker）
 
 ```bash
 cd backend
@@ -46,120 +41,116 @@ docker compose up -d
 - 密码：`root`
 - 端口：`3306`
 
-### 3.2 启动后端
+### 2.2 启动后端
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-默认端口：`8080`
+默认端口：`8081`
 
-### 3.3 迁移验证（V1 -> V3）
+### 2.3 Flyway 迁移验证
 
-启动日志中应看到 Flyway 成功执行：
+启动日志应看到以下脚本依次执行成功：
 - `V1__create_core_tables.sql`
 - `V2__complaint_workflow_extensions.sql`
 - `V3__complaint_timeline.sql`
+- `V4__query_domain_tables.sql`
+- `V5__auth_extension_tables.sql`
+- `V6__ui_enhancement_fields.sql`
+- `V7__dining_performance_extensions.sql`
+- `V8__merge_system_admin_role.sql`
+- `V9__normalize_five_roles.sql`
+- `V10__system_resource_backend_extensions.sql`
 
-## 4. 前端运行（DevEco）
+## 3. 前端运行（DevEco）
 
-### 4.1 打开工程
-
+### 3.1 打开工程
 在 DevEco Studio 打开：
 - `frontend/harmony-app`
 
-### 4.2 网络地址
-
+### 3.2 后端地址
 文件：
 - `frontend/harmony-app/entry/src/main/ets/common/network/ApiClient.ets`
 
 团队默认值：
-- `http://10.0.2.2:8080`
+- `http://10.0.2.2:8081`
 
-说明：
-- 模拟器通常使用 `10.0.2.2` 访问宿主机后端。
-- 真机调试改为本机局域网 IP，但不要提交个人 IP 到仓库。
-
-## 5. 账号与角色
-
+## 4. 演示账号
 - 游客：`visitor / visitor123`
 - 平台管理员：`admin / admin123`
 - 投诉处理员：`handler / handler123`
-- 应急发布员：`writer / writer123`
-- 审批员：`approver / approver123`
 - 酒店管理员：`hoteladmin / hoteladmin123`
 - 系统管理员：`sysadmin / sysadmin123`
+- 兼容账号：`writer / writer123`、`approver / approver123` 仍可登录，但角色已并入平台管理员 `ADMIN`
 
-## 6. 权限矩阵（P0）
+## 5. 五角色权限路径
+1. `VISITOR`：查询游客服务、查看应急、提交投诉、查看本人投诉、结案后评价。
+2. `ADMIN`：平台运营后台，负责投诉审批/驳回/分派/结案、应急发布审批、导流营销、旅游资源库管理。
+3. `COMPLAINT_HANDLER`：一线处理人员，只查看和处理分派给自己的投诉任务。
+4. `HOTEL_ADMIN`：酒店管理员，只能查看并维护自己绑定酒店的资料与房态。
+5. `SYSTEM_ADMIN`：系统管理员，负责账号、审计日志、系统参数，不参与投诉/应急/导流营销业务操作。
 
-- `VISITOR`：提交投诉、查看本人投诉、结案后评价、查看游客应急
-- `APPROVER | ADMIN | SYSTEM_ADMIN`：投诉审批/驳回/分派
-- `COMPLAINT_HANDLER | ADMIN | SYSTEM_ADMIN`：投诉处理/结案
-- `EMERGENCY_WRITER | ADMIN | SYSTEM_ADMIN`：应急建稿/编辑/提交审批
-- `APPROVER | ADMIN | SYSTEM_ADMIN`：应急审批发布
+## 6. 核心测试清单
 
-## 7. 测试清单
+### 6.1 认证与账号
+1. 注册：新用户名注册成功，角色默认为 `VISITOR`。
+2. 重复用户名注册：被拦截并返回业务错误。
+3. 忘记密码申请验证码：返回 `debugCode`，有效期取系统参数 `PASSWORD_RESET_CODE_EXPIRE_SECONDS`。
+4. 使用错误验证码重置：失败。
+5. 使用正确验证码重置：成功，新密码可登录、旧密码失效。
+6. 系统管理员可新增平台管理员、投诉处理员、酒店管理员、系统管理员账号。
+7. 系统管理员可停用账号；被停用账号登录应失败。
 
-### 7.1 投诉主链路（必测）
-
+### 6.2 投诉链路
 1. 游客提交投诉成功。
-2. 审批员或管理员执行“审批通过”成功。
-3. 审批员或管理员执行“分派”成功，列表可看到处理人。
-4. 处理员或管理员执行“提交处理”成功。
-5. 处理员或管理员执行“结案”成功。
-6. 游客对该投诉提交评价成功。
-7. 投诉详情时间线可看到 `CREATE/APPROVE/ASSIGN/PROCESS/CLOSE/RATE`。
+2. 管理员审批通过/驳回成功。
+3. 管理员分派处理人成功。
+4. 处理员只能处理分派给自己的投诉。
+5. 管理员结案成功。
+6. 游客只能评价自己且已结案的投诉。
+7. 时间线包含 `CREATE / APPROVE / REJECT / ASSIGN / PROCESS / CLOSE / RATE`。
+8. 审计日志中可以看到投诉相关关键动作。
 
-### 7.2 驳回链路（必测）
+### 6.3 应急链路
+1. 平台管理员创建草稿成功。
+2. 提交审批成功。
+3. 审批发布成功。
+4. 驳回修改成功，状态回到 `REJECTED`。
+5. 驳回后的应急信息可再次编辑并重新提交审批。
+6. 游客侧 `/api/emergency` 仅返回 `PUBLISHED` 且在有效期窗口内的数据。
 
-1. 游客提交投诉。
-2. 审批员或管理员执行“驳回”。
-3. 列表/详情可看到 `REJECTED` 状态与驳回原因。
-4. 时间线可看到 `REJECT` 记录。
+### 6.4 旅游资源库链路
+1. 平台管理员可管理四类资源：
+   - 景区景点
+   - 游览线路
+   - 餐饮
+   - 演出
+2. 支持列表、详情、新增、编辑、上架、下架、删除。
+3. 下架后游客侧 `/api/query/scenic-spots`、`/routes`、`/dining`、`/performances` 不再返回该资源。
+4. 重新上架后游客侧再次可见。
+5. 资源管理动作写入审计日志。
 
-### 7.3 应急链路（必测）
+### 6.5 酒店链路
+1. `hoteladmin` 登录后调用 `/api/hotels/admin` 仅返回自己绑定酒店。
+2. `hoteladmin` 仅可更新自己绑定酒店，不可越权更新其他酒店。
+3. `hoteladmin` 不可新增/删除酒店。
+4. `sysadmin` 可新增/删除酒店，并可为酒店管理员绑定酒店。
+5. `admin` 不可调用酒店管理写接口。
 
-1. 发布员或管理员创建草稿。
-2. 提交审批。
-3. 审批员或管理员审批发布。
-4. 游客接口 `/api/emergency` 仅返回状态 `PUBLISHED` 且在有效窗口内的数据：
-   - `validFrom` 为空：立即生效
-   - `validUntil` 为空：长期有效
+### 6.6 系统管理链路
+1. 系统管理员可查询账号列表。
+2. 系统管理员可创建账号、修改角色、重置密码、启停账号。
+3. 系统管理员可查询审计日志，并按时间、操作者、模块、动作过滤。
+4. 系统管理员可查询和更新系统参数。
+5. 固定五角色权限展示需与实际权限保持一致。
 
-### 7.4 异常映射（必测）
-
-1. 访问不存在的详情资源（如不存在投诉 ID）。
-2. 返回应为业务 `NOT_FOUND/404`，不能是 500。
-
-### 7.5 查询模块回归（必测）
-
-以下接口应可正常返回（包含兼容接口）：
-- `/api/query/hotels`
-- `/api/query/hotels/star`
-- `/api/query/hotels/non-star`
-- `/api/query/scenic-spots`
-- `/api/query/routes`
-- `/api/query/dining`
-- `/api/query/entertainment`
-- `/api/query/dining-entertainment`
-- `/api/query/performances`
-- `/api/query/weather`
-- `/api/query/traffic`
-- `/api/query/weather-traffic`
-
-## 8. 仓库卫生检查
-
+## 7. 仓库卫生检查
 合并前请确认：
 - 不提交 `frontend/harmony-app/entry/.preview/**`
 - 不提交 `frontend/harmony-app/oh_modules/.ohpm/**`
 - 不提交个人 IP、个人数据库密码
-
-可使用：
-
-```bash
-git ls-files | grep -E "entry/.preview|oh_modules/.ohpm"
-```
 
 Windows PowerShell：
 
@@ -167,14 +158,14 @@ Windows PowerShell：
 git ls-files | Select-String "entry/.preview|oh_modules/.ohpm"
 ```
 
-## 9. 常见问题排查
+## 8. 常见问题排查
+- 后端启动失败：检查 JDK 17、8081 端口占用、MySQL 容器状态。
+- 数据库连接失败：先执行 `docker compose up -d`，再检查 `backend/src/main/resources/application.yml` 与 Docker 账号密码是否一致。
+- 酒店管理员看不到数据：确认 `users.managed_hotel_id` 已正确绑定酒店。
+- 游客看不到资源：检查对应资源是否处于上架状态。
+- 审计日志为空：确认实际发生了登录、投诉、应急、资源或系统管理操作。
 
-- 后端起不来：检查 JDK 17、8080 端口占用、MySQL 容器状态
-- 连不上库：检查 `backend/src/main/resources/application.yml` 与容器账号密码
-- 前端请求失败：确认后端已启动、`API_BASE_URL` 是否符合当前网络路径
-- 权限报错：检查登录账号角色是否匹配当前操作
-
-## 10. 反馈模板
+## 9. 反馈模板
 
 ```text
 【环境】
@@ -183,7 +174,6 @@ DevEco 版本：
 运行方式：模拟器/真机
 
 【测试项】
-（例如：投诉驳回链路）
 
 【步骤】
 1.
@@ -195,8 +185,6 @@ DevEco 版本：
 【实际结果】
 
 【日志/报错】
-（包含接口路径与时间）
 
 【截图】
-（可选）
 ```

@@ -20,23 +20,30 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        createUserIfAbsent("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
-        createUserIfAbsent("admin", "admin123", "Admin Demo", UserRole.ADMIN);
-        createUserIfAbsent("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
-        createUserIfAbsent("writer", "writer123", "Emergency Writer Demo", UserRole.EMERGENCY_WRITER);
-        createUserIfAbsent("approver", "approver123", "Approver Demo", UserRole.APPROVER);
-        createUserIfAbsent("hoteladmin", "hotel123", "Hotel Manager Demo", UserRole.HOTEL_MANAGER);
-        createUserIfAbsent("sysadmin", "sysadmin123", "System Admin Demo", UserRole.SYSTEM_ADMIN);
+        deleteLegacyDemoUser("writer");
+        upsertDemoUser("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
+        upsertDemoUser("admin", "admin123", "Admin Demo", UserRole.ADMIN);
+        upsertDemoUser("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
+        upsertDemoUser("approver", "approver123", "Emergency Approver Demo", UserRole.APPROVER);
+        upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Admin Demo", UserRole.HOTEL_ADMIN, "h-1");
+        upsertDemoUser("sysadmin", "sysadmin123", "System Admin Demo", UserRole.SYSTEM_ADMIN);
     }
 
-    private void createUserIfAbsent(String username, String rawPassword, String displayName, UserRole role) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            return;
-        }
-        UserAccount user = new UserAccount();
+    private void deleteLegacyDemoUser(String username) {
+        userRepository.findByUsername(username).ifPresent(userRepository::delete);
+    }
+
+    private void upsertDemoUser(String username, String rawPassword, String displayName, UserRole role) {
+        upsertDemoUser(username, rawPassword, displayName, role, null);
+    }
+
+    private void upsertDemoUser(String username, String rawPassword, String displayName, UserRole role, String managedHotelId) {
+        UserAccount user = userRepository.findByUsername(username).orElseGet(UserAccount::new);
         user.setUsername(username);
         user.setDisplayName(displayName);
         user.setRole(role);
+        user.setEnabled(true);
+        user.setManagedHotelId(managedHotelId);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         userRepository.save(user);
     }

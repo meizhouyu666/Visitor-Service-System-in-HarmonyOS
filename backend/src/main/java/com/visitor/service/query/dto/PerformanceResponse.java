@@ -5,8 +5,16 @@ public record PerformanceResponse(
         String name,
         String location,
         String showTime,
-        double price,
+        int price,
         String team,
-        String detail
+        String detail,
+        String venue,
+        String showDateTime,
+        Integer remainingTickets,
+        String ticketStatus,
+        Integer distanceMeters,
+        Double navLat,
+        Double navLng
 ) {
 }
+

@@ -5,11 +5,19 @@ public record HotelResponse(
         String name,
         String address,
         int star,
-        double price,
+        int price,
         String phone,
         double score,
         boolean hasBreakfast,
         String facility,
-        String introduction
+        String introduction,
+        String availabilityStatus,
+        String coverImageUrl,
+        Integer totalRooms,
+        Integer availableRooms,
+        Boolean marketingRecommended,
+        String marketingTag,
+        Integer marketingPriority,
+        String marketingNote
 ) {
 }

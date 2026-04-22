@@ -5,6 +5,8 @@ public record TrafficResponse(
         String toLocation,
         String status,
         String suggestRoute,
-        String takeTime
+        String takeTime,
+        String severityLevel
 ) {
 }
+

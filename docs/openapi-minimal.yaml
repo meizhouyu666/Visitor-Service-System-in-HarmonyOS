@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: 游客服务系统 API（最小契约）
-  version: 2.0.0
+  version: 2.5.0
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:8081
 components:
   securitySchemes:
     bearerAuth:
@@ -27,6 +27,37 @@ components:
           type: string
         password:
           type: string
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        displayName:
+          type: string
+    AuthUserResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [VISITOR, ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        permissions:
+          type: array
+          items:
+            type: string
+    LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/AuthUserResponse'
+        - type: object
+          properties:
+            token:
+              type: string
     ComplaintCreateRequest:
       type: object
       required: [title, content]
@@ -61,6 +92,247 @@ components:
           type: integer
           minimum: 1
           maximum: 5
+    EmergencyRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        validFrom:
+          type: string
+          format: date-time
+          nullable: true
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        alertLevel:
+          type: string
+          nullable: true
+        alertType:
+          type: string
+          nullable: true
+    EmergencyReviewRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          nullable: true
+    HotelAdminRequest:
+      type: object
+      required: [name, address, star, price, phone, score, hasBreakfast, facility, introduction]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        star:
+          type: integer
+        price:
+          type: integer
+        phone:
+          type: string
+        score:
+          type: number
+        hasBreakfast:
+          type: boolean
+        facility:
+          type: string
+        introduction:
+          type: string
+        availabilityStatus:
+          type: string
+          nullable: true
+        coverImageUrl:
+          type: string
+          nullable: true
+    ResourceItemRequest:
+      type: object
+      description: |
+        平台旅游资源库统一请求体。不同 category 需要填写各自业务字段，未使用字段可省略。
+        - SCENIC_SPOTS：景点标题、景区分区、位置、开放时间、票价、等级、类型、是否免费、简介
+        - ROUTES：线路标题、建议时长、难度、适宜人群、线路内容、简介
+        - DINING：餐饮名称、分类、人均价格、营业时间、地址、推荐菜、简介，可选距离与导航坐标
+        - PERFORMANCES：演出名称、场地、演出时间、票价、团队、简介，可选场次时间、余票与票务状态
+      required: [title, description]
+      properties:
+        title:
+          type: string
+          description: 资源标题
+          example: 北欧小木屋风情区
+        subtitle:
+          type: string
+          nullable: true
+          description: 前端兼容副标题，可作为景区分区/适宜人群/餐饮分类等补充展示信息
+          example: 景区北侧麦温带植物林
+        location:
+          type: string
+          nullable: true
+          description: 位置、线路摘要或场地地址
+          example: 景区北侧观景步道
+        schedule:
+          type: string
+          nullable: true
+          description: 前端兼容时间摘要
+          example: 08:00 - 18:00
+        description:
+          type: string
+          description: 资源详情简介
+          example: 还原北欧森林木屋风情，适合拍照打卡，周边有驯鹿互动区。
+        coverImageUrl:
+          type: string
+          nullable: true
+          example: https://example.com/resource/scenic-001.jpg
+        online:
+          type: boolean
+          nullable: true
+          description: 是否立即上架到游客端
+          example: true
+        scenicArea:
+          type: string
+          nullable: true
+          example: 北侧森林区
+        openTime:
+          type: string
+          nullable: true
+          example: 08:00 - 18:00
+        ticketPrice:
+          type: integer
+          nullable: true
+          example: 60
+        level:
+          type: string
+          nullable: true
+          example: AAAA
+        type:
+          type: string
+          nullable: true
+          example: 森林观光
+        isFree:
+          type: boolean
+          nullable: true
+          example: false
+        crowdHeat:
+          type: integer
+          nullable: true
+          example: 73
+        durationHours:
+          type: integer
+          nullable: true
+          example: 6
+        difficulty:
+          type: string
+          nullable: true
+          example: MEDIUM
+        suitableFor:
+          type: string
+          nullable: true
+          example: 亲子家庭
+        spots:
+          type: string
+          nullable: true
+          example: 东大门 -> 湖畔 -> 游乐场 -> 美食城
+        avgPrice:
+          type: integer
+          nullable: true
+          example: 128
+        businessHours:
+          type: string
+          nullable: true
+          example: 11:00 - 22:00
+        address:
+          type: string
+          nullable: true
+          example: 东区观景台旁
+        recommendFood:
+          type: string
+          nullable: true
+          example: 炭烤牛排、海鲜烩饭
+        distanceMeters:
+          type: integer
+          nullable: true
+          example: 320
+        isOpen:
+          type: boolean
+          nullable: true
+          example: true
+        navLat:
+          type: number
+          format: double
+          nullable: true
+          example: 30.5728
+        navLng:
+          type: number
+          format: double
+          nullable: true
+          example: 104.0668
+        showTime:
+          type: string
+          nullable: true
+          example: 每日 19:30 - 21:00
+        price:
+          type: integer
+          nullable: true
+          example: 199
+        team:
+          type: string
+          nullable: true
+          example: 幻梦森林演艺团
+        venue:
+          type: string
+          nullable: true
+          example: 中央水上剧场
+        showDateTime:
+          type: string
+          nullable: true
+          example: 2026-05-01T19:30:00
+        remainingTickets:
+          type: integer
+          nullable: true
+          example: 86
+        ticketStatus:
+          type: string
+          nullable: true
+          example: AVAILABLE
+    SystemUserCreateRequest:
+      type: object
+      required: [username, displayName, role, password]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        password:
+          type: string
+        managedHotelId:
+          type: string
+          nullable: true
+    SystemUserUpdateRequest:
+      type: object
+      required: [displayName, role]
+      properties:
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+        managedHotelId:
+          type: string
+          nullable: true
+    SystemSettingUpdateRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+        description:
+          type: string
+          nullable: true
 paths:
   /api/auth/login:
     post:
@@ -72,28 +344,50 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
+  /api/auth/register:
+    post:
+      summary: 注册游客账号
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: OK
+  /api/auth/forgot-password/request-code:
+    post:
+      summary: 申请找回密码验证码
+      responses:
+        '200':
+          description: OK
+  /api/auth/forgot-password/reset:
+    post:
+      summary: 使用验证码重置密码
+      responses:
+        '200':
+          description: OK
   /api/auth/me:
     get:
       summary: 获取当前用户
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints:
     get:
-      summary: 投诉列表
+      summary: 投诉列表（支持筛选）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
     post:
-      summary: 提交投诉
+      summary: 游客提交投诉
       security:
         - bearerAuth: []
       requestBody:
@@ -103,9 +397,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintCreateRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}:
     get:
       summary: 投诉详情
@@ -114,9 +407,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ComplaintId'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}/timeline:
     get:
       summary: 投诉时间线
@@ -125,9 +417,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ComplaintId'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/{id}/rating:
     post:
       summary: 结案后评价
@@ -142,12 +433,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintRatingRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/approve:
     post:
-      summary: 审批通过
+      summary: 管理员审批通过投诉
       security:
         - bearerAuth: []
       parameters:
@@ -159,12 +449,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/reject:
     post:
-      summary: 驳回投诉
+      summary: 管理员驳回投诉
       security:
         - bearerAuth: []
       parameters:
@@ -176,12 +465,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/assign:
     post:
-      summary: 分派投诉
+      summary: 管理员分派投诉
       security:
         - bearerAuth: []
       parameters:
@@ -193,12 +481,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintAssignRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/process:
     post:
-      summary: 处理投诉
+      summary: 处理员处理投诉
       security:
         - bearerAuth: []
       parameters:
@@ -210,12 +497,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/complaints/admin/{id}/close:
     post:
-      summary: 结案投诉
+      summary: 管理员结案投诉
       security:
         - bearerAuth: []
       parameters:
@@ -227,172 +513,411 @@ paths:
             schema:
               $ref: '#/components/schemas/ComplaintActionRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency:
     get:
-      summary: 游客侧应急信息（仅有效窗口内已发布）
+      summary: 游客侧应急列表（仅有效期内已发布）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin:
     get:
       summary: 管理侧应急列表
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
     post:
       summary: 新建应急草稿
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}:
     put:
       summary: 更新应急草稿
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyRequest'
       responses:
-        "200":
+        '200':
           description: OK
     delete:
       summary: 删除应急信息
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}/submit:
     post:
       summary: 提交应急审批
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/emergency/admin/{id}/approve:
     post:
       summary: 审批并发布应急信息
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
+  /api/emergency/admin/{id}/reject:
+    post:
+      summary: 驳回应急信息
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyReviewRequest'
+      responses:
+        '200':
+          description: OK
+  /api/hotels/admin:
+    get:
+      summary: 管理侧酒店列表
+      description: HOTEL_ADMIN 仅查看自己绑定酒店，SYSTEM_ADMIN 可查看全量，ADMIN 无权访问。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 新增酒店
+      description: 仅 SYSTEM_ADMIN 可访问。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelAdminRequest'
+      responses:
+        '200':
+          description: OK
+  /api/hotels/admin/{id}:
+    put:
+      summary: 编辑酒店
+      description: HOTEL_ADMIN 仅可编辑自己绑定酒店，SYSTEM_ADMIN 可维护全量。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HotelAdminRequest'
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: 删除酒店
+      description: 仅 SYSTEM_ADMIN 可访问。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}:
+    get:
+      summary: 平台管理员查询资源库列表
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 平台管理员新增资源
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceItemRequest'
+            examples:
+              scenic:
+                summary: 新增景区景点
+                value:
+                  title: 北欧小木屋风情区
+                  scenicArea: 北侧森林区
+                  location: 景区北侧观景步道
+                  openTime: 08:00 - 18:00
+                  ticketPrice: 60
+                  level: AAAA
+                  type: 森林观光
+                  isFree: false
+                  crowdHeat: 73
+                  description: 还原北欧森林木屋风情，适合拍照打卡，周边有驯鹿互动区。
+                  coverImageUrl: https://example.com/resource/scenic-001.jpg
+                  online: true
+              route:
+                summary: 新增游览线路
+                value:
+                  title: 亲子一日游（东线）
+                  durationHours: 6
+                  difficulty: MEDIUM
+                  suitableFor: 亲子家庭
+                  spots: 东大门 -> 湖畔 -> 游乐场 -> 美食城
+                  description: 专为带儿童的家庭设计，地势平缓，沿途洗手间及休息区密集。
+                  coverImageUrl: https://example.com/resource/route-001.jpg
+                  online: true
+              dining:
+                summary: 新增餐饮资源
+                value:
+                  title: 湖畔星空餐厅
+                  type: 景观餐厅
+                  avgPrice: 128
+                  businessHours: 11:00 - 22:00
+                  address: 东区观景台旁
+                  recommendFood: 炭烤牛排、海鲜烩饭
+                  description: 提供中西融合菜系，360 度全景玻璃房，可直望湖畔夜景。
+                  distanceMeters: 320
+                  isOpen: true
+                  navLat: 30.5728
+                  navLng: 104.0668
+                  coverImageUrl: https://example.com/resource/dining-001.jpg
+                  online: true
+              performance:
+                summary: 新增演出资源
+                value:
+                  title: 大型实景剧《幻梦森林》
+                  location: 中央水上剧场
+                  showTime: 每日 19:30 - 21:00
+                  price: 199
+                  team: 幻梦森林演艺团
+                  venue: 中央水上剧场
+                  showDateTime: 2026-05-01T19:30:00
+                  remainingTickets: 86
+                  ticketStatus: AVAILABLE
+                  description: 结合声光电的大型沉浸式实景演出，讲述森林精灵的传说。
+                  distanceMeters: 580
+                  navLat: 30.5732
+                  navLng: 104.0681
+                  coverImageUrl: https://example.com/resource/show-001.jpg
+                  online: true
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}:
+    get:
+      summary: 平台管理员查询资源详情
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: 平台管理员更新资源
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceItemRequest'
+            examples:
+              scenicUpdate:
+                summary: 更新景区景点
+                value:
+                  title: 北欧小木屋风情区（春季版）
+                  scenicArea: 北侧森林区
+                  location: 景区北侧观景步道
+                  openTime: 08:30 - 18:30
+                  ticketPrice: 68
+                  level: AAAA
+                  type: 森林观光
+                  isFree: false
+                  crowdHeat: 81
+                  description: 春季新增花海打卡点与森林手作体验区。
+                  online: true
+              routeUpdate:
+                summary: 更新游览线路
+                value:
+                  title: 亲子一日游（升级版）
+                  durationHours: 7
+                  difficulty: MEDIUM
+                  suitableFor: 亲子家庭
+                  spots: 东大门 -> 湖畔 -> 游乐场 -> 美食城 -> 观光列车
+                  description: 增加观光列车站点，适合全天休闲游览。
+                  online: true
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: 平台管理员删除资源
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}/online:
+    post:
+      summary: 资源上架
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/resources/{category}/{id}/offline:
+    post:
+      summary: 资源下架
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users:
+    get:
+      summary: 系统管理员查询账号列表
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: 系统管理员创建账号
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemUserCreateRequest'
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}:
+    put:
+      summary: 系统管理员更新账号
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemUserUpdateRequest'
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/reset-password:
+    post:
+      summary: 系统管理员重置账号密码
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/enable:
+    post:
+      summary: 启用账号
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/users/{id}/disable:
+    post:
+      summary: 停用账号
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/audit-logs:
+    get:
+      summary: 系统管理员查询审计日志
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/settings:
+    get:
+      summary: 系统管理员查询系统参数
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/system/settings/{key}:
+    put:
+      summary: 系统管理员更新系统参数
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingUpdateRequest'
+      responses:
+        '200':
+          description: OK
   /api/query/hotels:
     get:
       summary: 酒店查询
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
-  /api/query/hotels/star:
-    get:
-      summary: 星级酒店查询
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
-  /api/query/hotels/non-star:
-    get:
-      summary: 非星级与乡村酒店查询
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
   /api/query/scenic-spots:
     get:
-      summary: 景区查询
+      summary: 景区查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/routes:
     get:
-      summary: 线路查询
+      summary: 线路查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
   /api/query/dining:
     get:
-      summary: 餐饮查询
+      summary: 餐饮查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:
-        "200":
+        '200':
           description: OK
-
-  /api/query/entertainment:
-    get:
-      summary: 娱乐查询
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
-  /api/query/dining-entertainment:
-    get:
-      summary: 餐饮娱乐综合查询（兼容）
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
   /api/query/performances:
     get:
-      summary: 演出查询
+      summary: 演出查询（仅返回上架资源）
       security:
         - bearerAuth: []
       responses:
-        "200":
-          description: OK
-
-  /api/query/weather:
-    get:
-      summary: 天气查询
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
-  /api/query/traffic:
-    get:
-      summary: 路况查询
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: OK
-
-  /api/query/weather-traffic:
-    get:
-      summary: 天气路况综合查询（兼容）
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
+        '200':
           description: OK

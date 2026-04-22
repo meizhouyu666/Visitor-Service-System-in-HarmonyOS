@@ -6,10 +6,13 @@ public record ScenicSpotResponse(
         String scenicArea,
         String location,
         String openTime,
-        double ticketPrice,
+        int ticketPrice,
         String level,
         String type,
         boolean isFree,
-        String description
+        String description,
+        Integer crowdHeat,
+        String coverImageUrl
 ) {
 }
+

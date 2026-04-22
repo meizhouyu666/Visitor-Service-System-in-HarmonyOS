@@ -1,0 +1,10 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="700" fill="#EAF2FF"/>
+  <rect x="40" y="40" width="1120" height="620" rx="34" fill="#FFFFFF"/>
+  <path d="M120 560C230 460 380 450 520 500C680 560 860 560 1030 460" stroke="#80B6FF" stroke-width="38" stroke-linecap="round"/>
+  <path d="M170 200C280 290 390 290 510 210C670 110 860 160 1030 270" stroke="#8ED09D" stroke-width="44" stroke-linecap="round"/>
+  <path d="M180 390C270 340 390 340 470 390C560 450 700 450 830 380C900 342 970 332 1040 350" stroke="#D9DEEA" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="640" cy="360" r="22" fill="#FF5C5C"/>
+  <circle cx="640" cy="360" r="48" fill="#FF5C5C" fill-opacity="0.2"/>
+  <text x="84" y="110" fill="#255287" font-size="40" font-family="Arial, sans-serif" font-weight="700">路况示意图</text>
+</svg>

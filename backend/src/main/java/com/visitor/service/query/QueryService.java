@@ -10,138 +10,433 @@ import com.visitor.service.query.dto.TrafficResponse;
 import com.visitor.service.query.dto.TravelRouteResponse;
 import com.visitor.service.query.dto.WeatherResponse;
 import com.visitor.service.query.dto.WeatherTrafficResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class QueryService {
 
-    public List<HotelResponse> hotels(String keyword) {
-        List<HotelResponse> all = List.of(
-                new HotelResponse("h-1", "Sunrise International Hotel", "No.18 Lake Road", 5, 699, "0596-111111", 4.8, true, "Pool,Gym,SPA", "Premium business and leisure hotel near old town"),
-                new HotelResponse("h-2", "Mountain View Hotel", "No.28 Scenic Avenue", 4, 428, "0596-222222", 4.6, true, "Parking,Wifi,Restaurant", "Family-friendly hotel with scenic mountain view"),
-                new HotelResponse("h-3", "Village Warm Inn", "No.8 Folk Street", 3, 238, "0596-333333", 4.4, false, "Wifi,Tea Room", "Affordable and local-style village hotel")
-        );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.address() + " " + item.introduction());
+    private final JdbcTemplate jdbcTemplate;
+
+    public QueryService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<ScenicSpotResponse> scenicSpots(String keyword) {
-        List<ScenicSpotResponse> all = List.of(
-                new ScenicSpotResponse("s-1", "Cloud Peak", "North Scenic Area", "North Mountain", "08:00-17:30", 80, "AAAA", "Mountain", false, "Best choice for sunrise and forest walk"),
-                new ScenicSpotResponse("s-2", "Ancient Town Street", "Central Scenic Area", "Old Town Center", "All Day", 0, "AAAA", "Historic", true, "Historic lane with food and culture activities")
+    public List<HotelResponse> hotels(String keyword, Integer minStar, String area, Integer minPrice, Integer maxPrice) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT qh.id, qh.name, qh.address, qh.star, qh.price, qh.phone, qh.score, qh.has_breakfast, qh.facility, qh.introduction,
+                       qh.availability_status, qh.cover_image_url,
+                       COALESCE(room_stats.total_rooms, 0) AS total_rooms,
+                       COALESCE(room_stats.available_rooms, 0) AS available_rooms,
+                       qh.marketing_recommended, qh.marketing_tag,
+                       qh.marketing_priority, qh.marketing_note
+                FROM query_hotels qh
+                LEFT JOIN (
+                    SELECT hotel_id, SUM(total_rooms) AS total_rooms, SUM(available_rooms) AS available_rooms
+                    FROM hotel_room_types
+                    GROUP BY hotel_id
+                ) room_stats ON room_stats.hotel_id = qh.id
+                WHERE 1 = 1
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "qh.name", "qh.address", "qh.introduction");
+        if (minStar != null) {
+            sql.append(" AND qh.star >= ?");
+            args.add(minStar);
+        }
+        appendArea(sql, args, area, "qh.address");
+        appendPriceRange(sql, args, "qh.price", minPrice, maxPrice);
+        sql.append(" ORDER BY qh.star DESC, qh.price ASC, qh.id ASC");
+
+        RowMapper<HotelResponse> mapper = (rs, rowNum) -> new HotelResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getString("address"),
+                rs.getInt("star"),
+                rs.getInt("price"),
+                rs.getString("phone"),
+                rs.getDouble("score"),
+                rs.getBoolean("has_breakfast"),
+                rs.getString("facility"),
+                rs.getString("introduction"),
+                rs.getString("availability_status"),
+                rs.getString("cover_image_url"),
+                rs.getObject("total_rooms", Integer.class),
+                rs.getObject("available_rooms", Integer.class),
+                rs.getObject("marketing_recommended", Boolean.class),
+                rs.getString("marketing_tag"),
+                rs.getObject("marketing_priority", Integer.class),
+                rs.getString("marketing_note")
         );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.location() + " " + item.description());
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
+    }
+
+    public List<ScenicSpotResponse> scenicSpots(String keyword, String level, String area, Integer minPrice, Integer maxPrice) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, name, scenic_area, location, open_time, ticket_price, level, type, is_free, description,
+                       crowd_heat, cover_image_url
+                FROM query_scenic_spots
+                WHERE online_status = 'ONLINE'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "location", "description", "scenic_area");
+        if (level != null && !level.isBlank()) {
+            sql.append(" AND level = ?");
+            args.add(level.trim().toUpperCase(Locale.ROOT));
+        }
+        appendArea(sql, args, area, "location", "scenic_area");
+        appendPriceRange(sql, args, "ticket_price", minPrice, maxPrice);
+        sql.append(" ORDER BY ticket_price ASC, id ASC");
+
+        RowMapper<ScenicSpotResponse> mapper = (rs, rowNum) -> new ScenicSpotResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getString("scenic_area"),
+                rs.getString("location"),
+                rs.getString("open_time"),
+                rs.getInt("ticket_price"),
+                rs.getString("level"),
+                rs.getString("type"),
+                rs.getBoolean("is_free"),
+                rs.getString("description"),
+                rs.getObject("crowd_heat", Integer.class),
+                rs.getString("cover_image_url")
+        );
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
     public List<TravelRouteResponse> routes(String keyword) {
-        List<TravelRouteResponse> all = List.of(
-                new TravelRouteResponse("r-1", "Family Day Route", 8, "Easy", "Family", "Ancient Town Street,Cloud Peak", "One-day route with culture and light hiking"),
-                new TravelRouteResponse("r-2", "Adventure Route", 12, "Medium", "Young Travelers", "Cloud Peak,River Canyon", "Mountain trail and river canyon route")
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, name, duration_hours, difficulty, suitable_for, spots, detail
+                FROM query_routes
+                WHERE online_status = 'ONLINE'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "spots", "detail");
+        sql.append(" ORDER BY id ASC");
+        RowMapper<TravelRouteResponse> mapper = (rs, rowNum) -> new TravelRouteResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getInt("duration_hours"),
+                rs.getString("difficulty"),
+                rs.getString("suitable_for"),
+                rs.getString("spots"),
+                rs.getString("detail")
         );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.spots() + " " + item.detail());
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
-    public List<DiningResponse> dining(String keyword) {
-        List<DiningResponse> all = List.of(
-                new DiningResponse("d-1", "River Taste Restaurant", "Local Cuisine", 88, "10:00-22:00", "No.6 Riverside", "Braised Fish,Herb Chicken", "Popular local cuisine restaurant for tourists"),
-                new DiningResponse("d-2", "Mountain Noodle House", "Noodle", 35, "09:00-21:00", "No.3 Valley Road", "Handmade Noodle", "Quick and affordable dining with local flavor")
+    public List<DiningResponse> dining(String keyword,
+                                       String area,
+                                       Integer minPrice,
+                                       Integer maxPrice,
+                                       String sortBy,
+                                       Integer limit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, name, type, avg_price, business_hours, address, recommend_food, detail_desc,
+                       logo_url, distance_meters, is_open, nav_lat, nav_lng
+                FROM query_dining
+                WHERE online_status = 'ONLINE'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "type", "recommend_food", "address");
+        appendArea(sql, args, area, "address");
+        appendPriceRange(sql, args, "avg_price", minPrice, maxPrice);
+        appendSortAndLimit(sql, args, sortBy, limit, "avg_price", "distance_meters");
+
+        RowMapper<DiningResponse> mapper = (rs, rowNum) -> new DiningResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getString("type"),
+                rs.getInt("avg_price"),
+                rs.getString("business_hours"),
+                rs.getString("address"),
+                rs.getString("recommend_food"),
+                rs.getString("detail_desc"),
+                rs.getString("logo_url"),
+                rs.getObject("distance_meters", Integer.class),
+                rs.getObject("is_open", Boolean.class),
+                rs.getObject("nav_lat", Double.class),
+                rs.getObject("nav_lng", Double.class)
         );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.type() + " " + item.recommendFood());
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
-    public List<EntertainmentResponse> entertainment(String keyword) {
-        List<EntertainmentResponse> all = List.of(
-                new EntertainmentResponse("e-1", "Night Music Plaza", "Music Plaza", "Old Town East Gate", "19:00-23:00", 0, "Open-air music and local stalls"),
-                new EntertainmentResponse("e-2", "River Light Park", "Night Tour", "Riverside Belt", "18:30-22:30", 30, "Night light show and interactive performance")
+    public List<EntertainmentResponse> entertainment(String keyword,
+                                                     String area,
+                                                     Integer minPrice,
+                                                     Integer maxPrice,
+                                                     String sortBy,
+                                                     Integer limit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, name, type, location, open_time, price, description,
+                       logo_url, distance_meters, is_open, nav_lat, nav_lng
+                FROM query_entertainment
+                WHERE 1 = 1
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "type", "location", "description");
+        appendArea(sql, args, area, "location");
+        appendPriceRange(sql, args, "price", minPrice, maxPrice);
+        appendSortAndLimit(sql, args, sortBy, limit, "price", "distance_meters");
+
+        RowMapper<EntertainmentResponse> mapper = (rs, rowNum) -> new EntertainmentResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getString("type"),
+                rs.getString("location"),
+                rs.getString("open_time"),
+                rs.getInt("price"),
+                rs.getString("description"),
+                rs.getString("logo_url"),
+                rs.getObject("distance_meters", Integer.class),
+                rs.getObject("is_open", Boolean.class),
+                rs.getObject("nav_lat", Double.class),
+                rs.getObject("nav_lng", Double.class)
         );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.type() + " " + item.location());
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
-    public List<PerformanceResponse> performances(String keyword) {
-        List<PerformanceResponse> all = List.of(
-                new PerformanceResponse("p-1", "Folk Dance Show", "Culture Theater", "20:00", 68, "Folk Dance Group", "Traditional dance with interactive finale"),
-                new PerformanceResponse("p-2", "Mountain Drama", "Old Stage Hall", "19:30", 88, "Mountain Drama Team", "Classic stage performance with local stories")
+    public List<PerformanceResponse> performances(String keyword,
+                                                  String area,
+                                                  Integer minPrice,
+                                                  Integer maxPrice,
+                                                  String sortBy,
+                                                  Integer limit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, name, location, show_time, price, team, detail,
+                       venue, show_datetime, remaining_tickets, ticket_status, distance_meters, nav_lat, nav_lng
+                FROM query_performances
+                WHERE online_status = 'ONLINE'
+                """);
+        List<Object> args = new ArrayList<>();
+        appendKeyword(sql, args, keyword, "name", "team", "location", "venue");
+        appendArea(sql, args, area, "location", "venue");
+        appendPriceRange(sql, args, "price", minPrice, maxPrice);
+        appendPerformanceSortAndLimit(sql, args, sortBy, limit);
+
+        RowMapper<PerformanceResponse> mapper = (rs, rowNum) -> new PerformanceResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getString("location"),
+                rs.getString("show_time"),
+                rs.getInt("price"),
+                rs.getString("team"),
+                rs.getString("detail"),
+                rs.getString("venue"),
+                rs.getString("show_datetime"),
+                rs.getObject("remaining_tickets", Integer.class),
+                rs.getString("ticket_status"),
+                rs.getObject("distance_meters", Integer.class),
+                rs.getObject("nav_lat", Double.class),
+                rs.getObject("nav_lng", Double.class)
         );
-        return filterByKeyword(all, keyword, item -> item.name() + " " + item.team() + " " + item.location());
+        return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }
 
     public List<WeatherResponse> weather() {
-        return List.of(
-                new WeatherResponse("2026-04-17", "Sunny", "26C", "East Wind 2", 55, "Good day for outdoor travel"),
-                new WeatherResponse("2026-04-18", "Cloudy", "24C", "North Wind 3", 62, "Carry a light jacket in the evening")
-        );
+        String sql = """
+                SELECT date_value, weather, temperature, wind, humidity, tip
+                FROM query_weather
+                ORDER BY sort_order ASC
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new WeatherResponse(
+                rs.getString("date_value"),
+                rs.getString("weather"),
+                rs.getString("temperature"),
+                rs.getString("wind"),
+                rs.getInt("humidity"),
+                rs.getString("tip")
+        ));
     }
 
     public List<TrafficResponse> traffic() {
-        return List.of(
-                new TrafficResponse("City Center", "Cloud Peak", "Smooth", "Main Avenue -> Scenic Road", "45min"),
-                new TrafficResponse("Railway Station", "Ancient Town Street", "Moderate", "Ring Road -> East Gate", "30min")
-        );
+        String sql = """
+                SELECT from_location, to_location, status, suggest_route, take_time, severity_level
+                FROM query_traffic
+                ORDER BY sort_order ASC
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new TrafficResponse(
+                rs.getString("from_location"),
+                rs.getString("to_location"),
+                rs.getString("status"),
+                rs.getString("suggest_route"),
+                rs.getString("take_time"),
+                rs.getString("severity_level")
+        ));
     }
 
-    // Backward-compatible endpoints for old frontend callers.
+    // 兼容旧版前端调用的聚合接口。
     public List<SimpleItem> starHotels() {
-        return hotels(null).stream()
+        return hotels(null, null, null, null, null).stream()
                 .filter(item -> item.star() >= 4)
                 .map(item -> new SimpleItem(item.id(), item.name(), item.introduction()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<SimpleItem> nonStarHotels() {
-        return hotels(null).stream()
+        return hotels(null, null, null, null, null).stream()
                 .filter(item -> item.star() < 4)
                 .map(item -> new SimpleItem(item.id(), item.name(), item.introduction()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<SimpleItem> scenicSpots() {
-        return scenicSpots(null).stream()
+        return scenicSpots(null, null, null, null, null).stream()
                 .map(item -> new SimpleItem(item.id(), item.name(), item.description()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<SimpleItem> routes() {
         return routes(null).stream()
                 .map(item -> new SimpleItem(item.id(), item.name(), item.detail()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<SimpleItem> diningAndEntertainment() {
-        List<SimpleItem> diningItems = dining(null).stream()
+        List<SimpleItem> merged = new ArrayList<>();
+        merged.addAll(dining(null, null, null, null, null, null).stream()
                 .map(item -> new SimpleItem(item.id(), item.name(), item.detailDesc()))
-                .collect(Collectors.toList());
-        List<SimpleItem> entertainmentItems = entertainment(null).stream()
+                .toList());
+        merged.addAll(entertainment(null, null, null, null, null, null).stream()
                 .map(item -> new SimpleItem(item.id(), item.name(), item.description()))
-                .collect(Collectors.toList());
-        return List.of(diningItems, entertainmentItems).stream().flatMap(List::stream).collect(Collectors.toList());
+                .toList());
+        return merged;
     }
 
     public List<SimpleItem> performances() {
-        return performances(null).stream()
+        return performances(null, null, null, null, null, null).stream()
                 .map(item -> new SimpleItem(item.id(), item.name(), item.detail()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public WeatherTrafficResponse weatherTraffic() {
-        WeatherResponse current = weather().get(0);
-        TrafficResponse mainRoute = traffic().get(0);
+        List<WeatherResponse> weatherList = weather();
+        List<TrafficResponse> trafficList = traffic();
+
+        WeatherResponse current = weatherList.isEmpty()
+                ? new WeatherResponse("-", "未知", "-", "-", 0, "暂无天气建议")
+                : weatherList.get(0);
+        TrafficResponse mainRoute = trafficList.isEmpty()
+                ? new TrafficResponse("-", "-", "未知", "暂无路线", "-", "UNKNOWN")
+                : trafficList.get(0);
+
         return new WeatherTrafficResponse(
                 current.weather(),
                 current.temperature(),
                 mainRoute.status() + ", " + mainRoute.suggestRoute());
     }
 
-    private <T> List<T> filterByKeyword(List<T> all, String keyword, Function<T, String> textExtractor) {
-        if (keyword == null || keyword.isBlank()) {
-            return all;
+    private void appendKeyword(StringBuilder sql, List<Object> args, String keyword, String... columns) {
+        if (keyword == null || keyword.isBlank() || columns.length == 0) {
+            return;
         }
-        String normalized = keyword.toLowerCase(Locale.ROOT);
-        return all.stream()
-                .filter(item -> textExtractor.apply(item).toLowerCase(Locale.ROOT).contains(normalized))
-                .collect(Collectors.toList());
+        sql.append(" AND (");
+        String normalized = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+        for (int index = 0; index < columns.length; index++) {
+            if (index > 0) {
+                sql.append(" OR ");
+            }
+            sql.append("LOWER(").append(columns[index]).append(") LIKE ?");
+            args.add(normalized);
+        }
+        sql.append(')');
+    }
+
+    private void appendArea(StringBuilder sql, List<Object> args, String area, String... columns) {
+        if (area == null || area.isBlank() || columns.length == 0) {
+            return;
+        }
+        String normalized = "%" + area.trim().toLowerCase(Locale.ROOT) + "%";
+        sql.append(" AND (");
+        for (int index = 0; index < columns.length; index++) {
+            if (index > 0) {
+                sql.append(" OR ");
+            }
+            sql.append("LOWER(").append(columns[index]).append(") LIKE ?");
+            args.add(normalized);
+        }
+        sql.append(')');
+    }
+
+    private void appendPriceRange(StringBuilder sql,
+                                  List<Object> args,
+                                  String column,
+                                  Integer minPrice,
+                                  Integer maxPrice) {
+        if (minPrice != null) {
+            sql.append(" AND ").append(column).append(" >= ?");
+            args.add(minPrice);
+        }
+        if (maxPrice != null) {
+            sql.append(" AND ").append(column).append(" <= ?");
+            args.add(maxPrice);
+        }
+    }
+
+    private void appendSortAndLimit(StringBuilder sql,
+                                    List<Object> args,
+                                    String sortBy,
+                                    Integer limit,
+                                    String priceColumn,
+                                    String distanceColumn) {
+        String normalizedSort = sortBy == null ? "" : sortBy.trim().toLowerCase(Locale.ROOT);
+        if ("price_desc".equals(normalizedSort)) {
+            sql.append(" ORDER BY ").append(priceColumn).append(" DESC, id ASC");
+        } else if ("distance_asc".equals(normalizedSort)) {
+            sql.append(" ORDER BY ").append(distanceColumn).append(" ASC, id ASC");
+        } else if ("price_asc".equals(normalizedSort)) {
+            sql.append(" ORDER BY ").append(priceColumn).append(" ASC, id ASC");
+        } else {
+            sql.append(" ORDER BY id ASC");
+        }
+        appendLimit(sql, args, limit);
+    }
+
+    private void appendPerformanceSortAndLimit(StringBuilder sql, List<Object> args, String sortBy, Integer limit) {
+        String normalizedSort = sortBy == null ? "" : sortBy.trim().toLowerCase(Locale.ROOT);
+        if ("price_desc".equals(normalizedSort)) {
+            sql.append(" ORDER BY price DESC, id ASC");
+        } else if ("distance_asc".equals(normalizedSort)) {
+            sql.append(" ORDER BY distance_meters ASC, id ASC");
+        } else if ("time_asc".equals(normalizedSort)) {
+            sql.append(" ORDER BY show_datetime ASC, id ASC");
+        } else {
+            sql.append(" ORDER BY show_datetime ASC, id ASC");
+        }
+        appendLimit(sql, args, limit);
+    }
+
+    private void appendLimit(StringBuilder sql, List<Object> args, Integer limit) {
+        if (limit == null) {
+            return;
+        }
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        sql.append(" LIMIT ?");
+        args.add(safeLimit);
+    }
+
+    private <T> List<T> queryByKeyword(String baseSql,
+                                       RowMapper<T> mapper,
+                                       String keyword,
+                                       String primaryColumn,
+                                       String secondaryColumn,
+                                       String tertiaryColumn) {
+        if (keyword == null || keyword.isBlank()) {
+            return jdbcTemplate.query(baseSql + " ORDER BY id", mapper);
+        }
+
+        String sql = baseSql + " WHERE LOWER(" + primaryColumn + ") LIKE ?"
+                + " OR LOWER(" + secondaryColumn + ") LIKE ?"
+                + " OR LOWER(" + tertiaryColumn + ") LIKE ?"
+                + " ORDER BY id";
+
+        String normalized = "%" + keyword.trim().toLowerCase() + "%";
+        return jdbcTemplate.query(sql, mapper, normalized, normalized, normalized);
     }
 }

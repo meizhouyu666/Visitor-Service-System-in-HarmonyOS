@@ -1,10 +1,11 @@
-import { http } from '@kit.NetworkKit'
+﻿import { http } from '@kit.NetworkKit'
 import { ApiResponse } from '../model/ApiModels'
 
-// Team default for emulator -> host machine.
-// For physical device testing, use developer's LAN IP locally (do not commit personal IPs).
-const API_BASE_URL: string = 'http://10.0.2.2:8080'
-type RequestPayload = Record<string, Object> | string | number | boolean | null
+// 团队默认地址：模拟器访问宿主机后端
+// 真机联调时可本地改为局域网地址，但不要提交个人 IP
+const API_BASE_URL: string = 'http://10.0.2.2:8081'
+
+type RequestPayload = object
 
 export class ApiClient {
   private token: string = ''
@@ -17,19 +18,23 @@ export class ApiClient {
     return this.request<T>(path, http.RequestMethod.GET)
   }
 
-  async post<T, R>(path: string, payload: T): Promise<R> {
-    return this.request<R>(path, http.RequestMethod.POST, payload)
+  async post<T extends RequestPayload, R>(path: string, payload: T): Promise<R> {
+    return this.request<R, T>(path, http.RequestMethod.POST, payload)
   }
 
-  async put<T, R>(path: string, payload: T): Promise<R> {
-    return this.request<R>(path, http.RequestMethod.PUT, payload)
+  async put<T extends RequestPayload, R>(path: string, payload: T): Promise<R> {
+    return this.request<R, T>(path, http.RequestMethod.PUT, payload)
   }
 
   async delete<R>(path: string): Promise<R> {
     return this.request<R>(path, http.RequestMethod.DELETE)
   }
 
-  private async request<R>(path: string, method: http.RequestMethod, payload?: RequestPayload): Promise<R> {
+  private async request<R, T extends RequestPayload | undefined = undefined>(
+    path: string,
+    method: http.RequestMethod,
+    payload?: T
+  ): Promise<R> {
     const httpRequest: http.HttpRequest = http.createHttp()
     try {
       const response: http.HttpResponse = await httpRequest.request(
@@ -43,14 +48,23 @@ export class ApiClient {
       )
 
       const raw: string = `${response.result}`
-      const body: ApiResponse<R> = JSON.parse(raw)
-      if (body.code !== 0) {
-        throw new Error(body.message)
+      if (raw.trim().length === 0) {
+        throw new Error('服务返回空响应')
       }
-      return body.data
+      const envelope: ApiResponse<R> = JSON.parse(raw)
+      if (typeof envelope.code === 'number') {
+        if (envelope.code !== 0) {
+          throw new Error(envelope.message.length > 0 ? envelope.message : '请求失败，请稍后重试')
+        }
+        return envelope.data
+      }
+      const plain: R = JSON.parse(raw)
+      return plain
     } catch (error) {
-      const message: string = `${error}`
-      throw new Error(`Network request failed: ${message}`)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('请求失败，请稍后重试')
     } finally {
       httpRequest.destroy()
     }

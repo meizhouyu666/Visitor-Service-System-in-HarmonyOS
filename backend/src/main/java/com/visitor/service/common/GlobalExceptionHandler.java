@@ -15,6 +15,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
+        if (ex.getCode() == ErrorCode.UNAUTHORIZED) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
+        if (ex.getCode() == ErrorCode.FORBIDDEN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
+        if (ex.getCode() == ErrorCode.NOT_FOUND) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
+        }
         return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
     }
 
@@ -23,7 +35,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(error -> error.getField() + " " + error.getDefaultMessage())
-                .orElse("Invalid request");
+                .orElse("请求参数不合法");
         return ResponseEntity.badRequest().body(ApiResponse.failure(ErrorCode.VALIDATION, message));
     }
 
@@ -35,7 +47,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "No permission"));
+                .body(ApiResponse.failure(ErrorCode.FORBIDDEN, "无权限访问"));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

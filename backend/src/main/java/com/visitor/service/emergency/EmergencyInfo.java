@@ -29,6 +29,12 @@ public class EmergencyInfo {
     @Column(name = "valid_until")
     private LocalDateTime validUntil;
 
+    @Column(name = "alert_level", nullable = false, length = 32)
+    private String alertLevel = "MEDIUM";
+
+    @Column(name = "alert_type", nullable = false, length = 64)
+    private String alertType = "GENERAL";
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
     private UserAccount createdBy;
@@ -105,6 +111,22 @@ public class EmergencyInfo {
 
     public void setCreatedBy(UserAccount createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getAlertLevel() {
+        return alertLevel;
+    }
+
+    public void setAlertLevel(String alertLevel) {
+        this.alertLevel = alertLevel;
+    }
+
+    public String getAlertType() {
+        return alertType;
+    }
+
+    public void setAlertType(String alertType) {
+        this.alertType = alertType;
     }
 
     public UserAccount getApprovedBy() {

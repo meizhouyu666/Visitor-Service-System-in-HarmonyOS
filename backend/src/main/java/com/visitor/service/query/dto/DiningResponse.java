@@ -4,10 +4,16 @@ public record DiningResponse(
         String id,
         String name,
         String type,
-        double avgPrice,
+        int avgPrice,
         String businessHours,
         String address,
         String recommendFood,
-        String detailDesc
+        String detailDesc,
+        String logoUrl,
+        Integer distanceMeters,
+        Boolean isOpen,
+        Double navLat,
+        Double navLng
 ) {
 }
+
