@@ -1,4 +1,4 @@
-﻿import { HotelAdminRequest, HotelResponse } from '../../common/model/ApiModels'
+﻿import { HotelAdminRequest, HotelResponse, HotelRoomItemRequest, HotelRoomItemResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 import {
   RADIUS_LG,
@@ -22,7 +22,6 @@ import {
 
 export type HotelMode = 'visitor' | 'manager' | 'admin'
 
-@Observed
 class HotelRoomItem {
   id: string
   name: string
@@ -31,14 +30,7 @@ class HotelRoomItem {
   price: number
   imageUrl: string
 
-  constructor(
-    id: string,
-    name: string,
-    totalRooms: number,
-    availableRooms: number,
-    price: number,
-    imageUrl: string
-  ) {
+  constructor(id: string, name: string, totalRooms: number, availableRooms: number, price: number, imageUrl: string) {
     this.id = id
     this.name = name
     this.totalRooms = totalRooms
@@ -147,6 +139,9 @@ export struct HotelPage {
       const list: HotelResponse[] = await apiClient.get<HotelResponse[]>(this.resolveListPath())
       this.items = [...list]
       this.syncSelection(preferredId)
+      if (this.mode === 'manager' && this.selectedId.length > 0) {
+        await this.loadRoomItems(this.selectedId)
+      }
       this.actionMessage = ''
     } catch (_error) {
       this.errorMessage = '加载酒店数据失败，请稍后重试'
@@ -235,6 +230,67 @@ export struct HotelPage {
     this.selectedId = item.id
     this.fillForm(item)
     this.actionMessage = ''
+    if (this.mode === 'manager') {
+      void this.loadRoomItems(item.id)
+    }
+  }
+
+  private defaultRoomItems(): HotelRoomItem[] {
+    return [
+      new HotelRoomItem(
+        'deluxe-king',
+        '豪华大床房',
+        50,
+        12,
+        599,
+        'https://images.unsplash.com/photo-1590490359683-658d3d23f972?auto=format&fit=crop&w=400&q=80'
+      ),
+      new HotelRoomItem(
+        'standard-twin',
+        '双人标准间',
+        80,
+        5,
+        450,
+        'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80'
+      ),
+      new HotelRoomItem(
+        'family-suite',
+        '全景家庭套房',
+        15,
+        0,
+        1299,
+        'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=400&q=80'
+      )
+    ]
+  }
+
+  private mapRoomResponse(item: HotelRoomItemResponse, index: number): HotelRoomItem {
+    return new HotelRoomItem(
+      item.id,
+      item.name,
+      item.totalRooms,
+      item.availableRooms,
+      item.price,
+      this.resolveRoomImage(item.imageUrl, index)
+    )
+  }
+
+  private async loadRoomItems(hotelId: string): Promise<void> {
+    if (hotelId.length === 0) {
+      this.roomItems = this.defaultRoomItems()
+      return
+    }
+    try {
+      const list: HotelRoomItemResponse[] = await apiClient.get<HotelRoomItemResponse[]>(`/api/hotels/admin/${hotelId}/rooms`)
+      if (list.length === 0) {
+        this.roomItems = this.defaultRoomItems()
+        return
+      }
+      this.roomItems = list.map((item: HotelRoomItemResponse, index: number) => this.mapRoomResponse(item, index))
+    } catch (_error) {
+      this.roomItems = this.defaultRoomItems()
+      this.errorMessage = '加载房型库存失败，请稍后重试'
+    }
   }
 
   private parseInteger(value: string, fallback: number): number {
@@ -497,7 +553,7 @@ export struct HotelPage {
       const nextValue: number = item.id === id
         ? Math.max(0, Math.min(item.totalRooms, item.availableRooms + delta))
         : item.availableRooms
-      return new HotelRoomItem(
+      const nextItem: HotelRoomItem = new HotelRoomItem(
         item.id,
         item.name,
         item.totalRooms,
@@ -505,32 +561,85 @@ export struct HotelPage {
         item.price,
         item.imageUrl
       )
+      return nextItem
     })
     this.actionMessage = ''
   }
 
-  private buildRoomSyncRequest(): HotelAdminRequest | null {
+  private currentRoomItem(roomId: string): HotelRoomItem {
+    const found: HotelRoomItem | undefined = this.roomItems.find((item: HotelRoomItem) => item.id === roomId)
+    if (found !== undefined) {
+      return found
+    }
+    const fallbackRoom: HotelRoomItem = new HotelRoomItem(roomId, '房型待同步', 0, 0, 0, '')
+    return fallbackRoom
+  }
+
+  private roomName(roomId: string): string {
+    return this.currentRoomItem(roomId).name
+  }
+
+  private roomImage(roomId: string): string {
+    return this.currentRoomItem(roomId).imageUrl
+  }
+
+  private roomPrice(roomId: string): number {
+    return this.currentRoomItem(roomId).price
+  }
+
+  private roomTotalRooms(roomId: string): number {
+    return this.currentRoomItem(roomId).totalRooms
+  }
+
+  private roomAvailableRooms(roomId: string): number {
+    return this.currentRoomItem(roomId).availableRooms
+  }
+
+  private roomStatusLabelById(roomId: string): string {
+    return this.roomStatusLabel(this.currentRoomItem(roomId))
+  }
+
+  private roomStatusColorById(roomId: string): string {
+    return this.roomStatusColor(this.currentRoomItem(roomId))
+  }
+
+  private roomStatusBgById(roomId: string): string {
+    return this.roomStatusBg(this.currentRoomItem(roomId))
+  }
+
+  private resolveRoomImage(url: string | undefined, index: number): string {
+    if (url !== undefined && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://'))) {
+      return url
+    }
+    if (index % 3 === 0) {
+      return 'https://images.unsplash.com/photo-1590490359683-658d3d23f972?auto=format&fit=crop&w=400&q=80'
+    }
+    if (index % 3 === 1) {
+      return 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80'
+    }
+    return 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=400&q=80'
+  }
+
+  private buildRoomSyncRequest(): HotelRoomItemRequest[] | null {
     if (this.selectedId.length === 0) {
       this.errorMessage = '未找到当前酒店，请先确认酒店账号已绑定酒店'
       return null
     }
-    return {
-      name: this.selectedSnapshot.name,
-      address: this.selectedSnapshot.address,
-      star: this.selectedSnapshot.star,
-      price: this.selectedSnapshot.price,
-      phone: this.selectedSnapshot.phone,
-      score: this.selectedSnapshot.score,
-      hasBreakfast: this.selectedSnapshot.hasBreakfast,
-      facility: this.selectedSnapshot.facility,
-      introduction: this.selectedSnapshot.introduction,
-      availabilityStatus: this.deriveHotelAvailability(),
-      coverImageUrl: this.selectedSnapshot.coverImageUrl
-    }
+    return this.roomItems.map((item: HotelRoomItem) => {
+      const requestItem: HotelRoomItemRequest = {
+        id: item.id,
+        name: item.name,
+        totalRooms: item.totalRooms,
+        availableRooms: item.availableRooms,
+        price: item.price,
+        imageUrl: item.imageUrl
+      }
+      return requestItem
+    })
   }
 
   private async syncRoomStatus(): Promise<void> {
-    const payload: HotelAdminRequest | null = this.buildRoomSyncRequest()
+    const payload: HotelRoomItemRequest[] | null = this.buildRoomSyncRequest()
     if (payload === null) {
       return
     }
@@ -538,9 +647,9 @@ export struct HotelPage {
     this.errorMessage = ''
     this.actionMessage = ''
     try {
-      await apiClient.put<HotelAdminRequest, HotelResponse>(`/api/hotels/admin/${this.selectedId}`, payload)
-      this.formAvailability = payload.availabilityStatus ?? 'AVAILABLE'
+      await apiClient.put<HotelRoomItemRequest[], HotelRoomItemResponse[]>(`/api/hotels/admin/${this.selectedId}/rooms`, payload)
       await this.loadHotels(this.selectedId)
+      await this.loadRoomItems(this.selectedId)
       this.actionMessage = '实时房态已同步至平台'
     } catch (_error) {
       this.errorMessage = '同步房态失败，请稍后重试'
@@ -724,17 +833,17 @@ export struct HotelPage {
       .width('100%')
 
       ForEach(this.roomItems, (item: HotelRoomItem) => {
-        this.RoomTypeCard(item)
+        this.RoomTypeCard(item.id)
       }, (item: HotelRoomItem) => item.id)
     }
     .width('100%')
   }
 
   @Builder
-  private RoomTypeCard(item: HotelRoomItem): void {
+  private RoomTypeCard(roomId: string): void {
     Column({ space: 16 }) {
       Row({ space: 14 }) {
-        Image(item.imageUrl)
+        Image(this.roomImage(roomId))
           .width(82)
           .height(82)
           .borderRadius(RADIUS_MD)
@@ -742,25 +851,25 @@ export struct HotelPage {
 
         Column({ space: 12 }) {
           Row() {
-            Text(item.name)
+            Text(this.roomName(roomId))
               .fontSize(15)
               .fontWeight(FontWeight.Bold)
               .fontColor(THEME_TEXT_PRIMARY)
               .layoutWeight(1)
-            Text(`¥${item.price}/晚`)
+            Text(`¥${this.roomPrice(roomId)}/晚`)
               .fontSize(12)
               .fontColor(THEME_TEXT_SECONDARY)
           }
           .width('100%')
 
           Row({ space: 8 }) {
-            Text(this.roomStatusLabel(item))
+            Text(this.roomStatusLabelById(roomId))
               .fontSize(11)
-              .fontColor(this.roomStatusColor(item))
+              .fontColor(this.roomStatusColorById(roomId))
               .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-              .backgroundColor(this.roomStatusBg(item))
+              .backgroundColor(this.roomStatusBgById(roomId))
               .borderRadius(RADIUS_PILL)
-            Text(`总房量 ${item.totalRooms} 间`)
+            Text(`总房量 ${this.roomTotalRooms(roomId)} 间`)
               .fontSize(12)
               .fontColor(THEME_TEXT_TERTIARY)
           }
@@ -780,14 +889,14 @@ export struct HotelPage {
           .fontWeight(FontWeight.Medium)
           .fontColor(THEME_TEXT_PRIMARY)
         Blank()
-        this.StepperButton('－', item.id, -1, item.availableRooms <= 0)
-        Text(`${item.availableRooms}`)
+        this.StepperButton('－', roomId, -1, this.roomAvailableRooms(roomId) <= 0)
+        Text(`${this.roomAvailableRooms(roomId)}`)
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)
           .textAlign(TextAlign.Center)
           .width(42)
-        this.StepperButton('＋', item.id, 1, item.availableRooms >= item.totalRooms)
+        this.StepperButton('＋', roomId, 1, this.roomAvailableRooms(roomId) >= this.roomTotalRooms(roomId))
       }
       .width('100%')
     }

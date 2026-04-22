@@ -1,5 +1,6 @@
 ﻿import { AuthStore } from '../common/state/AuthStore'
-import { UserRole } from '../common/model/ApiModels'
+import { ComplaintItem, EmergencyItem, ResourceItemResponse, UserRole } from '../common/model/ApiModels'
+import { apiClient } from '../common/network/ApiClient'
 import { ComplaintMode, ComplaintPage } from './modules/ComplaintPage'
 import { EmergencyMode, EmergencyPage } from './modules/EmergencyPage'
 import { HotelMode, HotelPage } from './modules/HotelPage'
@@ -9,6 +10,8 @@ import { WeatherTrafficPage } from './modules/WeatherTrafficPage'
 import { VisitorHomePage } from './modules/VisitorHomePage'
 import { VisitorServiceTab, VisitorServicesPage } from './modules/VisitorServicesPage'
 import { ResourceLibraryPage } from './modules/ResourceLibraryPage'
+import { MarketingPage } from './modules/MarketingPage'
+import { SystemAdminPage } from './modules/SystemAdminPage'
 import {
   RADIUS_LG,
   RADIUS_MD,
@@ -33,7 +36,7 @@ type AuthMode = 'login' | 'register' | 'reset'
 type VisitorNav = 'home' | 'services' | 'complaint' | 'emergency'
 type AdminSection = 'home' | 'complaints' | 'emergency' | 'marketing' | 'resources' | 'system'
 type SystemAdminSection = 'home' | 'account' | 'logs' | 'rbac' | 'settings'
-type SystemAccountRole = 'ADMIN' | 'HOTEL_ADMIN' | 'COMPLAINT_HANDLER'
+type SystemAccountRole = 'ADMIN' | 'APPROVER' | 'HOTEL_ADMIN' | 'COMPLAINT_HANDLER'
 
 interface TabItem {
   key: string
@@ -52,6 +55,8 @@ interface AdminTodoItem {
   subtitle: string
   iconColor: string
   iconBg: string
+  section: AdminSection
+  sortTime: number
 }
 
 interface MarketingHotelItem {
@@ -105,6 +110,14 @@ struct Index {
   @State private systemDisplayNameInput: string = ''
   @State private systemRemarkInput: string = ''
   @State private systemMessage: string = ''
+  @State private dashboardComplaintPendingCount: number = 0
+  @State private dashboardPublishedEmergencyCount: number = 0
+  @State private dashboardPendingEmergencyApprovalCount: number = 0
+  @State private dashboardCrowdLabel: string = '平稳'
+  @State private dashboardTodoItems: AdminTodoItem[] = []
+  @State private dashboardErrorMessage: string = ''
+  @State private dashboardLoading: boolean = false
+  @State private dashboardLoaded: boolean = false
   @State private pageOpacity: number = 1
   @State private pageOffsetY: number = 0
   @State private switching: boolean = false
@@ -124,10 +137,7 @@ struct Index {
     { key: 'emergency', icon: '🚨', title: '应急' }
   ]
 
-  private adminTodos: AdminTodoItem[] = [
-    { icon: '诉', title: '新增投诉：导游服务态度差', subtitle: '10 分钟前 · 需管理员审批', iconColor: THEME_DANGER, iconBg: '#FFECEC' },
-    { icon: '警', title: '预警审批：东区道路拥堵', subtitle: '30 分钟前 · 需确认发布', iconColor: THEME_WARNING, iconBg: '#FFF4E6' }
-  ]
+  private adminTodos: AdminTodoItem[] = []
 
   private systemManageItems: SystemManageItem[] = [
     { key: 'account', icon: '👥', title: '账号与权限', subtitle: '新增酒店 / 平台人员', iconColor: THEME_PRIMARY, iconBg: THEME_PRIMARY_SOFT },
@@ -144,6 +154,7 @@ struct Index {
 
   private systemAccountRoles: SystemAccountRoleOption[] = [
     { key: 'ADMIN', title: '平台管理员', subtitle: '投诉 / 应急 / 营销运营' },
+    { key: 'APPROVER', title: '应急审批员', subtitle: '审核、驳回与发布应急预警' },
     { key: 'HOTEL_ADMIN', title: '酒店管理员', subtitle: '房态与酒店资料维护' },
     { key: 'COMPLAINT_HANDLER', title: '投诉处理员', subtitle: '工单处理与结果反馈' }
   ]
@@ -190,6 +201,9 @@ struct Index {
   aboutToAppear(): void {
     if (this.authStore.currentUser !== null && !this.isVisitor()) {
       this.resetRoleTabSelection()
+      if (this.isAdminDashboardRole()) {
+        void this.loadAdminDashboard()
+      }
     }
   }
 
@@ -233,6 +247,9 @@ struct Index {
       this.selectedTabKey = ''
       this.adminSection = 'home'
       this.marketingMessage = ''
+      this.dashboardLoaded = false
+      this.dashboardTodoItems = []
+      this.dashboardErrorMessage = ''
     })
   }
 
@@ -246,6 +263,9 @@ struct Index {
         this.adminSection = 'home'
         this.marketingMessage = ''
       })
+      if (this.isAdminDashboardRole()) {
+        void this.loadAdminDashboard()
+      }
     }
   }
 
@@ -284,8 +304,16 @@ struct Index {
     return this.authStore.getRole() === 'ADMIN'
   }
 
+  private isApprover(): boolean {
+    return this.authStore.getRole() === 'APPROVER'
+  }
+
   private isSystemAdmin(): boolean {
     return this.authStore.getRole() === 'SYSTEM_ADMIN'
+  }
+
+  private isAdminDashboardRole(): boolean {
+    return this.isAdmin() || this.isApprover()
   }
 
   private isComplaintHandler(): boolean {
@@ -310,6 +338,9 @@ struct Index {
     this.adminSection = section
     this.pressedAdminSection = ''
     this.marketingMessage = ''
+    if (section === 'home' && this.isAdminDashboardRole()) {
+      void this.loadAdminDashboard()
+    }
   }
 
   private adminCardScale(key: AdminSection): number {
@@ -348,6 +379,9 @@ struct Index {
   }
 
   private systemRoleTitle(role: SystemAccountRole): string {
+    if (role === 'APPROVER') {
+      return '应急审批员'
+    }
     if (role === 'HOTEL_ADMIN') {
       return '酒店管理员'
     }
@@ -358,6 +392,9 @@ struct Index {
   }
 
   private systemRoleInputHint(): string {
+    if (this.systemRoleInput === 'APPROVER') {
+      return '人员姓名，如：应急审批员王五'
+    }
     if (this.systemRoleInput === 'HOTEL_ADMIN') {
       return '归属对象，如：假日星空酒店'
     }
@@ -368,6 +405,9 @@ struct Index {
   }
 
   private systemUsernameHint(): string {
+    if (this.systemRoleInput === 'APPROVER') {
+      return '登录账号，如：approver_wang'
+    }
     if (this.systemRoleInput === 'HOTEL_ADMIN') {
       return '登录账号，如：hotel_holiday'
     }
@@ -410,6 +450,270 @@ struct Index {
       return '旅游资源库'
     }
     return '工作台'
+  }
+
+  private platformHeaderRoleText(): string {
+    if (this.isApprover()) {
+      return '应急审批员'
+    }
+    return '平台管理员'
+  }
+
+  private canUseAdminEmergencyWrite(): boolean {
+    return this.authStore.hasPermission('EMERGENCY_WRITE')
+  }
+
+  private canUseAdminEmergencyApprove(): boolean {
+    return this.authStore.hasPermission('EMERGENCY_APPROVE')
+  }
+
+  private canSeeEmergencyModule(): boolean {
+    return this.authStore.hasPermission('EMERGENCY_VIEW') || this.canUseAdminEmergencyWrite() || this.canUseAdminEmergencyApprove()
+  }
+
+  private canSeeComplaintModule(): boolean {
+    return this.authStore.hasPermission('COMPLAINT_MANAGE')
+  }
+
+  private canSeeMarketingModule(): boolean {
+    return this.authStore.hasPermission('MARKETING_MANAGE')
+  }
+
+  private canSeeResourceModule(): boolean {
+    return this.authStore.hasPermission('RESOURCE_MANAGE')
+  }
+
+  private adminEmergencyMode(): EmergencyMode {
+    if (this.isApprover()) {
+      return 'approver'
+    }
+    return 'admin'
+  }
+
+  private async loadAdminDashboard(): Promise<void> {
+    if (!this.isAdminDashboardRole() || this.dashboardLoading) {
+      return
+    }
+    this.dashboardLoading = true
+    this.dashboardErrorMessage = ''
+    try {
+      let complaints: ComplaintItem[] = []
+      let emergencies: EmergencyItem[] = []
+      let scenicResources: ResourceItemResponse[] = []
+
+      if (this.canSeeComplaintModule()) {
+        complaints = await apiClient.get<ComplaintItem[]>('/api/complaints')
+      }
+      if (this.canSeeEmergencyModule()) {
+        emergencies = await apiClient.get<EmergencyItem[]>('/api/emergency/admin')
+      }
+      if (this.canSeeResourceModule()) {
+        scenicResources = await apiClient.get<ResourceItemResponse[]>('/api/resources/scenic-spots')
+      }
+
+      this.dashboardComplaintPendingCount = complaints.filter((item: ComplaintItem) => item.status === 'SUBMITTED').length
+      this.dashboardPublishedEmergencyCount = emergencies.filter((item: EmergencyItem) => item.status === 'PUBLISHED').length
+      this.dashboardPendingEmergencyApprovalCount =
+        emergencies.filter((item: EmergencyItem) => item.status === 'PENDING_APPROVAL').length
+      this.dashboardCrowdLabel = this.resolveCrowdLabel(scenicResources)
+      this.dashboardTodoItems = this.buildDashboardTodos(complaints, emergencies)
+      this.dashboardLoaded = true
+    } catch (_error) {
+      this.dashboardErrorMessage = '首页摘要加载失败，请稍后重试'
+    } finally {
+      this.dashboardLoading = false
+    }
+  }
+
+  private resolveCrowdLabel(items: ResourceItemResponse[]): string {
+    let total: number = 0
+    let count: number = 0
+    items.forEach((item: ResourceItemResponse) => {
+      if (item.online && item.crowdHeat !== null) {
+        total += item.crowdHeat
+        count += 1
+      }
+    })
+    if (count === 0) {
+      return this.isApprover() ? '待审' : '平稳'
+    }
+    const average: number = total / count
+    if (average >= 80) {
+      return '高峰'
+    }
+    if (average >= 60) {
+      return '较高'
+    }
+    if (average >= 35) {
+      return '平稳'
+    }
+    return '舒适'
+  }
+
+  private buildDashboardTodos(complaints: ComplaintItem[], emergencies: EmergencyItem[]): AdminTodoItem[] {
+    let items: AdminTodoItem[] = []
+    if (this.canSeeComplaintModule()) {
+      const pendingComplaints: ComplaintItem[] = complaints.filter((item: ComplaintItem) => item.status === 'SUBMITTED')
+      const resolvedComplaints: ComplaintItem[] = complaints.filter((item: ComplaintItem) => item.status === 'RESOLVED')
+      items = items.concat(pendingComplaints.map((item: ComplaintItem) => this.mapPendingComplaintTodo(item)))
+      items = items.concat(resolvedComplaints.map((item: ComplaintItem) => this.mapResolvedComplaintTodo(item)))
+    }
+    if (this.canUseAdminEmergencyApprove()) {
+      const pendingEmergencies: EmergencyItem[] = emergencies.filter((item: EmergencyItem) => item.status === 'PENDING_APPROVAL')
+      items = items.concat(pendingEmergencies.map((item: EmergencyItem) => this.mapApprovalEmergencyTodo(item)))
+    } else if (this.canUseAdminEmergencyWrite()) {
+      const rejectedEmergencies: EmergencyItem[] = emergencies.filter((item: EmergencyItem) => item.status === 'REJECTED')
+      const draftEmergencies: EmergencyItem[] = emergencies.filter((item: EmergencyItem) => item.status === 'DRAFT')
+      items = items.concat(rejectedEmergencies.map((item: EmergencyItem) => this.mapRejectedEmergencyTodo(item)))
+      items = items.concat(draftEmergencies.map((item: EmergencyItem) => this.mapDraftEmergencyTodo(item)))
+    }
+    return items
+      .sort((left: AdminTodoItem, right: AdminTodoItem) => right.sortTime - left.sortTime)
+      .slice(0, 5)
+  }
+
+  private mapPendingComplaintTodo(item: ComplaintItem): AdminTodoItem {
+    return {
+      icon: '诉',
+      title: `投诉待审批：${item.title}`,
+      subtitle: `${this.relativeTimeText(item.createdAt)} · 需管理员审批`,
+      iconColor: THEME_DANGER,
+      iconBg: '#FFECEC',
+      section: 'complaints',
+      sortTime: this.toTimestamp(item.createdAt)
+    }
+  }
+
+  private mapResolvedComplaintTodo(item: ComplaintItem): AdminTodoItem {
+    return {
+      icon: '结',
+      title: `投诉待结案：${item.title}`,
+      subtitle: `${this.relativeTimeText(item.updatedAt)} · 需复核后结案`,
+      iconColor: THEME_SUCCESS,
+      iconBg: '#EAF8EF',
+      section: 'complaints',
+      sortTime: this.toTimestamp(item.updatedAt)
+    }
+  }
+
+  private mapApprovalEmergencyTodo(item: EmergencyItem): AdminTodoItem {
+    return {
+      icon: '警',
+      title: `预警待审批：${item.title}`,
+      subtitle: `${this.relativeTimeText(item.updatedAt)} · 需确认发布`,
+      iconColor: THEME_WARNING,
+      iconBg: '#FFF4E6',
+      section: 'emergency',
+      sortTime: this.toTimestamp(item.updatedAt)
+    }
+  }
+
+  private mapRejectedEmergencyTodo(item: EmergencyItem): AdminTodoItem {
+    return {
+      icon: '改',
+      title: `预警待修改：${item.title}`,
+      subtitle: `${this.relativeTimeText(item.updatedAt)} · 已驳回待重新提交`,
+      iconColor: THEME_WARNING,
+      iconBg: '#FFF4E6',
+      section: 'emergency',
+      sortTime: this.toTimestamp(item.updatedAt)
+    }
+  }
+
+  private mapDraftEmergencyTodo(item: EmergencyItem): AdminTodoItem {
+    return {
+      icon: '稿',
+      title: `预警草稿：${item.title}`,
+      subtitle: `${this.relativeTimeText(item.updatedAt)} · 待提交审批`,
+      iconColor: THEME_PRIMARY,
+      iconBg: THEME_PRIMARY_SOFT,
+      section: 'emergency',
+      sortTime: this.toTimestamp(item.updatedAt)
+    }
+  }
+
+  private toTimestamp(raw: string): number {
+    const parsed: number = Date.parse(raw)
+    if (Number.isNaN(parsed)) {
+      return 0
+    }
+    return parsed
+  }
+
+  private relativeTimeText(raw: string): string {
+    const timestamp: number = this.toTimestamp(raw)
+    if (timestamp <= 0) {
+      return '刚刚'
+    }
+    const diffMs: number = Math.max(0, Date.now() - timestamp)
+    const minutes: number = Math.floor(diffMs / 60000)
+    if (minutes < 1) {
+      return '刚刚'
+    }
+    if (minutes < 60) {
+      return `${minutes} 分钟前`
+    }
+    const hours: number = Math.floor(minutes / 60)
+    if (hours < 24) {
+      return `${hours} 小时前`
+    }
+    const days: number = Math.floor(hours / 24)
+    return `${days} 天前`
+  }
+
+  private overviewMetricOneValue(): string {
+    if (this.canSeeComplaintModule()) {
+      return `${this.dashboardComplaintPendingCount}`
+    }
+    return `${this.dashboardPendingEmergencyApprovalCount}`
+  }
+
+  private overviewMetricOneLabel(): string {
+    if (this.canSeeComplaintModule()) {
+      return '待审批投诉'
+    }
+    return '待审批预警'
+  }
+
+  private overviewMetricTwoValue(): string {
+    return `${this.dashboardPublishedEmergencyCount}`
+  }
+
+  private overviewMetricTwoLabel(): string {
+    return '生效应急预警'
+  }
+
+  private overviewMetricThreeValue(): string {
+    return this.dashboardCrowdLabel
+  }
+
+  private overviewMetricThreeLabel(): string {
+    if (this.canSeeResourceModule()) {
+      return '当前客流'
+    }
+    return '审批负载'
+  }
+
+  private openAdminTodoSection(section: AdminSection): void {
+    this.switchAdminSection(section)
+  }
+
+  private openAllAdminTodos(): void {
+    if (this.canSeeComplaintModule() && this.dashboardComplaintPendingCount > 0) {
+      this.openAdminTodoSection('complaints')
+      return
+    }
+    if (this.canSeeEmergencyModule()) {
+      this.openAdminTodoSection('emergency')
+      return
+    }
+    if (this.canSeeResourceModule()) {
+      this.openAdminTodoSection('resources')
+      return
+    }
+    if (this.canSeeMarketingModule()) {
+      this.openAdminTodoSection('marketing')
+    }
   }
 
   private progressWidth(value: number): string {
@@ -474,6 +778,8 @@ struct Index {
         ]
       case 'COMPLAINT_HANDLER':
         return [{ key: 'complaint-handler', title: '鎶曡瘔澶勭悊' }]
+      case 'APPROVER':
+        return [{ key: 'emergency-approver', title: '应急审批' }]
       case 'HOTEL_ADMIN':
         return [{ key: 'hotel-manager', title: '閰掑簵绠＄悊' }]
       case 'SYSTEM_ADMIN':
@@ -707,7 +1013,7 @@ struct Index {
           Text(this.authStore.infoMessage).fontColor('#0F8A43').fontSize(12)
         }
 
-        Text('演示账号：visitor / admin / handler / hoteladmin / sysadmin（writer / approver 已并入平台管理员）')
+        Text('演示账号：visitor / admin / approver / handler / hoteladmin / sysadmin')
           .fontSize(11)
           .fontColor(THEME_TEXT_TERTIARY)
       }
@@ -795,7 +1101,7 @@ struct Index {
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)
-        Text(`欢迎回来，平台管理员（${this.currentDisplayName('Admin')}）`)
+        Text(`欢迎回来，${this.platformHeaderRoleText()}（${this.currentDisplayName('Admin')}）`)
           .fontSize(11)
           .fontColor(THEME_TEXT_SECONDARY)
       }
@@ -852,16 +1158,16 @@ struct Index {
       .width('100%')
     } else if (this.adminSection === 'emergency') {
       Column({ space: 8 }) {
-        EmergencyPage({ mode: 'admin' })
+        EmergencyPage({ mode: this.adminEmergencyMode() })
       }
       .layoutWeight(1)
       .width('100%')
     } else if (this.adminSection === 'marketing') {
-      Scroll() {
-        this.AdminMarketingView()
+      Column({ space: 8 }) {
+        MarketingPage()
       }
       .layoutWeight(1)
-      .scrollBar(BarState.Off)
+      .width('100%')
     } else if (this.adminSection === 'resources') {
       Column({ space: 8 }) {
         ResourceLibraryPage()
@@ -904,17 +1210,36 @@ struct Index {
           .fontColor(THEME_TEXT_PRIMARY)
           .width('100%')
 
-        Row({ space: 18 }) {
-          this.AdminModuleCard('complaints', '📝', '投诉管理', '审批 / 结案 / 分派', THEME_PRIMARY, THEME_PRIMARY_SOFT)
-          this.AdminModuleCard('emergency', '🚨', '应急信息', '发布 / 审批预警', THEME_WARNING, '#FFF4E6')
+        if (this.canSeeComplaintModule() || this.canSeeEmergencyModule()) {
+          Row({ space: 18 }) {
+            if (this.canSeeComplaintModule()) {
+              this.AdminModuleCard('complaints', '📝', '投诉管理', '审批 / 结案 / 分派', THEME_PRIMARY, THEME_PRIMARY_SOFT)
+            }
+            if (this.canSeeEmergencyModule()) {
+              this.AdminModuleCard(
+                'emergency',
+                '🚨',
+                '应急信息',
+                this.canUseAdminEmergencyApprove() ? '审批 / 驳回预警' : '发布 / 修改 / 删除',
+                THEME_WARNING,
+                '#FFF4E6'
+              )
+            }
+          }
+          .width('100%')
         }
-        .width('100%')
 
-        Row({ space: 18 }) {
-          this.AdminModuleCard('marketing', '📈', '导流营销', '酒店推荐配置', THEME_SUCCESS, '#EAF8EF')
-          this.AdminModuleCard('resources', '🗺', '旅游资源库', '景点 / 餐饮维护', THEME_PRIMARY, THEME_PRIMARY_SOFT)
+        if (this.canSeeMarketingModule() || this.canSeeResourceModule()) {
+          Row({ space: 18 }) {
+            if (this.canSeeMarketingModule()) {
+              this.AdminModuleCard('marketing', '📈', '导流营销', '酒店推荐配置', THEME_SUCCESS, '#EAF8EF')
+            }
+            if (this.canSeeResourceModule()) {
+              this.AdminModuleCard('resources', '🗺', '旅游资源库', '景点 / 餐饮维护', THEME_PRIMARY, THEME_PRIMARY_SOFT)
+            }
+          }
+          .width('100%')
         }
-        .width('100%')
       }
       .width('100%')
 
@@ -932,14 +1257,21 @@ struct Index {
         .width('100%')
 
       Row() {
-        this.AdminMetric('12', '待审批投诉')
+        this.AdminMetric(this.overviewMetricOneValue(), this.overviewMetricOneLabel())
         Blank().width(1).height(42).backgroundColor('#52A7FF')
-        this.AdminMetric('3', '生效应急预警')
+        this.AdminMetric(this.overviewMetricTwoValue(), this.overviewMetricTwoLabel())
         Blank().width(1).height(42).backgroundColor('#52A7FF')
-        this.AdminMetric('高峰', '当前客流')
+        this.AdminMetric(this.overviewMetricThreeValue(), this.overviewMetricThreeLabel())
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
+
+      if (this.dashboardErrorMessage.length > 0) {
+        Text(this.dashboardErrorMessage)
+          .fontSize(11)
+          .fontColor('#EAF2FF')
+          .width('100%')
+      }
     }
     .padding(18)
     .backgroundColor(THEME_PRIMARY)
@@ -1018,43 +1350,62 @@ struct Index {
         Text('查看全部')
           .fontSize(11)
           .fontColor(THEME_PRIMARY)
+          .onClick(() => this.openAllAdminTodos())
       }
       .width('100%')
 
-      Column() {
-        ForEach(this.adminTodos, (item: AdminTodoItem) => {
-          Row({ space: 12 }) {
-            Text(item.icon)
-              .fontSize(13)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(item.iconColor)
-              .textAlign(TextAlign.Center)
-              .width(34)
-              .height(34)
-              .backgroundColor(item.iconBg)
-              .borderRadius(RADIUS_PILL)
-            Column({ space: 4 }) {
-              Text(item.title)
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(THEME_TEXT_PRIMARY)
-                .maxLines(1)
-              Text(item.subtitle)
-                .fontSize(11)
+      if (this.dashboardTodoItems.length === 0) {
+        Column({ space: 6 }) {
+          Text(this.dashboardLoading && !this.dashboardLoaded ? '正在加载待办' : '暂无待办')
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Text(this.dashboardLoading && !this.dashboardLoaded ? '正在汇总投诉、应急与资源数据' : '当前没有需要你处理的后台任务')
+            .fontSize(11)
+            .fontColor(THEME_TEXT_TERTIARY)
+        }
+        .width('100%')
+        .padding({ top: 24, bottom: 24 })
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_LG)
+        .shadow(SHADOW_CARD)
+      } else {
+        Column() {
+          ForEach(this.dashboardTodoItems, (item: AdminTodoItem) => {
+            Row({ space: 12 }) {
+              Text(item.icon)
+                .fontSize(13)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(item.iconColor)
+                .textAlign(TextAlign.Center)
+                .width(34)
+                .height(34)
+                .backgroundColor(item.iconBg)
+                .borderRadius(RADIUS_PILL)
+              Column({ space: 4 }) {
+                Text(item.title)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(THEME_TEXT_PRIMARY)
+                  .maxLines(1)
+                Text(item.subtitle)
+                  .fontSize(11)
+                  .fontColor(THEME_TEXT_TERTIARY)
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+              Text('>')
+                .fontSize(22)
                 .fontColor(THEME_TEXT_TERTIARY)
             }
-            .layoutWeight(1)
-            .alignItems(HorizontalAlign.Start)
-            Text('>')
-              .fontSize(22)
-              .fontColor(THEME_TEXT_TERTIARY)
-          }
-          .padding({ left: 18, right: 18, top: 14, bottom: 14 })
-        }, (item: AdminTodoItem) => item.title)
+            .padding({ left: 18, right: 18, top: 14, bottom: 14 })
+            .onClick(() => this.openAdminTodoSection(item.section))
+          }, (item: AdminTodoItem) => `${item.section}-${item.title}-${item.sortTime}`)
+        }
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_LG)
+        .shadow(SHADOW_CARD)
       }
-      .backgroundColor(THEME_SURFACE)
-      .borderRadius(RADIUS_LG)
-      .shadow(SHADOW_CARD)
     }
     .width('100%')
   }
@@ -1666,22 +2017,11 @@ struct Index {
   private SystemAdminShellView(): void {
     Column() {
       this.SingleRoleHeader()
-
-      Scroll() {
-        if (this.systemAdminSection === 'home') {
-          this.SystemAdminDashboardView()
-        } else if (this.systemAdminSection === 'account') {
-          this.SystemAccountView()
-        } else if (this.systemAdminSection === 'logs') {
-          this.SystemLogsView()
-        } else if (this.systemAdminSection === 'rbac') {
-          this.SystemRbacView()
-        } else {
-          this.SystemSettingsView()
-        }
+      Column() {
+        SystemAdminPage()
       }
       .layoutWeight(1)
-      .scrollBar(BarState.Off)
+      .width('100%')
     }
     .width('100%')
     .height('100%')
@@ -1873,7 +2213,7 @@ struct Index {
         this.LoginView()
       } else if (this.isVisitor()) {
         this.VisitorShellView()
-      } else if (this.isAdmin()) {
+      } else if (this.isAdmin() || this.isApprover()) {
         this.AdminShellView()
       } else if (this.isSystemAdmin()) {
         this.SystemAdminShellView()

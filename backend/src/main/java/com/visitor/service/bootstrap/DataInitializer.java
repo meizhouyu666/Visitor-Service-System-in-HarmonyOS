@@ -20,13 +20,17 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        deleteLegacyDemoUser("writer");
         upsertDemoUser("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
         upsertDemoUser("admin", "admin123", "Admin Demo", UserRole.ADMIN);
         upsertDemoUser("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
-        upsertDemoUser("writer", "writer123", "Platform Admin Demo", UserRole.ADMIN);
-        upsertDemoUser("approver", "approver123", "Platform Admin Demo", UserRole.ADMIN);
+        upsertDemoUser("approver", "approver123", "Emergency Approver Demo", UserRole.APPROVER);
         upsertDemoUser("hoteladmin", "hoteladmin123", "Hotel Admin Demo", UserRole.HOTEL_ADMIN, "h-1");
         upsertDemoUser("sysadmin", "sysadmin123", "System Admin Demo", UserRole.SYSTEM_ADMIN);
+    }
+
+    private void deleteLegacyDemoUser(String username) {
+        userRepository.findByUsername(username).ifPresent(userRepository::delete);
     }
 
     private void upsertDemoUser(String username, String rawPassword, String displayName, UserRole role) {

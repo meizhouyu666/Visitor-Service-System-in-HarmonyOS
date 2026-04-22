@@ -20,8 +20,11 @@ public class UserRoleConverter implements AttributeConverter<UserRole, String> {
         }
 
         String normalized = dbData.trim().toUpperCase(Locale.ROOT);
-        if (normalized.equals("EMERGENCY_WRITER") || normalized.equals("APPROVER")) {
+        if (normalized.equals("EMERGENCY_WRITER") || normalized.equals("WRITER")) {
             return UserRole.ADMIN;
+        }
+        if (normalized.equals("APPROVER") || normalized.equals("EMERGENCY_APPROVER")) {
+            return UserRole.APPROVER;
         }
         if (normalized.equals("HOTEL_MANAGER") || normalized.equals("HOTELADMIN")) {
             return UserRole.HOTEL_ADMIN;

@@ -2,6 +2,8 @@ package com.visitor.service.hotel;
 
 import com.visitor.service.common.ApiResponse;
 import com.visitor.service.hotel.dto.HotelAdminRequest;
+import com.visitor.service.hotel.dto.HotelRoomItemRequest;
+import com.visitor.service.hotel.dto.HotelRoomItemResponse;
 import com.visitor.service.query.dto.HotelResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,6 +59,22 @@ public class HotelAdminController {
                                              @Valid @RequestBody HotelAdminRequest request,
                                              Authentication authentication) {
         return ApiResponse.success(hotelAdminService.update(authentication, id, request));
+    }
+
+    @Operation(summary = "酒店房型列表")
+    @GetMapping("/{id}/rooms")
+    @PreAuthorize("hasAnyAuthority('HOTEL_ROOM_MANAGE', 'USER_MANAGE')")
+    public ApiResponse<List<HotelRoomItemResponse>> listRooms(@PathVariable String id, Authentication authentication) {
+        return ApiResponse.success(hotelAdminService.listRooms(authentication, id));
+    }
+
+    @Operation(summary = "同步酒店房型库存")
+    @PutMapping("/{id}/rooms")
+    @PreAuthorize("hasAnyAuthority('HOTEL_ROOM_MANAGE', 'USER_MANAGE')")
+    public ApiResponse<List<HotelRoomItemResponse>> updateRooms(@PathVariable String id,
+                                                                @Valid @RequestBody List<HotelRoomItemRequest> request,
+                                                                Authentication authentication) {
+        return ApiResponse.success(hotelAdminService.updateRooms(authentication, id, request));
     }
 
     @Operation(summary = "删除酒店（仅系统管理员）")

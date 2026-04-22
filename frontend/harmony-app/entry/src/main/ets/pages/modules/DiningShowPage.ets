@@ -1,7 +1,6 @@
 import { DiningResponse, EntertainmentResponse, PerformanceResponse } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 import {
-  RADIUS_LG,
   RADIUS_MD,
   RADIUS_PILL,
   SHADOW_CARD,
@@ -11,7 +10,6 @@ import {
   THEME_PRIMARY_SOFT,
   THEME_SUCCESS,
   THEME_SURFACE,
-  THEME_SURFACE_MUTED,
   THEME_TEXT_PRIMARY,
   THEME_TEXT_SECONDARY,
   THEME_TEXT_TERTIARY,
@@ -21,6 +19,12 @@ import {
 type DiningCategory = 'recommend' | 'food' | 'fun' | 'show'
 type AreaFilter = 'all' | '古城' | '滨江' | '景区'
 type PriceFilter = 'all' | '0-100' | '100-300' | '300+'
+
+enum ServiceCardKind {
+  FOOD = 'FOOD',
+  FUN = 'FUN',
+  SHOW = 'SHOW'
+}
 
 class PriceRangeModel {
   minPrice: number | undefined
@@ -56,10 +60,39 @@ class QuickActionItem {
   }
 }
 
+class PromoCardModel {
+  id: string
+  badge: string
+  title: string
+  subtitle: string
+  ratingText: string
+  priceText: string
+  targetCategory: DiningCategory
+
+  constructor(
+    id: string,
+    badge: string,
+    title: string,
+    subtitle: string,
+    ratingText: string,
+    priceText: string,
+    targetCategory: DiningCategory
+  ) {
+    this.id = id
+    this.badge = badge
+    this.title = title
+    this.subtitle = subtitle
+    this.ratingText = ratingText
+    this.priceText = priceText
+    this.targetCategory = targetCategory
+  }
+}
+
 class ServiceCardModel {
   id: string
+  kind: ServiceCardKind
   title: string
-  imageUrl: string
+  caption: string
   ratingText: string
   priceText: string
   primaryTag: string
@@ -73,13 +106,15 @@ class ServiceCardModel {
   actionBg: string
   actionColor: string
   actionDisabled: boolean
-  caption: string
+  coverTone: string
+  coverLabel: string
   orderHint: string
 
   constructor(
     id: string,
+    kind: ServiceCardKind,
     title: string,
-    imageUrl: string,
+    caption: string,
     ratingText: string,
     priceText: string,
     primaryTag: string,
@@ -93,12 +128,14 @@ class ServiceCardModel {
     actionBg: string,
     actionColor: string,
     actionDisabled: boolean,
-    caption: string,
+    coverTone: string,
+    coverLabel: string,
     orderHint: string
   ) {
     this.id = id
+    this.kind = kind
     this.title = title
-    this.imageUrl = imageUrl
+    this.caption = caption
     this.ratingText = ratingText
     this.priceText = priceText
     this.primaryTag = primaryTag
@@ -112,26 +149,9 @@ class ServiceCardModel {
     this.actionBg = actionBg
     this.actionColor = actionColor
     this.actionDisabled = actionDisabled
-    this.caption = caption
+    this.coverTone = coverTone
+    this.coverLabel = coverLabel
     this.orderHint = orderHint
-  }
-}
-
-class PromoCardModel {
-  id: string
-  imageUrl: string
-  badge: string
-  title: string
-  ratingText: string
-  priceText: string
-
-  constructor(id: string, imageUrl: string, badge: string, title: string, ratingText: string, priceText: string) {
-    this.id = id
-    this.imageUrl = imageUrl
-    this.badge = badge
-    this.title = title
-    this.ratingText = ratingText
-    this.priceText = priceText
   }
 }
 
@@ -158,9 +178,9 @@ export struct DiningShowPage {
 
   private readonly quickActions: QuickActionItem[] = [
     new QuickActionItem('tea', '☕', '下午茶', 'food'),
-    new QuickActionItem('food', '✦', '地方名吃', 'food'),
-    new QuickActionItem('show', '⌘', '演出日历', 'show'),
-    new QuickActionItem('bar', '♪', '酒吧夜生活', 'fun')
+    new QuickActionItem('food', '🍜', '地方名吃', 'food'),
+    new QuickActionItem('show', '🎭', '演出日历', 'show'),
+    new QuickActionItem('bar', '🎵', '酒吧夜生活', 'fun')
   ]
 
   async aboutToAppear(): Promise<void> {
@@ -306,13 +326,13 @@ export struct DiningShowPage {
 
   private displayPriceLabel(): string {
     if (this.priceFilter === '0-100') {
-      return '¥0-100'
+      return '0-100'
     }
     if (this.priceFilter === '100-300') {
-      return '¥100-300'
+      return '100-300'
     }
     if (this.priceFilter === '300+') {
-      return '¥300+'
+      return '300+'
     }
     return '全部价位'
   }
@@ -350,15 +370,15 @@ export struct DiningShowPage {
     this.loadAll()
   }
 
-  private isOpenLabel(isOpen: boolean | undefined): string {
+  private openStatusText(isOpen: boolean | undefined): string {
     return isOpen === false ? '已打烊' : '正在营业'
   }
 
-  private isOpenColor(isOpen: boolean | undefined): string {
+  private openStatusColor(isOpen: boolean | undefined): string {
     return isOpen === false ? THEME_TEXT_TERTIARY : THEME_SUCCESS
   }
 
-  private isOpenBg(isOpen: boolean | undefined): string {
+  private openStatusBg(isOpen: boolean | undefined): string {
     return isOpen === false ? '#EFF2F7' : '#EAF8EF'
   }
 
@@ -408,7 +428,11 @@ export struct DiningShowPage {
   }
 
   private foodSecondaryTag(item: DiningResponse): string {
-    return item.recommendFood.length > 0 ? item.recommendFood.split('、')[0] : '情调约会'
+    if (item.recommendFood.length > 0) {
+      const parts: string[] = item.recommendFood.split(/[、,，]/)
+      return parts[0].trim().length > 0 ? parts[0].trim() : '情调约会'
+    }
+    return '情调约会'
   }
 
   private entertainmentPrimaryTag(item: EntertainmentResponse): string {
@@ -416,42 +440,30 @@ export struct DiningShowPage {
   }
 
   private entertainmentSecondaryTag(item: EntertainmentResponse): string {
-    return item.description.length > 0 ? item.description.substring(0, 4) : '亲子互动'
+    return item.description.length >= 4 ? item.description.substring(0, 4) : '亲子互动'
   }
 
   private performancePrimaryTag(item: PerformanceResponse): string {
-    return item.team.length > 0 ? item.team : '演艺大秀'
+    return item.team !== undefined && item.team.length > 0 ? item.team : '演艺大秀'
   }
 
   private performanceSecondaryTag(item: PerformanceResponse): string {
-    return item.location.length > 0 ? item.location : '声光电沉浸'
+    if (item.venue !== undefined && item.venue.length > 0) {
+      return item.venue
+    }
+    return '声光电沉浸'
   }
 
-  private resolveDiningImage(item: DiningResponse, index: number): string {
-    if (item.logoUrl !== undefined && item.logoUrl.length > 0) {
-      return item.logoUrl
-    }
-    if (index % 2 === 0) {
-      return 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=600&q=80'
-    }
-    return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80'
+  private diningCoverTone(index: number): string {
+    return index % 2 === 0 ? '#FFB566' : '#FF8A1F'
   }
 
-  private resolveEntertainmentImage(item: EntertainmentResponse, index: number): string {
-    if (item.logoUrl !== undefined && item.logoUrl.length > 0) {
-      return item.logoUrl
-    }
-    if (index % 2 === 0) {
-      return 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80'
-    }
-    return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80'
+  private entertainmentCoverTone(index: number): string {
+    return index % 2 === 0 ? '#F59E0B' : '#FB7185'
   }
 
-  private resolvePerformanceImage(index: number): string {
-    if (index % 2 === 0) {
-      return 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80'
-    }
-    return 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80'
+  private performanceCoverTone(index: number): string {
+    return index % 2 === 0 ? '#8B5CF6' : '#3B82F6'
   }
 
   private navigateHint(place: string): void {
@@ -470,42 +482,46 @@ export struct DiningShowPage {
 
     if (dining.length > 0) {
       cards.push(new PromoCardModel(
-        `promo-${dining[0].id}`,
-        this.resolveDiningImage(dining[0], 0),
-        '官方力荐',
+        `promo-dining-${dining[0].id}`,
+        '官方推荐',
         dining[0].name,
-        `★ ${dining[0].avgPrice > 0 ? '4.8' : '4.6'}`,
-        `¥${dining[0].avgPrice}/人`
+        dining[0].address,
+        '★ 4.8',
+        `¥${dining[0].avgPrice}/人`,
+        'food'
       ))
     }
     if (shows.length > 0) {
       cards.push(new PromoCardModel(
-        `promo-${shows[0].id}`,
-        this.resolvePerformanceImage(0),
+        `promo-show-${shows[0].id}`,
         '演出热卖',
         shows[0].name,
+        shows[0].location,
         '★ 4.9',
-        `¥${shows[0].price}起`
+        `¥${shows[0].price}起`,
+        'show'
       ))
     }
     if (entertainment.length > 0) {
       cards.push(new PromoCardModel(
-        `promo-${entertainment[0].id}`,
-        this.resolveEntertainmentImage(entertainment[0], 0),
+        `promo-fun-${entertainment[0].id}`,
         '夜游精选',
         entertainment[0].name,
+        entertainment[0].location,
         '★ 4.7',
-        `¥${entertainment[0].price}/人`
+        `¥${entertainment[0].price}/人`,
+        'fun'
       ))
     }
     if (dining.length > 1) {
       cards.push(new PromoCardModel(
-        `promo-${dining[1].id}`,
-        this.resolveDiningImage(dining[1], 1),
+        `promo-dining-${dining[1].id}`,
         '地方名吃',
         dining[1].name,
-        '★ 4.8',
-        `¥${dining[1].avgPrice}/人`
+        dining[1].address,
+        '★ 4.7',
+        `¥${dining[1].avgPrice}/人`,
+        'food'
       ))
     }
     return cards
@@ -515,21 +531,23 @@ export struct DiningShowPage {
     const isOpen: boolean = item.isOpen !== false
     return new ServiceCardModel(
       item.id,
+      ServiceCardKind.FOOD,
       item.name,
-      this.resolveDiningImage(item, index),
+      '特色餐饮',
       '4.8 (2150)',
       `¥${item.avgPrice}/人`,
       this.foodPrimaryTag(item),
       this.foodSecondaryTag(item),
       `${item.address}（${this.distanceText(item.distanceMeters)}）`,
       item.businessHours,
-      this.isOpenLabel(item.isOpen),
-      this.isOpenColor(item.isOpen),
-      this.isOpenBg(item.isOpen),
+      this.openStatusText(item.isOpen),
+      this.openStatusColor(item.isOpen),
+      this.openStatusBg(item.isOpen),
       isOpen ? '去排队' : '已打烊',
       isOpen ? '#FF8A1F' : '#EFF2F7',
       isOpen ? '#FFFFFF' : THEME_TEXT_TERTIARY,
       !isOpen,
+      this.diningCoverTone(index),
       '特色餐饮',
       '按距离及热度排序'
     )
@@ -539,21 +557,23 @@ export struct DiningShowPage {
     const isOpen: boolean = item.isOpen !== false
     return new ServiceCardModel(
       item.id,
+      ServiceCardKind.FUN,
       item.name,
-      this.resolveEntertainmentImage(item, index),
+      '休闲娱乐',
       '4.7 (890)',
       `¥${item.price}/人`,
       this.entertainmentPrimaryTag(item),
       this.entertainmentSecondaryTag(item),
       `${item.location}（${this.distanceText(item.distanceMeters)}）`,
       item.openTime,
-      this.isOpenLabel(item.isOpen),
-      this.isOpenColor(item.isOpen),
-      this.isOpenBg(item.isOpen),
+      this.openStatusText(item.isOpen),
+      this.openStatusColor(item.isOpen),
+      this.openStatusBg(item.isOpen),
       isOpen ? '查看详情' : '已打烊',
       isOpen ? '#FFF2E8' : '#EFF2F7',
       isOpen ? '#FF8A1F' : THEME_TEXT_TERTIARY,
       !isOpen,
+      this.entertainmentCoverTone(index),
       '休闲娱乐',
       '沉浸放松'
     )
@@ -561,16 +581,18 @@ export struct DiningShowPage {
 
   private performanceCard(item: PerformanceResponse, index: number): ServiceCardModel {
     const soldOut: boolean = item.ticketStatus === 'SOLD_OUT'
+    const showTime: string = item.showDateTime !== undefined && item.showDateTime.length > 0 ? item.showDateTime : item.showTime
     return new ServiceCardModel(
       item.id,
+      ServiceCardKind.SHOW,
       item.name,
-      this.resolvePerformanceImage(index),
+      '营业性演出',
       '4.9 (5328)',
       `¥${item.price}起`,
       this.performancePrimaryTag(item),
       this.performanceSecondaryTag(item),
       `${item.location}（${this.distanceText(item.distanceMeters)}）`,
-      item.showDateTime !== undefined && item.showDateTime.length > 0 ? item.showDateTime : item.showTime,
+      showTime,
       this.ticketLabel(item.ticketStatus, item.remainingTickets),
       this.ticketColor(item.ticketStatus),
       this.ticketBg(item.ticketStatus),
@@ -578,6 +600,7 @@ export struct DiningShowPage {
       soldOut ? '#EFF2F7' : THEME_PRIMARY,
       soldOut ? THEME_TEXT_TERTIARY : '#FFFFFF',
       soldOut,
+      this.performanceCoverTone(index),
       '营业性演出',
       '场次推荐'
     )
@@ -616,6 +639,10 @@ export struct DiningShowPage {
     return this.mixedCards()
   }
 
+  private hasCurrentCards(): boolean {
+    return this.currentCards().length > 0
+  }
+
   private emptyText(): string {
     if (this.category === 'food') {
       return '暂无餐饮数据'
@@ -644,6 +671,14 @@ export struct DiningShowPage {
     this.navigateHint(card.title)
   }
 
+  private jumpToQuickAction(item: QuickActionItem): void {
+    this.switchCategory(item.targetCategory)
+  }
+
+  private jumpFromPromo(item: PromoCardModel): void {
+    this.switchCategory(item.targetCategory)
+  }
+
   @Builder
   private TopBar(): void {
     Column({ space: 12 }) {
@@ -663,7 +698,7 @@ export struct DiningShowPage {
 
       Row({ space: 10 }) {
         Row({ space: 8 }) {
-          Text('⌕')
+          Text('🔍')
             .fontSize(14)
             .fontColor('#94A3B8')
           TextInput({ placeholder: '搜索餐厅、游乐项目或演出名称...', text: this.searchKeyword })
@@ -757,295 +792,280 @@ export struct DiningShowPage {
           ForEach(this.quickActions, (item: QuickActionItem) => {
             Column({ space: 8 }) {
               Text(item.icon)
-                .fontSize(22)
+                .fontSize(24)
+                .width(52)
+                .height(52)
                 .textAlign(TextAlign.Center)
-                .width(54)
-                .height(54)
-                .padding({ top: 13 })
-                .backgroundColor(this.quickActionBg(item.id))
+                .padding({ top: 10 })
+                .backgroundColor('#FFF7ED')
                 .borderRadius(RADIUS_PILL)
               Text(item.label)
                 .fontSize(12)
-                .fontColor(THEME_TEXT_PRIMARY)
+                .fontColor(THEME_TEXT_SECONDARY)
             }
-            .width('23%')
-            .alignItems(HorizontalAlign.Center)
-            .onClick(() => this.switchCategory(item.targetCategory))
+            .width(72)
+            .onClick(() => this.jumpToQuickAction(item))
           }, (item: QuickActionItem) => item.id)
         }
         .width('100%')
+      }
+      .width('100%')
+    }
+  }
 
-        Column({ space: 10 }) {
-          Row() {
-            Text('附近推荐与热门')
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(THEME_TEXT_PRIMARY)
-            Blank()
-            Text('按距离及热度排序')
-              .fontSize(12)
-              .fontColor(THEME_TEXT_TERTIARY)
-          }
-          .width('100%')
-
-          Scroll() {
-            Row({ space: 12 }) {
-              ForEach(this.recommendCards(), (item: PromoCardModel) => {
-                this.PromoCard(item)
-              }, (item: PromoCardModel) => item.id)
-            }
-            .padding({ right: 12 })
-          }
-          .scrollable(ScrollDirection.Horizontal)
-          .scrollBar(BarState.Off)
-          .width('100%')
+  @Builder
+  private PromoSection(): void {
+    if (this.category === 'recommend' && this.recommendCards().length > 0) {
+      Column({ space: 12 }) {
+        Row() {
+          Text('附近推荐与热门')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(THEME_TEXT_PRIMARY)
+          Blank()
+          Text('按距离及热度排序')
+            .fontSize(12)
+            .fontColor(THEME_TEXT_TERTIARY)
         }
+        .width('100%')
+
+        Scroll() {
+          Row({ space: 12 }) {
+            ForEach(this.recommendCards(), (item: PromoCardModel, index: number) => {
+              this.PromoCard(item, index)
+            }, (item: PromoCardModel) => item.id)
+          }
+          .padding({ right: 12 })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
         .width('100%')
       }
       .width('100%')
     }
   }
 
-  private quickActionBg(id: string): string {
-    if (id === 'tea') {
-      return '#FFF0D9'
-    }
-    if (id === 'food') {
-      return '#FFE7E6'
-    }
-    if (id === 'show') {
-      return '#F2E6FF'
-    }
-    return '#E5F0FF'
-  }
-
   @Builder
-  private PromoCard(item: PromoCardModel): void {
-    Column({ space: 10 }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        Image(item.imageUrl)
-          .width(176)
-          .height(136)
-          .borderRadius(RADIUS_MD)
-          .objectFit(ImageFit.Cover)
-        Text(item.badge)
-          .fontSize(11)
-          .fontColor(Color.White)
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-          .backgroundColor('#FF7A2F')
-          .borderRadius(RADIUS_PILL)
-          .margin({ left: 10, top: 10 })
-      }
-      .width(176)
-
+  private PromoCard(item: PromoCardModel, index: number): void {
+    Column({ space: 8 }) {
       Column({ space: 6 }) {
+        Text(item.badge)
+          .fontSize(10)
+          .fontColor('#FF7A1A')
+          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+          .backgroundColor('#FFF1E8')
+          .borderRadius(RADIUS_PILL)
+
+        Blank()
+
         Text(item.title)
           .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(THEME_TEXT_PRIMARY)
-          .maxLines(1)
-        Row({ space: 8 }) {
-          Text(item.ratingText)
-            .fontSize(12)
-            .fontColor('#FF8A1F')
-          Text(item.priceText)
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(THEME_PRIMARY)
-        }
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#FFFFFF')
+          .maxLines(2)
       }
+      .width(168)
+      .height(132)
+      .padding(12)
+      .borderRadius(RADIUS_MD)
+      .backgroundColor(index % 2 === 0 ? '#1E40AF' : '#7C3AED')
       .alignItems(HorizontalAlign.Start)
-      .width('100%')
+
+      Text(item.subtitle)
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .maxLines(1)
+      Row({ space: 8 }) {
+        Text(item.ratingText)
+          .fontSize(12)
+          .fontColor('#FF8A1F')
+        Text(item.priceText)
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(THEME_PRIMARY)
+      }
     }
-    .width(176)
+    .width(168)
     .padding(12)
     .backgroundColor(THEME_SURFACE)
-    .borderRadius(RADIUS_LG)
+    .borderRadius(RADIUS_MD)
     .shadow(SHADOW_CARD)
+    .onClick(() => this.jumpFromPromo(item))
   }
 
   @Builder
-  private ResultSection(): void {
-    Column({ space: 12 }) {
-      if (this.loading) {
-        this.EmptyCard('正在加载内容...', '请稍候片刻')
-      } else if (this.errorMessage.length > 0) {
-        Column({ space: 8 }) {
-          Text(this.errorMessage)
-            .fontSize(12)
-            .fontColor(THEME_DANGER)
-          Button('重试')
-            .height(34)
-            .padding({ left: 16, right: 16 })
-            .borderRadius(RADIUS_PILL)
-            .backgroundColor(THEME_PRIMARY)
-            .fontColor(Color.White)
-            .onClick(() => this.loadAll())
-        }
-        .width('100%')
-        .padding(14)
-        .backgroundColor(THEME_SURFACE)
-        .borderRadius(RADIUS_MD)
-        .alignItems(HorizontalAlign.Start)
-      } else if (this.currentCards().length === 0) {
-        this.EmptyCard(this.emptyText(), '换个关键词或筛选条件试试')
-      } else {
-        ForEach(this.currentCards(), (item: ServiceCardModel) => {
-          this.ServiceCard(item)
-        }, (item: ServiceCardModel) => item.id)
-      }
-
-      if (this.actionMessage.length > 0) {
-        Text(this.actionMessage)
+  private ServiceCard(card: ServiceCardModel): void {
+    Row({ space: 14 }) {
+      Column({ space: 8 }) {
+        Text(card.caption)
           .fontSize(12)
-          .fontColor(THEME_TEXT_SECONDARY)
-          .padding(12)
-          .width('100%')
-          .backgroundColor(THEME_SURFACE_MUTED)
-          .borderRadius(RADIUS_MD)
-      }
-    }
-    .width('100%')
-    .opacity(this.contentOpacity)
-    .translate({ x: 0, y: this.contentOffsetY })
-  }
-
-  @Builder
-  private EmptyCard(title: string, detail: string): void {
-    Column({ space: 8 }) {
-      Text(title)
-        .fontSize(15)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(THEME_TEXT_PRIMARY)
-      Text(detail)
-        .fontSize(12)
-        .fontColor(THEME_TEXT_TERTIARY)
-    }
-    .width('100%')
-    .padding(18)
-    .backgroundColor(THEME_SURFACE)
-    .borderRadius(RADIUS_LG)
-  }
-
-  @Builder
-  private ServiceCard(item: ServiceCardModel): void {
-    Column({ space: 14 }) {
-      Row({ space: 14 }) {
-        Stack({ alignContent: Alignment.BottomStart }) {
-          Image(item.imageUrl)
-            .width(106)
-            .height(106)
-            .borderRadius(RADIUS_MD)
-            .objectFit(ImageFit.Cover)
-          Text(item.caption)
-            .fontSize(11)
-            .fontColor(Color.White)
-            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-            .backgroundColor('rgba(17,24,39,0.58)')
-            .borderRadius(RADIUS_PILL)
-            .margin({ left: 8, bottom: 8 })
-        }
-
-        Column({ space: 8 }) {
-          Row() {
-            Text(item.title)
-              .layoutWeight(1)
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(THEME_TEXT_PRIMARY)
-            Text(item.priceText)
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(THEME_TEXT_PRIMARY)
-          }
-          .width('100%')
-
-          Row({ space: 8 }) {
-            Text(item.ratingText)
-              .fontSize(12)
-              .fontColor('#FF8A1F')
-            Text(item.primaryTag)
-              .fontSize(11)
-              .fontColor('#5B8FF9')
-              .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-              .backgroundColor('#EAF2FF')
-              .borderRadius(RADIUS_PILL)
-            Text(item.secondaryTag)
-              .fontSize(11)
-              .fontColor('#9D65F9')
-              .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-              .backgroundColor('#F3EAFF')
-              .borderRadius(RADIUS_PILL)
-          }
-          .width('100%')
-
-          Text(item.locationText)
-            .fontSize(12)
-            .fontColor(THEME_TEXT_SECONDARY)
-            .maxLines(1)
-          Text(item.timeText)
-            .fontSize(12)
-            .fontColor(THEME_TEXT_SECONDARY)
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-      }
-
-      Blank()
-        .height(1)
-        .width('100%')
-        .backgroundColor('#EFF2F7')
-
-      Row() {
-        Text(item.statusText)
-          .fontSize(12)
-          .fontColor(item.statusColor)
-          .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-          .backgroundColor(item.statusBg)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#FFFFFF')
+          .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+          .backgroundColor('rgba(15,23,42,0.32)')
           .borderRadius(RADIUS_PILL)
         Blank()
-        Button(item.actionText)
-          .enabled(!item.actionDisabled)
-          .height(36)
-          .padding({ left: 16, right: 16 })
-          .borderRadius(RADIUS_PILL)
-          .backgroundColor(item.actionBg)
-          .fontColor(item.actionColor)
-          .fontSize(14)
+        Text(card.coverLabel)
+          .fontSize(12)
           .fontWeight(FontWeight.Medium)
-          .onClick(() => this.cardAction(item))
+          .fontColor('#FFFFFF')
       }
-      .width('100%')
+      .width(100)
+      .height(100)
+      .padding(12)
+      .backgroundColor(card.coverTone)
+      .borderRadius(RADIUS_MD)
+      .alignItems(HorizontalAlign.Start)
+
+      Column({ space: 8 }) {
+        Row() {
+          Text(card.title)
+            .layoutWeight(1)
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(THEME_TEXT_PRIMARY)
+            .maxLines(1)
+          Text(card.priceText)
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(THEME_TEXT_PRIMARY)
+        }
+        .width('100%')
+
+        Row({ space: 8 }) {
+          Text(card.ratingText)
+            .fontSize(12)
+            .fontColor('#FF8A1F')
+          Text(card.primaryTag)
+            .fontSize(11)
+            .fontColor('#FF8A1F')
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor('#FFF2E8')
+            .borderRadius(RADIUS_PILL)
+          Text(card.secondaryTag)
+            .fontSize(11)
+            .fontColor('#8B5CF6')
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor('#F4ECFF')
+            .borderRadius(RADIUS_PILL)
+        }
+        .width('100%')
+
+        Text(card.locationText)
+          .fontSize(12)
+          .fontColor(THEME_TEXT_SECONDARY)
+          .maxLines(1)
+
+        Text(card.timeText)
+          .fontSize(12)
+          .fontColor(THEME_TEXT_SECONDARY)
+          .maxLines(1)
+
+        Row() {
+          Text(card.statusText)
+            .fontSize(12)
+            .fontColor(card.statusColor)
+            .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+            .backgroundColor(card.statusBg)
+            .borderRadius(RADIUS_PILL)
+          Blank()
+          Button(card.actionText)
+            .enabled(!card.actionDisabled)
+            .height(34)
+            .padding({ left: 14, right: 14 })
+            .borderRadius(RADIUS_PILL)
+            .backgroundColor(card.actionBg)
+            .fontColor(card.actionColor)
+            .fontSize(13)
+            .onClick(() => this.cardAction(card))
+        }
+        .width('100%')
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .padding(16)
     .backgroundColor(THEME_SURFACE)
-    .borderRadius(RADIUS_LG)
+    .borderRadius(RADIUS_MD)
     .shadow(SHADOW_CARD)
   }
 
-  build() {
-    Column({ space: 14 }) {
-      this.TopBar()
+  @Builder
+  private ContentSection(): void {
+    if (this.loading && !this.hasCurrentCards()) {
+      Text('正在加载餐饮娱乐演出数据...')
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else if (this.errorMessage.length > 0) {
+      Column({ space: 8 }) {
+        Text(this.errorMessage)
+          .fontSize(12)
+          .fontColor(THEME_DANGER)
+        Button('重试')
+          .height(34)
+          .borderRadius(RADIUS_PILL)
+          .backgroundColor(THEME_PRIMARY)
+          .fontColor('#FFFFFF')
+          .onClick(() => this.loadAll())
+      }
+      .width('100%')
+      .padding(12)
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_MD)
+      .alignItems(HorizontalAlign.Start)
+    } else if (!this.hasCurrentCards()) {
+      Text(this.emptyText())
+        .fontSize(12)
+        .fontColor(THEME_TEXT_SECONDARY)
+        .width('100%')
+        .padding(12)
+        .backgroundColor(THEME_SURFACE)
+        .borderRadius(RADIUS_MD)
+    } else {
+      Column({ space: 12 }) {
+        this.QuickActionSection()
+        this.PromoSection()
+        if (this.actionMessage.length > 0) {
+          Text(this.actionMessage)
+            .fontSize(12)
+            .fontColor(THEME_PRIMARY)
+            .width('100%')
+            .padding({ left: 4, right: 4 })
+        }
+        ForEach(this.currentCards(), (card: ServiceCardModel) => {
+          this.ServiceCard(card)
+        }, (card: ServiceCardModel) => card.id)
+      }
+      .width('100%')
+    }
+  }
 
+  build() {
+    Column({ space: 12 }) {
+      this.TopBar()
       Scroll() {
-        Column({ space: 16 }) {
-          this.QuickActionSection()
-          this.ResultSection()
+        Column({ space: 12 }) {
+          this.ContentSection()
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
-        .padding({ bottom: this.embedded ? 84 : 24 })
       }
       .layoutWeight(1)
       .width('100%')
       .scrollBar(BarState.Off)
+      .opacity(this.contentOpacity)
+      .translate({ x: 0, y: this.contentOffsetY })
     }
+    .height('100%')
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 12, bottom: this.embedded ? 0 : 98 })
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.Start)
-    .padding(this.embedded ? { left: 0, right: 0, top: 0, bottom: 0 } : { left: 12, right: 12, top: 12, bottom: 20 })
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.embedded ? Color.Transparent : THEME_PAGE_BG)
+    .backgroundColor(THEME_PAGE_BG)
   }
 }

@@ -24,6 +24,7 @@ public class SystemAdminService {
 
     private static final Set<UserRole> MANAGED_ROLES = EnumSet.of(
             UserRole.ADMIN,
+            UserRole.APPROVER,
             UserRole.COMPLAINT_HANDLER,
             UserRole.HOTEL_ADMIN,
             UserRole.SYSTEM_ADMIN

@@ -11,7 +11,6 @@ public record ResourceItemRequest(
         @Size(max = 128, message = "副标题长度不能超过 128")
         String subtitle,
 
-        @NotBlank(message = "位置不能为空")
         @Size(max = 255, message = "位置长度不能超过 255")
         String location,
 
@@ -22,7 +21,36 @@ public record ResourceItemRequest(
         String description,
 
         String coverImageUrl,
+        Boolean online,
 
-        Boolean online
+        String scenicArea,
+        String openTime,
+        Integer ticketPrice,
+        String level,
+        String type,
+        Boolean isFree,
+        Integer crowdHeat,
+
+        Integer durationHours,
+        String difficulty,
+        String suitableFor,
+        String spots,
+
+        Integer avgPrice,
+        String businessHours,
+        String address,
+        String recommendFood,
+        Integer distanceMeters,
+        Boolean isOpen,
+        Double navLat,
+        Double navLng,
+
+        String showTime,
+        Integer price,
+        String team,
+        String venue,
+        String showDateTime,
+        Integer remainingTickets,
+        String ticketStatus
 ) {
 }

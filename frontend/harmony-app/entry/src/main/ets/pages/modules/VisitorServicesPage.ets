@@ -82,6 +82,7 @@ export struct VisitorServicesPage {
   @State private hotels: HotelResponse[] = []
   @State private scenicList: ScenicSpotResponse[] = []
   @State private routes: TravelRouteResponse[] = []
+  @State private selectedHotelId: string = ''
 
   async aboutToAppear(): Promise<void> {
     await this.loadRouteData()
@@ -196,6 +197,7 @@ export struct VisitorServicesPage {
       this.hotels = [...hotelList]
       this.scenicList = [...scenicData]
       this.routes = [...routeData]
+      this.syncSelectedHotel()
     } catch (_error) {
       this.errorMessage = '服务与线路数据加载失败，请稍后重试'
     } finally {
@@ -296,13 +298,18 @@ export struct VisitorServicesPage {
   }
 
   private recommendedHotels(): HotelResponse[] {
-    const list: HotelResponse[] = [...this.visibleHotels()]
+    const list: HotelResponse[] = this.visibleHotels().filter((item: HotelResponse) => item.marketingRecommended === true)
     list.sort((left: HotelResponse, right: HotelResponse) => {
+      const rightPriority: number = right.marketingPriority ?? 0
+      const leftPriority: number = left.marketingPriority ?? 0
+      if (rightPriority !== leftPriority) {
+        return rightPriority - leftPriority
+      }
       const rightScore: number = right.score + right.star * 0.15
       const leftScore: number = left.score + left.star * 0.15
       return rightScore - leftScore
     })
-    return list.slice(0, 4)
+    return list.slice(0, 6)
   }
 
   private hasRecommendedHotels(): boolean {
@@ -311,6 +318,161 @@ export struct VisitorServicesPage {
 
   private hasVisibleHotels(): boolean {
     return this.visibleHotels().length > 0
+  }
+
+  private syncSelectedHotel(): void {
+    const selected: HotelResponse | null = this.selectedPromoHotel()
+    if (selected !== null) {
+      this.selectedHotelId = selected.id
+      return
+    }
+    const recommended: HotelResponse[] = this.recommendedHotels()
+    if (recommended.length > 0) {
+      this.selectedHotelId = recommended[0].id
+      return
+    }
+    const visible: HotelResponse[] = this.visibleHotels()
+    this.selectedHotelId = visible.length > 0 ? visible[0].id : ''
+  }
+
+  private selectedPromoHotel(): HotelResponse | null {
+    if (this.selectedHotelId.length > 0) {
+      const visible: HotelResponse[] = this.visibleHotels()
+      for (let index: number = 0; index < visible.length; index += 1) {
+        if (visible[index].id === this.selectedHotelId) {
+          return visible[index]
+        }
+      }
+    }
+    return null
+  }
+
+  private selectedHotel(): HotelResponse | null {
+    const selected: HotelResponse | null = this.selectedPromoHotel()
+    if (selected !== null) {
+      return selected
+    }
+    const recommended: HotelResponse[] = this.recommendedHotels()
+    if (recommended.length > 0) {
+      return recommended[0]
+    }
+    const visible: HotelResponse[] = this.visibleHotels()
+    if (visible.length > 0) {
+      return visible[0]
+    }
+    return null
+  }
+
+  private selectedHotelSafe(): HotelResponse {
+    const item: HotelResponse | null = this.selectedHotel()
+    if (item !== null) {
+      return item
+    }
+    const fallbackHotel: HotelResponse = {
+      id: '',
+      name: '',
+      address: '',
+      star: 0,
+      price: 0,
+      phone: '',
+      score: 0,
+      hasBreakfast: false,
+      facility: '',
+      introduction: '',
+      availabilityStatus: 'AVAILABLE',
+      coverImageUrl: '',
+      totalRooms: 0,
+      availableRooms: 0,
+      marketingRecommended: false,
+      marketingTag: '',
+      marketingPriority: 0,
+      marketingNote: ''
+    }
+    return fallbackHotel
+  }
+
+  private selectHotel(id: string): void {
+    this.selectedHotelId = id
+  }
+
+  private isSelectedHotel(item: HotelResponse): boolean {
+    return this.selectedHotelId.length > 0 && item.id === this.selectedHotelId
+  }
+
+  private hotelDetailTitle(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : item.name
+  }
+
+  private hotelDetailNote(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : this.hotelMarketingNote(item)
+  }
+
+  private hotelDetailTags(): string[] {
+    const item: HotelResponse | null = this.selectedHotel()
+    if (item === null) {
+      return []
+    }
+    let tags: string[] = [this.hotelTagOne(item), this.hotelTagTwo(item)]
+    if (item.marketingRecommended === true) {
+      tags = [...tags, '\u5b98\u65b9\u63a8\u8350']
+    }
+    return tags
+  }
+
+  private hasSelectedHotel(): boolean {
+    return this.selectedHotel() !== null
+  }
+
+  private selectedHotelPriceText(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : `¥${item.price}/晚`
+  }
+
+  private selectedHotelLocationHint(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : this.hotelLocationHint(item)
+  }
+
+  private selectedHotelAvailabilityText(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : this.hotelAvailabilityText(item)
+  }
+
+  private selectedHotelRoomInventoryText(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : this.hotelRoomInventoryText(item)
+  }
+
+  private selectedHotelAvailabilityColor(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? THEME_TEXT_SECONDARY : this.hotelAvailabilityColor(item)
+  }
+
+  private selectedHotelAvailabilityBg(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '#EEF3FA' : this.hotelAvailabilityBg(item)
+  }
+
+  private selectedHotelButtonText(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '' : this.hotelButtonText(item)
+  }
+
+  private selectedHotelButtonBg(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? '#EEF3FA' : this.hotelButtonBg(item)
+  }
+
+  private selectedHotelButtonColor(): string {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null ? THEME_TEXT_SECONDARY : this.hotelButtonColor(item)
+  }
+
+  private selectedHotelButtonDisabled(): boolean {
+    const item: HotelResponse | null = this.selectedHotel()
+    return item === null || this.hotelButtonDisabled(item)
   }
 
   private resolveHotelCover(item: HotelResponse, index: number): string {
@@ -377,14 +539,46 @@ export struct VisitorServicesPage {
   }
 
   private hotelTagTwo(item: HotelResponse): string {
-    if (item.hasBreakfast) {
-      return '含早餐'
+    if (item.marketingRecommended === true && item.marketingTag !== undefined && item.marketingTag.length > 0) {
+      return item.marketingTag
     }
-    return this.isStarHotel(item) ? '高评分' : '民宿推荐'
+    if (item.hasBreakfast) {
+      return '\u542b\u65e9\u9910'
+    }
+    return this.isStarHotel(item) ? '\u9ad8\u8bc4\u5206' : '\u6c11\u5bbf\u63a8\u8350'
   }
 
   private hotelLocationHint(item: HotelResponse): string {
     return `${item.address}（距景区景点500m）`
+  }
+
+  private hotelRoomInventoryText(item: HotelResponse): string {
+    const totalRooms: number | undefined = item.totalRooms
+    const availableRooms: number | undefined = item.availableRooms
+    if (totalRooms !== undefined && availableRooms !== undefined && totalRooms > 0) {
+      return `剩余 ${availableRooms} / ${totalRooms} 间`
+    }
+    return '房型库存同步中'
+  }
+
+  private hotelMarketingNote(item: HotelResponse): string {
+    if (item.marketingNote !== undefined && item.marketingNote.length > 0) {
+      return item.marketingNote
+    }
+    if (this.isStarHotel(item)) {
+      return '\u5b98\u65b9\u63a8\u8350\u9ad8\u54c1\u8d28\u4f4f\u5bbf\uff0c\u9002\u5408\u666f\u533a\u6df1\u5ea6\u6e38\u4e0e\u5bb6\u5ead\u51fa\u884c\u3002'
+    }
+    return '\u5728\u5730\u7279\u8272\u4f4f\u5bbf\u63a8\u8350\uff0c\u9002\u5408\u4e61\u6751\u4f11\u95f2\u548c\u6162\u6e38\u4f53\u9a8c\u3002'
+  }
+
+  private hotelPromoTitle(): string {
+    if (this.hotelStayFilter === 'star') {
+      return '\u5b98\u65b9\u5bfc\u6d41\u7279\u60e0\u63a8\u8350 \u00b7 \u661f\u7ea7\u9152\u5e97'
+    }
+    if (this.hotelStayFilter === 'bnb') {
+      return '\u5b98\u65b9\u5bfc\u6d41\u7279\u60e0\u63a8\u8350 \u00b7 \u4e61\u6751\u6c11\u5bbf'
+    }
+    return '\u5b98\u65b9\u5bfc\u6d41\u7279\u60e0\u63a8\u8350'
   }
 
   private hotelAvailabilityText(item: HotelResponse): string {
@@ -576,6 +770,7 @@ export struct VisitorServicesPage {
       .fontWeight(this.hotelStayFilter === value ? FontWeight.Medium : FontWeight.Regular)
       .onClick(() => {
         this.hotelStayFilter = value
+        this.syncSelectedHotel()
       })
   }
 
@@ -584,12 +779,12 @@ export struct VisitorServicesPage {
     if (this.hasRecommendedHotels()) {
       Column({ space: 10 }) {
         Row() {
-          Text('官方导流特惠推荐')
+          Text(this.hotelPromoTitle())
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor(THEME_TEXT_PRIMARY)
           Blank()
-          Text('优先推荐高评分房源')
+          Text('\u5b9e\u65f6\u540c\u6b65\u5e73\u53f0\u5bfc\u6d41\u7b56\u7565')
             .fontSize(11)
             .fontColor(THEME_TEXT_TERTIARY)
         }
@@ -614,20 +809,24 @@ export struct VisitorServicesPage {
   @Builder
   private HotelPromoCard(item: HotelResponse, index: number): void {
     Column({ space: 10 }) {
-      this.HotelCoverBlock(item, index, 170, 128)
+      this.HotelCoverBlock(item, index, 152, 92)
 
       Column({ space: 6 }) {
         Text(item.name)
-          .fontSize(15)
+          .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(THEME_TEXT_PRIMARY)
           .maxLines(1)
+        Text(this.hotelMarketingNote(item))
+          .fontSize(10)
+          .fontColor(THEME_TEXT_SECONDARY)
+          .maxLines(1)
         Row({ space: 8 }) {
           Text(`★ ${item.score}`)
-            .fontSize(12)
+            .fontSize(11)
             .fontColor('#FF8A1F')
           Text(`¥${item.price}/晚起`)
-            .fontSize(13)
+            .fontSize(12)
             .fontWeight(FontWeight.Medium)
             .fontColor(THEME_PRIMARY)
         }
@@ -635,11 +834,97 @@ export struct VisitorServicesPage {
       .alignItems(HorizontalAlign.Start)
       .width('100%')
     }
-    .width(170)
-    .padding(12)
+    .width(152)
+    .padding(10)
     .backgroundColor(THEME_SURFACE)
     .borderRadius(RADIUS_MD)
     .shadow(SHADOW_CARD)
+    .border({ width: 1, color: this.isSelectedHotel(item) ? '#B7D4FF' : Color.Transparent })
+    .onClick(() => this.selectHotel(item.id))
+  }
+
+  @Builder
+  private HotelSpotlight(): void {
+    if (this.hasSelectedHotel()) {
+      Row({ space: 14 }) {
+        this.HotelCoverBlock(this.selectedHotelSafe(), 0, 108, 108)
+
+        Column({ space: 8 }) {
+          Row() {
+            Column({ space: 4 }) {
+              Text('\u672c\u6b21\u5bfc\u6d41\u4f18\u5148\u63a8\u8350')
+                .fontSize(12)
+                .fontColor(THEME_PRIMARY)
+              Text(this.hotelDetailTitle())
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(THEME_TEXT_PRIMARY)
+                .maxLines(1)
+            }
+            .alignItems(HorizontalAlign.Start)
+            Blank()
+            Text(this.selectedHotelPriceText())
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(THEME_TEXT_PRIMARY)
+          }
+          .width('100%')
+
+          Text(this.hotelDetailNote())
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .maxLines(2)
+
+          Row({ space: 8 }) {
+            ForEach(this.hotelDetailTags(), (tag: string) => {
+              Text(tag)
+                .fontSize(11)
+                .fontColor(THEME_TEXT_SECONDARY)
+                .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor('#EEF3FA')
+                .borderRadius(RADIUS_PILL)
+            }, (tag: string) => tag)
+          }
+          .width('100%')
+
+          Text(this.selectedHotelLocationHint())
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .maxLines(1)
+
+          Text(this.selectedHotelRoomInventoryText())
+            .fontSize(12)
+            .fontColor(THEME_TEXT_SECONDARY)
+            .maxLines(1)
+
+          Row() {
+            Text(this.selectedHotelAvailabilityText())
+              .fontSize(12)
+              .fontColor(this.selectedHotelAvailabilityColor())
+              .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+              .backgroundColor(this.selectedHotelAvailabilityBg())
+              .borderRadius(RADIUS_PILL)
+            Blank()
+            Button(this.selectedHotelButtonText())
+              .enabled(!this.selectedHotelButtonDisabled())
+              .height(34)
+              .padding({ left: 16, right: 16 })
+              .borderRadius(RADIUS_PILL)
+              .backgroundColor(this.selectedHotelButtonBg())
+              .fontColor(this.selectedHotelButtonColor())
+              .fontSize(13)
+          }
+          .width('100%')
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding(16)
+      .backgroundColor(THEME_SURFACE)
+      .borderRadius(RADIUS_MD)
+      .shadow(SHADOW_CARD)
+    }
   }
 
   @Builder
@@ -653,12 +938,12 @@ export struct VisitorServicesPage {
         .backgroundColor(THEME_SURFACE)
         .borderRadius(RADIUS_MD)
     } else {
-      Column({ space: 12 }) {
+      Column({ space: 8 }) {
         this.HotelPromoSection()
 
-        Column({ space: 10 }) {
+        Column({ space: 8 }) {
           Text('全部房源')
-            .fontSize(18)
+            .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(THEME_TEXT_PRIMARY)
           ForEach(this.visibleHotels(), (item: HotelResponse, index: number) => {
@@ -674,18 +959,18 @@ export struct VisitorServicesPage {
   @Builder
   private HotelStayCard(item: HotelResponse, index: number): void {
     Row({ space: 14 }) {
-      this.HotelCoverBlock(item, index, 108, 108)
+      this.HotelCoverBlock(item, index, 88, 88)
 
       Column({ space: 8 }) {
         Row() {
           Text(item.name)
             .layoutWeight(1)
-            .fontSize(17)
+            .fontSize(16)
             .fontWeight(FontWeight.Bold)
             .fontColor(THEME_TEXT_PRIMARY)
             .maxLines(1)
           Text(`¥${item.price}`)
-            .fontSize(16)
+            .fontSize(15)
             .fontWeight(FontWeight.Medium)
             .fontColor(THEME_TEXT_PRIMARY)
         }
@@ -707,11 +992,24 @@ export struct VisitorServicesPage {
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
             .backgroundColor('#F3EAFF')
             .borderRadius(RADIUS_PILL)
+          if (item.marketingRecommended === true) {
+            Text('\u5b98\u65b9\u63a8\u8350')
+              .fontSize(11)
+              .fontColor('#FF7A1A')
+              .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+              .backgroundColor('#FFF1E8')
+              .borderRadius(RADIUS_PILL)
+          }
         }
         .width('100%')
 
         Text(this.hotelLocationHint(item))
-          .fontSize(12)
+          .fontSize(11)
+          .fontColor(THEME_TEXT_SECONDARY)
+          .maxLines(1)
+
+        Text(this.hotelRoomInventoryText(item))
+          .fontSize(11)
           .fontColor(THEME_TEXT_SECONDARY)
           .maxLines(1)
 
@@ -738,7 +1036,7 @@ export struct VisitorServicesPage {
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding(16)
+    .padding(12)
     .backgroundColor(THEME_SURFACE)
     .borderRadius(RADIUS_MD)
     .shadow(SHADOW_CARD)

@@ -1,12 +1,11 @@
-package com.visitor.service.query.dto;
+package com.visitor.service.marketing.dto;
 
-public record HotelResponse(
+public record MarketingHotelResponse(
         String id,
         String name,
         String address,
         int star,
         int price,
-        String phone,
         double score,
         boolean hasBreakfast,
         String facility,
@@ -15,9 +14,10 @@ public record HotelResponse(
         String coverImageUrl,
         Integer totalRooms,
         Integer availableRooms,
-        Boolean marketingRecommended,
+        boolean recommended,
         String marketingTag,
-        Integer marketingPriority,
-        String marketingNote
+        int marketingPriority,
+        String marketingNote,
+        String areaLabel
 ) {
 }

@@ -9,7 +9,9 @@ public final class RoleAuthorities {
 
     public static final String COMPLAINT_MANAGE = "COMPLAINT_MANAGE";
     public static final String COMPLAINT_PROCESS = "COMPLAINT_PROCESS";
-    public static final String EMERGENCY_MANAGE = "EMERGENCY_MANAGE";
+    public static final String EMERGENCY_VIEW = "EMERGENCY_VIEW";
+    public static final String EMERGENCY_WRITE = "EMERGENCY_WRITE";
+    public static final String EMERGENCY_APPROVE = "EMERGENCY_APPROVE";
     public static final String MARKETING_MANAGE = "MARKETING_MANAGE";
     public static final String RESOURCE_MANAGE = "RESOURCE_MANAGE";
     public static final String HOTEL_ROOM_MANAGE = "HOTEL_ROOM_MANAGE";
@@ -25,10 +27,12 @@ public final class RoleAuthorities {
             case ADMIN -> List.of(
                     COMPLAINT_MANAGE,
                     COMPLAINT_PROCESS,
-                    EMERGENCY_MANAGE,
+                    EMERGENCY_VIEW,
+                    EMERGENCY_WRITE,
                     MARKETING_MANAGE,
                     RESOURCE_MANAGE
             );
+            case APPROVER -> List.of(EMERGENCY_VIEW, EMERGENCY_APPROVE);
             case COMPLAINT_HANDLER -> List.of(COMPLAINT_PROCESS);
             case HOTEL_ADMIN -> List.of(HOTEL_ROOM_MANAGE);
             case SYSTEM_ADMIN -> List.of(USER_MANAGE, SYSTEM_CONFIG_MANAGE, AUDIT_LOG_VIEW);

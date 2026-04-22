@@ -3,6 +3,8 @@ package com.visitor.service.hotel;
 import com.visitor.service.common.BusinessException;
 import com.visitor.service.common.ErrorCode;
 import com.visitor.service.hotel.dto.HotelAdminRequest;
+import com.visitor.service.hotel.dto.HotelRoomItemRequest;
+import com.visitor.service.hotel.dto.HotelRoomItemResponse;
 import com.visitor.service.query.QueryService;
 import com.visitor.service.query.dto.HotelResponse;
 import com.visitor.service.system.AuditLogService;
@@ -14,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -130,6 +133,75 @@ public class HotelAdminService {
         return findById(id);
     }
 
+    @Transactional(readOnly = true)
+    public List<HotelRoomItemResponse> listRooms(Authentication authentication, String hotelId) {
+        validateWriteAccess(authentication, hotelId);
+        ensureHotelExists(hotelId);
+        return jdbcTemplate.query("""
+                SELECT id, name, total_rooms, available_rooms, price, image_url
+                FROM hotel_room_types
+                WHERE hotel_id = ?
+                ORDER BY sort_order ASC, id ASC
+                """, roomRowMapper(), hotelId);
+    }
+
+    public List<HotelRoomItemResponse> updateRooms(Authentication authentication, String hotelId, List<HotelRoomItemRequest> request) {
+        validateWriteAccess(authentication, hotelId);
+        ensureHotelExists(hotelId);
+        if (request == null || request.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION, "房型列表不能为空");
+        }
+
+        List<HotelRoomItemResponse> existing = jdbcTemplate.query("""
+                SELECT id, name, total_rooms, available_rooms, price, image_url
+                FROM hotel_room_types
+                WHERE hotel_id = ?
+                ORDER BY sort_order ASC, id ASC
+                """, roomRowMapper(), hotelId);
+
+        if (existing.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "当前酒店暂无房型数据");
+        }
+
+        for (int index = 0; index < request.size(); index++) {
+            HotelRoomItemRequest item = request.get(index);
+            if (item.availableRooms() > item.totalRooms()) {
+                throw new BusinessException(ErrorCode.VALIDATION, "剩余房量不能大于总房量");
+            }
+            int updated = jdbcTemplate.update("""
+                    UPDATE hotel_room_types
+                    SET name = ?,
+                        total_rooms = ?,
+                        available_rooms = ?,
+                        price = ?,
+                        image_url = ?,
+                        sort_order = ?,
+                        updated_by = ?,
+                        updated_at = ?
+                    WHERE id = ? AND hotel_id = ?
+                    """,
+                    item.name().trim(),
+                    item.totalRooms(),
+                    item.availableRooms(),
+                    item.price(),
+                    normalizeOptionalText(item.imageUrl()),
+                    index + 1,
+                    authentication.getName(),
+                    LocalDateTime.now(),
+                    item.id(),
+                    hotelId
+            );
+            if (updated == 0) {
+                throw new BusinessException(ErrorCode.NOT_FOUND, "房型不存在或不属于当前酒店");
+            }
+        }
+
+        String availabilityStatus = deriveHotelAvailability(request);
+        jdbcTemplate.update("UPDATE query_hotels SET availability_status = ? WHERE id = ?", availabilityStatus, hotelId);
+        auditLogService.record(authentication.getName(), "HOTEL", "UPDATE_ROOMS", "HOTEL", hotelId, "同步酒店房型库存");
+        return listRooms(authentication, hotelId);
+    }
+
     public void delete(String id, String actorUsername) {
         int deleted = jdbcTemplate.update("DELETE FROM query_hotels WHERE id = ?", id);
         if (deleted == 0) {
@@ -142,8 +214,17 @@ public class HotelAdminService {
     public HotelResponse findById(String id) {
         List<HotelResponse> list = jdbcTemplate.query("""
                 SELECT id, name, address, star, price, phone, score, has_breakfast, facility, introduction,
-                       availability_status, cover_image_url
+                       availability_status, cover_image_url,
+                       COALESCE(room_stats.total_rooms, 0) AS total_rooms,
+                       COALESCE(room_stats.available_rooms, 0) AS available_rooms,
+                       marketing_recommended, marketing_tag,
+                       marketing_priority, marketing_note
                 FROM query_hotels
+                LEFT JOIN (
+                    SELECT hotel_id, SUM(total_rooms) AS total_rooms, SUM(available_rooms) AS available_rooms
+                    FROM hotel_room_types
+                    GROUP BY hotel_id
+                ) room_stats ON room_stats.hotel_id = query_hotels.id
                 WHERE id = ?
                 """, hotelRowMapper(), id);
         if (list.isEmpty()) {
@@ -185,7 +266,13 @@ public class HotelAdminService {
                 rs.getString("facility"),
                 rs.getString("introduction"),
                 rs.getString("availability_status"),
-                rs.getString("cover_image_url")
+                rs.getString("cover_image_url"),
+                rs.getObject("total_rooms", Integer.class),
+                rs.getObject("available_rooms", Integer.class),
+                rs.getObject("marketing_recommended", Boolean.class),
+                rs.getString("marketing_tag"),
+                rs.getObject("marketing_priority", Integer.class),
+                rs.getString("marketing_note")
         );
     }
 
@@ -208,7 +295,41 @@ public class HotelAdminService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private void ensureHotelExists(String hotelId) {
+        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM query_hotels WHERE id = ?", Integer.class, hotelId);
+        if (count == null || count == 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "酒店不存在");
+        }
+    }
+
     private String generateHotelId() {
         return "h-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
+    private RowMapper<HotelRoomItemResponse> roomRowMapper() {
+        return (rs, rowNum) -> new HotelRoomItemResponse(
+                rs.getString("id"),
+                rs.getString("name"),
+                rs.getInt("total_rooms"),
+                rs.getInt("available_rooms"),
+                rs.getInt("price"),
+                rs.getString("image_url")
+        );
+    }
+
+    private String deriveHotelAvailability(List<HotelRoomItemRequest> request) {
+        int totalRooms = 0;
+        int availableRooms = 0;
+        for (HotelRoomItemRequest item : request) {
+            totalRooms += item.totalRooms();
+            availableRooms += item.availableRooms();
+        }
+        if (availableRooms <= 0) {
+            return "FULL";
+        }
+        if (availableRooms <= Math.ceil(totalRooms * 0.2)) {
+            return "BUSY";
+        }
+        return "AVAILABLE";
     }
 }

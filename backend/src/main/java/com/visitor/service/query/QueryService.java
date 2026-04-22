@@ -29,20 +29,29 @@ public class QueryService {
 
     public List<HotelResponse> hotels(String keyword, Integer minStar, String area, Integer minPrice, Integer maxPrice) {
         StringBuilder sql = new StringBuilder("""
-                SELECT id, name, address, star, price, phone, score, has_breakfast, facility, introduction,
-                       availability_status, cover_image_url
-                FROM query_hotels
+                SELECT qh.id, qh.name, qh.address, qh.star, qh.price, qh.phone, qh.score, qh.has_breakfast, qh.facility, qh.introduction,
+                       qh.availability_status, qh.cover_image_url,
+                       COALESCE(room_stats.total_rooms, 0) AS total_rooms,
+                       COALESCE(room_stats.available_rooms, 0) AS available_rooms,
+                       qh.marketing_recommended, qh.marketing_tag,
+                       qh.marketing_priority, qh.marketing_note
+                FROM query_hotels qh
+                LEFT JOIN (
+                    SELECT hotel_id, SUM(total_rooms) AS total_rooms, SUM(available_rooms) AS available_rooms
+                    FROM hotel_room_types
+                    GROUP BY hotel_id
+                ) room_stats ON room_stats.hotel_id = qh.id
                 WHERE 1 = 1
                 """);
         List<Object> args = new ArrayList<>();
-        appendKeyword(sql, args, keyword, "name", "address", "introduction");
+        appendKeyword(sql, args, keyword, "qh.name", "qh.address", "qh.introduction");
         if (minStar != null) {
-            sql.append(" AND star >= ?");
+            sql.append(" AND qh.star >= ?");
             args.add(minStar);
         }
-        appendArea(sql, args, area, "address");
-        appendPriceRange(sql, args, "price", minPrice, maxPrice);
-        sql.append(" ORDER BY star DESC, price ASC, id ASC");
+        appendArea(sql, args, area, "qh.address");
+        appendPriceRange(sql, args, "qh.price", minPrice, maxPrice);
+        sql.append(" ORDER BY qh.star DESC, qh.price ASC, qh.id ASC");
 
         RowMapper<HotelResponse> mapper = (rs, rowNum) -> new HotelResponse(
                 rs.getString("id"),
@@ -56,7 +65,13 @@ public class QueryService {
                 rs.getString("facility"),
                 rs.getString("introduction"),
                 rs.getString("availability_status"),
-                rs.getString("cover_image_url")
+                rs.getString("cover_image_url"),
+                rs.getObject("total_rooms", Integer.class),
+                rs.getObject("available_rooms", Integer.class),
+                rs.getObject("marketing_recommended", Boolean.class),
+                rs.getString("marketing_tag"),
+                rs.getObject("marketing_priority", Integer.class),
+                rs.getString("marketing_note")
         );
         return jdbcTemplate.query(sql.toString(), mapper, args.toArray());
     }

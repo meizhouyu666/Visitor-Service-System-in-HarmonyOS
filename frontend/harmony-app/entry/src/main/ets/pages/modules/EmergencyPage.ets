@@ -49,6 +49,7 @@ export struct EmergencyPage {
   @State private validUntilInput: string = ''
   @State private alertLevelInput: string = 'MEDIUM'
   @State private alertTypeInput: string = 'GENERAL'
+  @State private selectedWindowPreset: string = 'today'
 
   @State private searchQuery: string = ''
   @State private adminTab: AdminEmergencyTab = 'published'
@@ -60,11 +61,11 @@ export struct EmergencyPage {
   }
 
   private canWrite(): boolean {
-    return this.mode === 'writer' || this.mode === 'admin'
+    return this.mode === 'admin' || this.mode === 'writer'
   }
 
   private canApprove(): boolean {
-    return this.mode === 'approver' || this.mode === 'admin'
+    return this.mode === 'approver'
   }
 
   private listApiPath(): string {
@@ -279,10 +280,9 @@ export struct EmergencyPage {
     this.selectedId = 0
     this.titleInput = ''
     this.contentInput = ''
-    this.validFromInput = ''
-    this.validUntilInput = ''
     this.alertLevelInput = 'MEDIUM'
     this.alertTypeInput = 'GENERAL'
+    this.applyWindowPreset('today')
   }
 
   private openCreateForm(): void {
@@ -529,6 +529,97 @@ export struct EmergencyPage {
   private currentItemCreatedBy(): string {
     const item: EmergencyItem | null = this.currentItem()
     return item === null ? '' : item.createdBy
+  }
+
+  private isSelectedOption(currentValue: string, optionValue: string): boolean {
+    return currentValue === optionValue
+  }
+
+  private optionCardBackground(selected: boolean): string {
+    return selected ? THEME_PRIMARY : THEME_SURFACE
+  }
+
+  private optionCardBorder(selected: boolean): string {
+    return selected ? THEME_PRIMARY : '#DDE5F2'
+  }
+
+  private optionCardTextColor(selected: boolean): string {
+    return selected ? '#FFFFFF' : THEME_TEXT_SECONDARY
+  }
+
+  private optionButtonText(label: string, selected: boolean): string {
+    return selected ? `✓ ${label}` : label
+  }
+
+  private levelOptionSelected(value: string): boolean {
+    return this.alertLevelInput === value
+  }
+
+  private typeOptionSelected(value: string): boolean {
+    return this.alertTypeInput === value
+  }
+
+  private isWindowPresetSelected(preset: string): boolean {
+    return this.selectedWindowPreset === preset
+  }
+
+  private padTime(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`
+  }
+
+  private formatIsoLike(date: Date): string {
+    const year: number = date.getFullYear()
+    const month: string = this.padTime(date.getMonth() + 1)
+    const day: string = this.padTime(date.getDate())
+    const hour: string = this.padTime(date.getHours())
+    const minute: string = this.padTime(date.getMinutes())
+    return `${year}-${month}-${day}T${hour}:${minute}:00`
+  }
+
+  private nowDate(): Date {
+    return new Date()
+  }
+
+  private withTime(base: Date, hour: number, minute: number): Date {
+    const next: Date = new Date(base.getTime())
+    next.setHours(hour, minute, 0, 0)
+    return next
+  }
+
+  private addHours(base: Date, hours: number): Date {
+    const next: Date = new Date(base.getTime())
+    next.setHours(next.getHours() + hours)
+    return next
+  }
+
+  private applyWindowPreset(preset: string): void {
+    const now: Date = this.nowDate()
+    let start: Date = now
+    let end: Date = this.addHours(now, 4)
+    if (preset === 'commute') {
+      start = this.withTime(now, 7, 30)
+      end = this.withTime(now, 11, 30)
+    } else if (preset === 'today') {
+      start = this.withTime(now, 8, 0)
+      end = this.withTime(now, 20, 0)
+    } else if (preset === 'tomorrow') {
+      const tomorrow: Date = this.addHours(this.withTime(now, 8, 0), 24)
+      start = tomorrow
+      end = this.addHours(tomorrow, 12)
+    } else if (preset === 'custom') {
+      this.selectedWindowPreset = preset
+      return
+    }
+    this.selectedWindowPreset = preset
+    this.validFromInput = this.formatIsoLike(start)
+    this.validUntilInput = this.formatIsoLike(end)
+  }
+
+  private effectiveWindowSummary(): string {
+    if (this.validFromInput.length === 0 && this.validUntilInput.length === 0) {
+      return '未设置显示有效期'
+    }
+    return `${this.formatDate(this.validFromInput, '立即生效')} 至 ${this.formatDate(this.validUntilInput, '长期有效')}`
   }
 
   @Builder
@@ -938,15 +1029,60 @@ export struct EmergencyPage {
   @Builder
   private LevelSelector(): void {
     Row({ space: 8 }) {
-      this.SelectChip('蓝色预警', this.alertLevelInput === 'LOW', () => {
-        this.alertLevelInput = 'LOW'
-      })
-      this.SelectChip('橙色预警', this.alertLevelInput === 'MEDIUM', () => {
-        this.alertLevelInput = 'MEDIUM'
-      })
-      this.SelectChip('红色预警', this.alertLevelInput === 'HIGH', () => {
-        this.alertLevelInput = 'HIGH'
-      })
+      Button(this.optionButtonText('蓝色预警', this.levelOptionSelected('LOW')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.levelOptionSelected('LOW')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.levelOptionSelected('LOW'))
+        })
+        .fontSize(12)
+        .fontWeight(this.levelOptionSelected('LOW') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.levelOptionSelected('LOW')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertLevelInput = 'LOW'
+        })
+      Button(this.optionButtonText('橙色预警', this.levelOptionSelected('MEDIUM')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.levelOptionSelected('MEDIUM')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.levelOptionSelected('MEDIUM'))
+        })
+        .fontSize(12)
+        .fontWeight(this.levelOptionSelected('MEDIUM') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.levelOptionSelected('MEDIUM')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertLevelInput = 'MEDIUM'
+        })
+      Button(this.optionButtonText('红色预警', this.levelOptionSelected('HIGH')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.levelOptionSelected('HIGH')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.levelOptionSelected('HIGH'))
+        })
+        .fontSize(12)
+        .fontWeight(this.levelOptionSelected('HIGH') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.levelOptionSelected('HIGH')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertLevelInput = 'HIGH'
+        })
     }
     .width('100%')
   }
@@ -954,29 +1090,80 @@ export struct EmergencyPage {
   @Builder
   private TypeSelector(): void {
     Row({ space: 8 }) {
-      this.SelectChip('天气预警', this.alertTypeInput === 'WEATHER', () => {
-        this.alertTypeInput = 'WEATHER'
-      })
-      this.SelectChip('路况交通', this.alertTypeInput === 'TRAFFIC', () => {
-        this.alertTypeInput = 'TRAFFIC'
-      })
-      this.SelectChip('客流公告', this.alertTypeInput === 'GENERAL', () => {
-        this.alertTypeInput = 'GENERAL'
-      })
+      Button(this.optionButtonText('天气预警', this.typeOptionSelected('WEATHER')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.typeOptionSelected('WEATHER')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.typeOptionSelected('WEATHER'))
+        })
+        .fontSize(12)
+        .fontWeight(this.typeOptionSelected('WEATHER') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.typeOptionSelected('WEATHER')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertTypeInput = 'WEATHER'
+        })
+      Button(this.optionButtonText('路况交通', this.typeOptionSelected('TRAFFIC')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.typeOptionSelected('TRAFFIC')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.typeOptionSelected('TRAFFIC'))
+        })
+        .fontSize(12)
+        .fontWeight(this.typeOptionSelected('TRAFFIC') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.typeOptionSelected('TRAFFIC')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertTypeInput = 'TRAFFIC'
+        })
+      Button(this.optionButtonText('客流公告', this.typeOptionSelected('GENERAL')))
+        .layoutWeight(1)
+        .height(40)
+        .borderRadius(RADIUS_PILL)
+        .backgroundColor(this.optionCardBackground(this.typeOptionSelected('GENERAL')))
+        .border({
+          width: 1,
+          color: this.optionCardBorder(this.typeOptionSelected('GENERAL'))
+        })
+        .fontSize(12)
+        .fontWeight(this.typeOptionSelected('GENERAL') ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.optionCardTextColor(this.typeOptionSelected('GENERAL')))
+        .stateEffect(true)
+        .onClick(() => {
+          this.actionMessage = ''
+          this.errorMessage = ''
+          this.alertTypeInput = 'GENERAL'
+        })
     }
     .width('100%')
   }
 
   @Builder
-  private SelectChip(label: string, selected: boolean, onTap: () => void): void {
-    Button(label)
+  private WindowPresetButton(label: string, preset: string): void {
+    Button(this.optionButtonText(label, this.isWindowPresetSelected(preset)))
       .layoutWeight(1)
-      .height(36)
+      .height(38)
       .borderRadius(RADIUS_PILL)
-      .backgroundColor(selected ? THEME_PRIMARY : THEME_SURFACE_MUTED)
-      .fontColor(selected ? Color.White : THEME_TEXT_SECONDARY)
-      .fontSize(12)
-      .onClick(() => onTap())
+      .backgroundColor(this.optionCardBackground(this.isWindowPresetSelected(preset)))
+      .border({
+        width: 1,
+        color: this.optionCardBorder(this.isWindowPresetSelected(preset))
+      })
+      .fontSize(11)
+      .fontWeight(this.isWindowPresetSelected(preset) ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.optionCardTextColor(this.isWindowPresetSelected(preset)))
+      .stateEffect(true)
+      .onClick(() => this.applyWindowPreset(preset))
   }
 
   @Builder
@@ -1027,16 +1214,42 @@ export struct EmergencyPage {
             Text('显示有效期')
               .fontSize(13)
               .fontColor(THEME_TEXT_SECONDARY)
-            TextInput({ placeholder: '开始时间（如 2026-04-21T08:00:00）', text: this.validFromInput })
+            Row({ space: 8 }) {
+              this.WindowPresetButton('今日有效', 'today')
+              this.WindowPresetButton('通勤时段', 'commute')
+            }
+            .width('100%')
+            Row({ space: 8 }) {
+              this.WindowPresetButton('立即生效 4 小时', 'now')
+              this.WindowPresetButton('明日白天', 'tomorrow')
+            }
+            .width('100%')
+            Column({ space: 6 }) {
+              Text('当前生效窗口')
+                .fontSize(11)
+                .fontColor(THEME_TEXT_TERTIARY)
+              Text(this.effectiveWindowSummary())
+                .fontSize(12)
+                .fontColor(THEME_TEXT_PRIMARY)
+                .lineHeight(20)
+            }
+            .width('100%')
+            .padding(12)
+            .backgroundColor(THEME_SURFACE)
+            .borderRadius(RADIUS_LG)
+            .alignItems(HorizontalAlign.Start)
+            TextInput({ placeholder: '自定义开始时间（如 2026-04-21T08:00:00）', text: this.validFromInput })
               .onChange((value: string) => {
+                this.selectedWindowPreset = 'custom'
                 this.validFromInput = value
               })
               .height(46)
               .padding(12)
               .backgroundColor(THEME_SURFACE)
               .borderRadius(RADIUS_LG)
-            TextInput({ placeholder: '结束时间（如 2026-04-21T18:00:00）', text: this.validUntilInput })
+            TextInput({ placeholder: '自定义结束时间（如 2026-04-21T18:00:00）', text: this.validUntilInput })
               .onChange((value: string) => {
+                this.selectedWindowPreset = 'custom'
                 this.validUntilInput = value
               })
               .height(46)

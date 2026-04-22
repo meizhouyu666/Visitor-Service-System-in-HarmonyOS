@@ -46,7 +46,7 @@ components:
           type: string
         role:
           type: string
-          enum: [VISITOR, ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+          enum: [VISITOR, ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
         permissions:
           type: array
           items:
@@ -150,26 +150,152 @@ components:
           nullable: true
     ResourceItemRequest:
       type: object
-      required: [title, location, description]
+      description: |
+        平台旅游资源库统一请求体。不同 category 需要填写各自业务字段，未使用字段可省略。
+        - SCENIC_SPOTS：景点标题、景区分区、位置、开放时间、票价、等级、类型、是否免费、简介
+        - ROUTES：线路标题、建议时长、难度、适宜人群、线路内容、简介
+        - DINING：餐饮名称、分类、人均价格、营业时间、地址、推荐菜、简介，可选距离与导航坐标
+        - PERFORMANCES：演出名称、场地、演出时间、票价、团队、简介，可选场次时间、余票与票务状态
+      required: [title, description]
       properties:
         title:
           type: string
+          description: 资源标题
+          example: 北欧小木屋风情区
         subtitle:
           type: string
           nullable: true
+          description: 前端兼容副标题，可作为景区分区/适宜人群/餐饮分类等补充展示信息
+          example: 景区北侧麦温带植物林
         location:
           type: string
+          nullable: true
+          description: 位置、线路摘要或场地地址
+          example: 景区北侧观景步道
         schedule:
           type: string
           nullable: true
+          description: 前端兼容时间摘要
+          example: 08:00 - 18:00
         description:
           type: string
+          description: 资源详情简介
+          example: 还原北欧森林木屋风情，适合拍照打卡，周边有驯鹿互动区。
         coverImageUrl:
           type: string
           nullable: true
+          example: https://example.com/resource/scenic-001.jpg
         online:
           type: boolean
           nullable: true
+          description: 是否立即上架到游客端
+          example: true
+        scenicArea:
+          type: string
+          nullable: true
+          example: 北侧森林区
+        openTime:
+          type: string
+          nullable: true
+          example: 08:00 - 18:00
+        ticketPrice:
+          type: integer
+          nullable: true
+          example: 60
+        level:
+          type: string
+          nullable: true
+          example: AAAA
+        type:
+          type: string
+          nullable: true
+          example: 森林观光
+        isFree:
+          type: boolean
+          nullable: true
+          example: false
+        crowdHeat:
+          type: integer
+          nullable: true
+          example: 73
+        durationHours:
+          type: integer
+          nullable: true
+          example: 6
+        difficulty:
+          type: string
+          nullable: true
+          example: MEDIUM
+        suitableFor:
+          type: string
+          nullable: true
+          example: 亲子家庭
+        spots:
+          type: string
+          nullable: true
+          example: 东大门 -> 湖畔 -> 游乐场 -> 美食城
+        avgPrice:
+          type: integer
+          nullable: true
+          example: 128
+        businessHours:
+          type: string
+          nullable: true
+          example: 11:00 - 22:00
+        address:
+          type: string
+          nullable: true
+          example: 东区观景台旁
+        recommendFood:
+          type: string
+          nullable: true
+          example: 炭烤牛排、海鲜烩饭
+        distanceMeters:
+          type: integer
+          nullable: true
+          example: 320
+        isOpen:
+          type: boolean
+          nullable: true
+          example: true
+        navLat:
+          type: number
+          format: double
+          nullable: true
+          example: 30.5728
+        navLng:
+          type: number
+          format: double
+          nullable: true
+          example: 104.0668
+        showTime:
+          type: string
+          nullable: true
+          example: 每日 19:30 - 21:00
+        price:
+          type: integer
+          nullable: true
+          example: 199
+        team:
+          type: string
+          nullable: true
+          example: 幻梦森林演艺团
+        venue:
+          type: string
+          nullable: true
+          example: 中央水上剧场
+        showDateTime:
+          type: string
+          nullable: true
+          example: 2026-05-01T19:30:00
+        remainingTickets:
+          type: integer
+          nullable: true
+          example: 86
+        ticketStatus:
+          type: string
+          nullable: true
+          example: AVAILABLE
     SystemUserCreateRequest:
       type: object
       required: [username, displayName, role, password]
@@ -180,7 +306,7 @@ components:
           type: string
         role:
           type: string
-          enum: [ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+          enum: [ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
         password:
           type: string
         managedHotelId:
@@ -194,7 +320,7 @@ components:
           type: string
         role:
           type: string
-          enum: [ADMIN, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
+          enum: [ADMIN, APPROVER, COMPLAINT_HANDLER, HOTEL_ADMIN, SYSTEM_ADMIN]
         managedHotelId:
           type: string
           nullable: true
@@ -533,6 +659,67 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ResourceItemRequest'
+            examples:
+              scenic:
+                summary: 新增景区景点
+                value:
+                  title: 北欧小木屋风情区
+                  scenicArea: 北侧森林区
+                  location: 景区北侧观景步道
+                  openTime: 08:00 - 18:00
+                  ticketPrice: 60
+                  level: AAAA
+                  type: 森林观光
+                  isFree: false
+                  crowdHeat: 73
+                  description: 还原北欧森林木屋风情，适合拍照打卡，周边有驯鹿互动区。
+                  coverImageUrl: https://example.com/resource/scenic-001.jpg
+                  online: true
+              route:
+                summary: 新增游览线路
+                value:
+                  title: 亲子一日游（东线）
+                  durationHours: 6
+                  difficulty: MEDIUM
+                  suitableFor: 亲子家庭
+                  spots: 东大门 -> 湖畔 -> 游乐场 -> 美食城
+                  description: 专为带儿童的家庭设计，地势平缓，沿途洗手间及休息区密集。
+                  coverImageUrl: https://example.com/resource/route-001.jpg
+                  online: true
+              dining:
+                summary: 新增餐饮资源
+                value:
+                  title: 湖畔星空餐厅
+                  type: 景观餐厅
+                  avgPrice: 128
+                  businessHours: 11:00 - 22:00
+                  address: 东区观景台旁
+                  recommendFood: 炭烤牛排、海鲜烩饭
+                  description: 提供中西融合菜系，360 度全景玻璃房，可直望湖畔夜景。
+                  distanceMeters: 320
+                  isOpen: true
+                  navLat: 30.5728
+                  navLng: 104.0668
+                  coverImageUrl: https://example.com/resource/dining-001.jpg
+                  online: true
+              performance:
+                summary: 新增演出资源
+                value:
+                  title: 大型实景剧《幻梦森林》
+                  location: 中央水上剧场
+                  showTime: 每日 19:30 - 21:00
+                  price: 199
+                  team: 幻梦森林演艺团
+                  venue: 中央水上剧场
+                  showDateTime: 2026-05-01T19:30:00
+                  remainingTickets: 86
+                  ticketStatus: AVAILABLE
+                  description: 结合声光电的大型沉浸式实景演出，讲述森林精灵的传说。
+                  distanceMeters: 580
+                  navLat: 30.5732
+                  navLng: 104.0681
+                  coverImageUrl: https://example.com/resource/show-001.jpg
+                  online: true
       responses:
         '200':
           description: OK
@@ -554,6 +741,31 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ResourceItemRequest'
+            examples:
+              scenicUpdate:
+                summary: 更新景区景点
+                value:
+                  title: 北欧小木屋风情区（春季版）
+                  scenicArea: 北侧森林区
+                  location: 景区北侧观景步道
+                  openTime: 08:30 - 18:30
+                  ticketPrice: 68
+                  level: AAAA
+                  type: 森林观光
+                  isFree: false
+                  crowdHeat: 81
+                  description: 春季新增花海打卡点与森林手作体验区。
+                  online: true
+              routeUpdate:
+                summary: 更新游览线路
+                value:
+                  title: 亲子一日游（升级版）
+                  durationHours: 7
+                  difficulty: MEDIUM
+                  suitableFor: 亲子家庭
+                  spots: 东大门 -> 湖畔 -> 游乐场 -> 美食城 -> 观光列车
+                  description: 增加观光列车站点，适合全天休闲游览。
+                  online: true
       responses:
         '200':
           description: OK

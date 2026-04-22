@@ -105,13 +105,14 @@ export class AuthStore {
     const role: string = this.currentUser?.role ?? 'VISITOR'
     switch (role) {
       case 'ADMIN':
+      case 'APPROVER':
       case 'COMPLAINT_HANDLER':
       case 'HOTEL_ADMIN':
       case 'SYSTEM_ADMIN':
       case 'VISITOR':
         return role
       case 'EMERGENCY_WRITER':
-      case 'APPROVER':
+      case 'WRITER':
         return 'ADMIN'
       case 'HOTEL_MANAGER':
       case 'HOTELADMIN':
@@ -141,6 +142,8 @@ export class AuthStore {
         return '游客'
       case 'COMPLAINT_HANDLER':
         return '投诉处理员'
+      case 'APPROVER':
+        return '应急审批员'
       case 'HOTEL_ADMIN':
         return '酒店管理员'
       case 'SYSTEM_ADMIN':

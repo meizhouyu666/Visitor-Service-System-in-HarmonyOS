@@ -8,6 +8,7 @@ export interface ApiResponse<T> {
 export type UserRole =
   | 'VISITOR'
   | 'ADMIN'
+  | 'APPROVER'
   | 'COMPLAINT_HANDLER'
   | 'HOTEL_ADMIN'
   | 'SYSTEM_ADMIN'
@@ -151,6 +152,110 @@ export interface HotelResponse {
   introduction: string
   availabilityStatus?: string
   coverImageUrl?: string
+  totalRooms?: number
+  availableRooms?: number
+  marketingRecommended?: boolean
+  marketingTag?: string
+  marketingPriority?: number
+  marketingNote?: string
+}
+
+export interface MarketingHotelItemResponse {
+  id: string
+  name: string
+  address: string
+  star: number
+  price: number
+  score: number
+  hasBreakfast: boolean
+  facility: string
+  introduction: string
+  availabilityStatus: string
+  coverImageUrl?: string
+  totalRooms?: number
+  availableRooms?: number
+  recommended: boolean
+  marketingTag?: string
+  marketingPriority: number
+  marketingNote?: string
+  areaLabel: string
+}
+
+export interface MarketingDashboardResponse {
+  currentVisitors: number
+  eastHeatPercent: number
+  westHeatPercent: number
+  loadLabel: string
+  suggestion: string
+  hotels: MarketingHotelItemResponse[]
+}
+
+export interface MarketingHotelUpdateRequest {
+  recommended: boolean
+  marketingTag?: string
+  marketingPriority?: number
+  marketingNote?: string
+}
+
+export interface SystemUserResponse {
+  id: number
+  username: string
+  displayName: string
+  role: UserRole | string
+  enabled: boolean
+  managedHotelId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SystemUserCreateRequest {
+  username: string
+  displayName: string
+  role: UserRole | string
+  password: string
+  managedHotelId?: string
+}
+
+export interface SystemUserUpdateRequest {
+  displayName: string
+  role: UserRole | string
+  managedHotelId?: string
+}
+
+export interface SystemUserResetPasswordRequest {
+  newPassword: string
+}
+
+export interface AuditLogResponse {
+  id: number
+  actorUsername: string
+  actorRole: string
+  module: string
+  action: string
+  targetType: string
+  targetId: string
+  detail: string
+  createdAt: string
+}
+
+export interface AuditLogPageResponse {
+  items: AuditLogResponse[]
+  total: number
+  page: number
+  size: number
+}
+
+export interface SystemSettingResponse {
+  key: string
+  value: string
+  description: string
+  updatedBy: string
+  updatedAt: string
+}
+
+export interface SystemSettingUpdateRequest {
+  value: string
+  description?: string
 }
 
 export interface HotelAdminRequest {
@@ -165,6 +270,102 @@ export interface HotelAdminRequest {
   introduction: string
   availabilityStatus?: string
   coverImageUrl?: string
+}
+
+export interface HotelRoomItemResponse {
+  id: string
+  name: string
+  totalRooms: number
+  availableRooms: number
+  price: number
+  imageUrl?: string
+}
+
+export interface HotelRoomItemRequest {
+  id: string
+  name: string
+  totalRooms: number
+  availableRooms: number
+  price: number
+  imageUrl?: string
+}
+
+export type ResourceApiCategory = 'SCENIC_SPOTS' | 'ROUTES' | 'DINING' | 'PERFORMANCES'
+
+export interface ResourceItemRequest {
+  title: string
+  subtitle?: string
+  location?: string
+  schedule?: string
+  description: string
+  coverImageUrl?: string
+  online?: boolean
+  scenicArea?: string
+  openTime?: string
+  ticketPrice?: number
+  level?: string
+  type?: string
+  isFree?: boolean
+  crowdHeat?: number
+  durationHours?: number
+  difficulty?: string
+  suitableFor?: string
+  spots?: string
+  avgPrice?: number
+  businessHours?: string
+  address?: string
+  recommendFood?: string
+  distanceMeters?: number
+  isOpen?: boolean
+  navLat?: number
+  navLng?: number
+  showTime?: string
+  price?: number
+  team?: string
+  venue?: string
+  showDateTime?: string
+  remainingTickets?: number
+  ticketStatus?: string
+}
+
+export interface ResourceItemResponse {
+  id: string
+  category: ResourceApiCategory | string
+  title: string
+  subtitle: string | null
+  location: string | null
+  schedule: string | null
+  description: string
+  coverImageUrl: string | null
+  online: boolean
+  updatedBy: string | null
+  updatedAt: string | null
+  scenicArea: string | null
+  openTime: string | null
+  ticketPrice: number | null
+  level: string | null
+  type: string | null
+  isFree: boolean | null
+  crowdHeat: number | null
+  durationHours: number | null
+  difficulty: string | null
+  suitableFor: string | null
+  spots: string | null
+  avgPrice: number | null
+  businessHours: string | null
+  address: string | null
+  recommendFood: string | null
+  distanceMeters: number | null
+  isOpen: boolean | null
+  navLat: number | null
+  navLng: number | null
+  showTime: string | null
+  price: number | null
+  team: string | null
+  venue: string | null
+  showDateTime: string | null
+  remainingTickets: number | null
+  ticketStatus: string | null
 }
 
 export interface ScenicSpotResponse {
