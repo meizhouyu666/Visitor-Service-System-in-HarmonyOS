@@ -30,7 +30,8 @@ public final class RoleAuthorities {
                     EMERGENCY_VIEW,
                     EMERGENCY_WRITE,
                     MARKETING_MANAGE,
-                    RESOURCE_MANAGE
+                    RESOURCE_MANAGE,
+                    EMERGENCY_APPROVE
             );
             case APPROVER -> List.of(EMERGENCY_VIEW, EMERGENCY_APPROVE);
             case COMPLAINT_HANDLER -> List.of(COMPLAINT_PROCESS);

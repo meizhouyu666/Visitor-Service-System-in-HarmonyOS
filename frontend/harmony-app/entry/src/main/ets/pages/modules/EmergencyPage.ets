@@ -65,7 +65,7 @@ export struct EmergencyPage {
   }
 
   private canApprove(): boolean {
-    return this.mode === 'approver'
+    return this.mode === 'approver' || this.mode === 'admin'
   }
 
   private listApiPath(): string {
@@ -406,15 +406,30 @@ export struct EmergencyPage {
     }
   }
 
-  private rejectForRevision(): void {
-    if (this.selectedId <= 0) {
+  private async rejectForRevision(): Promise<void> {
+    if (!this.canApprove()) {
       return
     }
-    this.setLocalStatus(this.selectedId, 'REJECTED')
-    this.adminTab = 'draft'
-    this.adminScreen = 'form'
+    if (this.selectedId <= 0) {
+      this.errorMessage = '请先选择一条待审批预警'
+      return
+    }
+    this.loading = true
     this.errorMessage = ''
-    this.actionMessage = '已退回为修改状态。当前后端未提供驳回接口，本次先以前端演示态承载。'
+    try {
+      // 调用后端驳回接口（不传评论，如需评论可扩展）
+      await apiClient.post<Record<string, string>, EmergencyItem>(`/api/emergency/admin/${this.selectedId}/reject`, {})
+      this.clearLocalStatus(this.selectedId)
+      await this.loadItems(this.selectedId)
+      // 驳回后状态变为 DRAFT，应显示在“草稿/驳回”标签页
+      this.adminTab = 'draft'
+      this.adminScreen = 'list'
+      this.actionMessage = '已驳回，预警信息已退回草稿状态'
+    } catch (_error) {
+      this.errorMessage = '驳回失败，请稍后重试'
+    } finally {
+      this.loading = false
+    }
   }
 
   private async deleteItem(id: number): Promise<void> {
@@ -485,7 +500,7 @@ export struct EmergencyPage {
     if (tab === 'pending') {
       return `待审批 (${this.adminTabCount('pending')})`
     }
-    return '草稿/驳回'
+    return `草稿/驳回 (${this.adminTabCount('draft')})`
   }
 
   private tabSelected(tab: AdminEmergencyTab): boolean {

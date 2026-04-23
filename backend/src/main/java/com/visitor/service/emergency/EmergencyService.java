@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -50,21 +51,37 @@ public class EmergencyService {
         return EmergencyResponse.from(saved);
     }
 
-    public EmergencyResponse update(Long id, EmergencyRequest request, String username) {
-        EmergencyInfo info = findEmergency(id);
-        if (info.getStatus() != EmergencyStatus.DRAFT && info.getStatus() != EmergencyStatus.REJECTED) {
-            throw new BusinessException(ErrorCode.BUSINESS, "只有草稿或驳回状态的应急信息可以修改");
-        }
-        info.setTitle(request.title());
-        info.setContent(request.content());
-        info.setValidFrom(request.validFrom());
-        info.setValidUntil(resolveValidUntil(request.validFrom(), request.validUntil()));
-        info.setAlertLevel(resolveAlertLevel(request.alertLevel(), info.getAlertLevel()));
-        info.setAlertType(resolveAlertType(request.alertType(), info.getAlertType()));
-        EmergencyInfo saved = emergencyInfoRepository.save(info);
-        auditLogService.record(username, "EMERGENCY", "UPDATE", "EMERGENCY", saved.getId(), "更新应急信息");
-        return EmergencyResponse.from(saved);
+public EmergencyResponse update(Long id, EmergencyRequest request, String username) {
+    EmergencyInfo info = findEmergency(id);
+    
+    // 1. 状态检查：允许修改的状态
+    Set<EmergencyStatus> allowedStatuses = Set.of(
+        EmergencyStatus.DRAFT,
+        EmergencyStatus.REJECTED,
+        EmergencyStatus.PUBLISHED
+    );
+    if (!allowedStatuses.contains(info.getStatus())) {
+        throw new BusinessException(ErrorCode.BUSINESS, "只有草稿、驳回或已发布的应急信息可以修改");
     }
+    
+    // 2. 更新基本信息
+    info.setTitle(request.title());
+    info.setContent(request.content());
+    info.setValidFrom(request.validFrom());
+    info.setValidUntil(resolveValidUntil(request.validFrom(), request.validUntil()));
+    info.setAlertLevel(resolveAlertLevel(request.alertLevel(), info.getAlertLevel()));
+    info.setAlertType(resolveAlertType(request.alertType(), info.getAlertType()));
+    
+    // 3. 状态处理：如果原来是已发布，改为待审批；否则保留原状态
+    if (info.getStatus() == EmergencyStatus.PUBLISHED) {
+        info.setStatus(EmergencyStatus.PENDING_APPROVAL);
+    }
+    // 草稿和驳回状态：不做改变，保持原状（如果希望驳回后改为草稿，可以加额外逻辑）
+    
+    EmergencyInfo saved = emergencyInfoRepository.save(info);
+    auditLogService.record(username, "EMERGENCY", "UPDATE", "EMERGENCY", saved.getId(), "更新应急信息");
+    return EmergencyResponse.from(saved);
+}
 
     public void delete(Long id, String username) {
         EmergencyInfo info = findEmergency(id);
@@ -100,7 +117,7 @@ public class EmergencyService {
         if (info.getStatus() != EmergencyStatus.PENDING_APPROVAL) {
             throw new BusinessException(ErrorCode.BUSINESS, "只有待审批状态的应急信息可以驳回");
         }
-        info.setStatus(EmergencyStatus.REJECTED);
+        info.setStatus(EmergencyStatus.DRAFT);
         info.setApprovedBy(null);
         EmergencyInfo saved = emergencyInfoRepository.save(info);
         String detail = request == null || request.comment() == null || request.comment().isBlank()
