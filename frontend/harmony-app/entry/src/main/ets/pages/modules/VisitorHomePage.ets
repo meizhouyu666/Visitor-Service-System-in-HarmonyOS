@@ -150,7 +150,7 @@ export struct VisitorHomePage {
           .alignItems(HorizontalAlign.End)
         }
 
-        Button('Start a New Journey')
+        Button('开始新旅程')
           .onClick(() => {
             this.navigateTo('services', 'routes')
           })
@@ -257,7 +257,8 @@ export struct VisitorHomePage {
       Column({ space: 8 }) {
         Row() {
           SectionHeader({ title: '投诉进度摘要', subtitle: '最近记录与状态一目了然' })
-          Blank()
+            .layoutWeight(1) // 核心：占满剩余空间，不挤压按钮
+
           Button('查看全部')
             .onClick(() => {
               this.navigateTo('complaint')
@@ -269,6 +270,8 @@ export struct VisitorHomePage {
             .fontColor(THEME_PRIMARY)
         }
         .width('100%')
+        .justifyContent(FlexAlign.SpaceBetween)
+        .alignItems(VerticalAlign.Center)
 
         if (!this.hasLatestComplaint()) {
           EmptyStateCard({ message: '还没有投诉记录，祝你旅途愉快。' })

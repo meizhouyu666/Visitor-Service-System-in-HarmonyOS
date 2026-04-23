@@ -889,16 +889,18 @@ export struct HotelPage {
           .fontWeight(FontWeight.Medium)
           .fontColor(THEME_TEXT_PRIMARY)
         Blank()
-        this.StepperButton('－', roomId, -1, this.roomAvailableRooms(roomId) <= 0)
+          .layoutWeight(1)
+        this.StepperButton('－', roomId, -1, false)
         Text(`${this.roomAvailableRooms(roomId)}`)
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor(THEME_TEXT_PRIMARY)
           .textAlign(TextAlign.Center)
           .width(42)
-        this.StepperButton('＋', roomId, 1, this.roomAvailableRooms(roomId) >= this.roomTotalRooms(roomId))
+        this.StepperButton('＋', roomId, 1, false)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
     }
     .padding(16)
     .backgroundColor(THEME_SURFACE)
@@ -908,15 +910,22 @@ export struct HotelPage {
 
   @Builder
   private StepperButton(label: string, roomId: string, delta: number, disabled: boolean): void {
-    Button(label)
-      .enabled(!disabled)
-      .width(36)
-      .height(36)
-      .borderRadius(RADIUS_PILL)
-      .backgroundColor(disabled ? THEME_SURFACE_MUTED : THEME_PRIMARY_SOFT)
-      .fontColor(disabled ? THEME_TEXT_TERTIARY : THEME_PRIMARY)
-      .fontSize(18)
-      .onClick(() => this.changeRoomAvailable(roomId, delta))
+    Button() {
+      // 把 ± 放在 Text 里面，才能用 textAlign、lineHeight
+      Text(label)
+        .fontSize(20)  // 稍微缩小一点，防止被切
+        .fontWeight(FontWeight.Bold)
+        .textAlign(TextAlign.Center) // 现在不会报错了
+    }
+    .enabled(!disabled)
+    .width(40)
+    .height(40)
+    .borderRadius(RADIUS_PILL)
+    .backgroundColor(disabled ? THEME_SURFACE_MUTED : THEME_PRIMARY_SOFT)
+    .fontColor(disabled ? THEME_TEXT_TERTIARY : THEME_PRIMARY)
+    .padding(0) // 去掉按钮默认内边距（核心！）
+    .borderWidth(0) // 去掉边框
+    .onClick(() => this.changeRoomAvailable(roomId, delta))
   }
 
   @Builder

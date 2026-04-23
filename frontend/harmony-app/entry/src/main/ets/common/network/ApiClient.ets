@@ -3,7 +3,7 @@ import { ApiResponse } from '../model/ApiModels'
 
 // 团队默认地址：模拟器访问宿主机后端
 // 真机联调时可本地改为局域网地址，但不要提交个人 IP
-const API_BASE_URL: string = 'http://10.0.2.2:8081'
+const API_BASE_URL: string = 'http://192.168.52.120:8081'
 
 type RequestPayload = object
 
@@ -14,7 +14,7 @@ export class ApiClient {
     this.token = token
   }
 
-  async get<T>(path: string): Promise<T> {
+  async get<T>(path: string): Promise<T> {0
     return this.request<T>(path, http.RequestMethod.GET)
   }
 

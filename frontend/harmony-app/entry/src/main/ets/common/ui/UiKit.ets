@@ -92,7 +92,7 @@ export struct SectionHeader {
 export struct PrimaryActionButton {
   @Prop label: string = '确认'
   @Prop disabled: boolean = false
-  @BuilderParam onPress: () => void = EmptyBuilder
+  @Prop onPress: () => void = () => {}
 
   build() {
     Button(this.label)
@@ -216,7 +216,7 @@ export struct TimelineNode {
 export struct FilterChip {
   @Prop label: string = ''
   @Prop selected: boolean = false
-  @BuilderParam onToggle: () => void = EmptyBuilder
+  @Prop onToggle: () => void = () => {}
 
   build() {
     Button(this.label)

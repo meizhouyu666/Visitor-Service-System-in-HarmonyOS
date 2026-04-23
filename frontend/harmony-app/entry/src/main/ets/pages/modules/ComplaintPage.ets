@@ -1226,14 +1226,20 @@ export struct ComplaintPage {
   private VisitorProgressPanel(): void {
     FloatingCard() {
       Column({ space: 10 }) {
+        // 修复核心：给标题组件设权重，限制右侧元素不越界
         Row() {
           SectionHeader({ title: '投诉进度', subtitle: '全流程状态闭环跟踪' })
+            .layoutWeight(1) // 核心：占据剩余空间，不挤压按钮/徽章
+
           Blank()
+
           if (this.hasLatestComplaint()) {
             StatusBadge({ label: this.latestComplaintStatusLabel(), tone: 'primary' })
+              .width(90) // 固定宽度，防止被压缩
           }
         }
         .width('100%')
+        .justifyContent(FlexAlign.Start) // 保持左对齐，贴合原设计
 
         TimelineNode({
           title: '已提交',

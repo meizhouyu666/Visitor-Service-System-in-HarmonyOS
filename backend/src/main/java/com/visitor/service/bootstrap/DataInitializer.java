@@ -20,7 +20,6 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        deleteLegacyDemoUser("writer");
         upsertDemoUser("visitor", "visitor123", "Visitor Demo", UserRole.VISITOR);
         upsertDemoUser("admin", "admin123", "Admin Demo", UserRole.ADMIN);
         upsertDemoUser("handler", "handler123", "Complaint Handler Demo", UserRole.COMPLAINT_HANDLER);
