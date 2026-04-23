@@ -18,6 +18,8 @@ export type BadgeTone = 'primary' | 'success' | 'warning' | 'danger' | 'neutral'
 @Builder
 function EmptyBuilder(): void {}
 
+function EmptyAction(): void {}
+
 function toneTextColor(tone: BadgeTone): string {
   if (tone === 'primary') {
     return THEME_PRIMARY
@@ -92,7 +94,7 @@ export struct SectionHeader {
 export struct PrimaryActionButton {
   @Prop label: string = '确认'
   @Prop disabled: boolean = false
-  @BuilderParam onPress: () => void = EmptyBuilder
+  onPress: () => void = EmptyAction
 
   build() {
     Button(this.label)
@@ -216,7 +218,7 @@ export struct TimelineNode {
 export struct FilterChip {
   @Prop label: string = ''
   @Prop selected: boolean = false
-  @BuilderParam onToggle: () => void = EmptyBuilder
+  onToggle: () => void = EmptyAction
 
   build() {
     Button(this.label)
