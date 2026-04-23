@@ -5,7 +5,8 @@ import {
   ComplaintItem,
   ComplaintQueryFilter,
   ComplaintRatingRequest,
-  ComplaintTimelineItem
+  ComplaintTimelineItem,
+  SystemUserResponse
 } from '../../common/model/ApiModels'
 import { apiClient } from '../../common/network/ApiClient'
 import {
@@ -72,15 +73,29 @@ export struct ComplaintPage {
     to: ''
   }
 
-  private adminAssigneeOptions: AdminAssigneeOption[] = [
-    { username: 'handler', title: '安保与秩序组（王师傅）', subtitle: '现场设施、秩序与安全处置' },
-    { username: 'writer', title: '票务与客服中心（刘专员）', subtitle: '票务退款、服务咨询与客服协调' },
-    { username: 'approver', title: '餐饮卫生监督组（张主管）', subtitle: '餐饮卫生、商户服务与巡查' },
-    { username: 'hoteladmin', title: '酒店服务协同组（陈经理）', subtitle: '酒店住宿、客房设施与入住争议' }
-  ]
+  @State private adminAssigneeOptions: AdminAssigneeOption[] = []
+  @State private adminHandlersLoading: boolean = false
 
   async aboutToAppear(): Promise<void> {
     await this.loadComplaints()
+    await this.loadHandlerAccounts()
+  }
+
+  private async loadHandlerAccounts(): Promise<void> {
+    this.adminHandlersLoading = true
+    try {
+      const users: SystemUserResponse[] = await apiClient.get<SystemUserResponse[]>('/api/complaints/handlers')
+      this.adminAssigneeOptions = users.map((user: SystemUserResponse): AdminAssigneeOption => ({
+        username: user.username,
+        title: `处理人（${user.displayName}）`,
+        subtitle: '负责投诉工单的现场处置与跟进反馈'
+      }))
+    } catch (error) {
+      console.error('[ComplaintPage] 加载处理人失败:', JSON.stringify(error))
+      this.adminAssigneeOptions = []
+    } finally {
+      this.adminHandlersLoading = false
+    }
   }
 
   private isVisitorMode(): boolean {
@@ -341,12 +356,12 @@ export struct ComplaintPage {
 
   private adminAssigneeTitle(username: string): string {
     const option: AdminAssigneeOption | undefined = this.adminAssigneeOptions.find((item: AdminAssigneeOption) => item.username === username)
-    return option === undefined ? '待分派' : option.title
+    return option === undefined ? username : option.title
   }
 
   private adminAssigneeSubtitle(username: string): string {
     const option: AdminAssigneeOption | undefined = this.adminAssigneeOptions.find((item: AdminAssigneeOption) => item.username === username)
-    return option === undefined ? '请选择责任部门与处理人' : option.subtitle
+    return option === undefined ? '' : option.subtitle
   }
 
   private complaintCode(item: ComplaintItem): string {
@@ -361,11 +376,11 @@ export struct ComplaintPage {
   }
 
   private adminProcessingSummary(item: ComplaintItem): string {
-    if (item.processedBy !== null && item.processedBy.length > 0) {
-      return `${this.adminAssigneeTitle(item.processedBy)} 处理中`
-    }
     if (item.assignee !== null && item.assignee.length > 0) {
       return `${this.adminAssigneeTitle(item.assignee)} 已接单`
+    }
+    if (item.processedBy !== null && item.processedBy.length > 0) {
+      return `${this.adminAssigneeTitle(item.processedBy)} 处理中`
     }
     return '已审批通过，等待责任人反馈'
   }
@@ -1913,36 +1928,54 @@ export struct ComplaintPage {
         .borderRadius(RADIUS_MD)
         .padding(12)
 
-      ForEach(this.adminAssigneeOptions, (item: AdminAssigneeOption) => {
-        Row({ space: 12 }) {
-          Column({ space: 4 }) {
-            Text(item.title)
-              .fontSize(15)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(THEME_TEXT_PRIMARY)
-            Text(item.subtitle)
+      if (this.adminHandlersLoading) {
+        Text('加载处理人列表...')
+          .fontSize(13)
+          .fontColor(THEME_TEXT_TERTIARY)
+          .padding(14)
+          .width('100%')
+          .backgroundColor('#F8FAFF')
+          .borderRadius(RADIUS_MD)
+      } else if (this.adminAssigneeOptions.length === 0) {
+        Text('暂无可用的投诉处理人，请先联系系统管理员创建 COMPLAINT_HANDLER 类型账号')
+          .fontSize(13)
+          .fontColor(THEME_DANGER)
+          .padding(14)
+          .width('100%')
+          .backgroundColor('#FFECEC')
+          .borderRadius(RADIUS_MD)
+      } else {
+        ForEach(this.adminAssigneeOptions, (item: AdminAssigneeOption) => {
+          Row({ space: 12 }) {
+            Column({ space: 4 }) {
+              Text(item.title)
+                .fontSize(15)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(THEME_TEXT_PRIMARY)
+              Text(item.subtitle)
+                .fontSize(12)
+                .fontColor(THEME_TEXT_TERTIARY)
+            }
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Start)
+            Text(this.isAdminAssigneeSelected(item.username) ? '已选' : '选择')
               .fontSize(12)
-              .fontColor(THEME_TEXT_TERTIARY)
+              .fontColor(this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY : THEME_TEXT_TERTIARY)
+              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+              .backgroundColor(this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY_SOFT : THEME_SURFACE_MUTED)
+              .borderRadius(RADIUS_PILL)
           }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-          Text(this.isAdminAssigneeSelected(item.username) ? '已选' : '选择')
-            .fontSize(12)
-            .fontColor(this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY : THEME_TEXT_TERTIARY)
-            .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-            .backgroundColor(this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY_SOFT : THEME_SURFACE_MUTED)
-            .borderRadius(RADIUS_PILL)
-        }
-        .width('100%')
-        .padding(14)
-        .backgroundColor(this.isAdminAssigneeSelected(item.username) ? '#EEF4FF' : '#F8FAFF')
-        .borderRadius(RADIUS_MD)
-        .border({
-          width: this.isAdminAssigneeSelected(item.username) ? 1 : 0,
-          color: this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY : 'transparent'
-        })
-        .onClick(() => this.selectAdminAssignee(item.username))
-      }, (item: AdminAssigneeOption) => item.username)
+          .width('100%')
+          .padding(14)
+          .backgroundColor(this.isAdminAssigneeSelected(item.username) ? '#EEF4FF' : '#F8FAFF')
+          .borderRadius(RADIUS_MD)
+          .border({
+            width: this.isAdminAssigneeSelected(item.username) ? 1 : 0,
+            color: this.isAdminAssigneeSelected(item.username) ? THEME_PRIMARY : 'transparent'
+          })
+          .onClick(() => this.selectAdminAssignee(item.username))
+        }, (item: AdminAssigneeOption) => item.username)
+      }
 
       Button(this.loading ? '审批派单中...' : '确认审批并派发工单')
         .enabled(!this.loading)

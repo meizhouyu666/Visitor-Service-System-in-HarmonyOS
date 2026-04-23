@@ -9,4 +9,6 @@ public interface UserRepository extends JpaRepository<UserAccount, Long> {
     Optional<UserAccount> findByUsername(String username);
 
     List<UserAccount> findAllByOrderByCreatedAtDesc();
+
+    List<UserAccount> findByRole(UserRole role);
 }

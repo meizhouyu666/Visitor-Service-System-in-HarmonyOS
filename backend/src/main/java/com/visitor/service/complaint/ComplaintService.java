@@ -10,6 +10,7 @@ import com.visitor.service.complaint.dto.ComplaintRatingRequest;
 import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.complaint.dto.ComplaintTimelineResponse;
 import com.visitor.service.system.AuditLogService;
+import com.visitor.service.system.dto.SystemUserResponse;
 import com.visitor.service.user.UserAccount;
 import com.visitor.service.user.UserRepository;
 import com.visitor.service.user.UserRole;
@@ -116,7 +117,6 @@ public class ComplaintService {
 
         complaint.setStatus(ComplaintStatus.APPROVED);
         complaint.setHandlerComment(request.comment());
-        complaint.setProcessedBy(actor);
         complaint.setRejectionComment(null);
         Complaint saved = complaintRepository.save(complaint);
 
@@ -149,7 +149,6 @@ public class ComplaintService {
         UserAccount assignee = findUser(request.assigneeUsername());
 
         complaint.setAssignee(assignee);
-        complaint.setProcessedBy(actor);
         Complaint saved = complaintRepository.save(complaint);
 
         String detail = request.comment() == null || request.comment().isBlank()
@@ -282,5 +281,12 @@ public class ComplaintService {
 
     private boolean containsIgnoreCase(String source, String keyword) {
         return source.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SystemUserResponse> listHandlers() {
+        return userRepository.findByRole(UserRole.COMPLAINT_HANDLER).stream()
+                .map(SystemUserResponse::from)
+                .toList();
     }
 }

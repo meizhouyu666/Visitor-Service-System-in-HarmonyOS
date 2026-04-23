@@ -8,6 +8,7 @@ import com.visitor.service.system.dto.SystemUserCreateRequest;
 import com.visitor.service.system.dto.SystemUserResetPasswordRequest;
 import com.visitor.service.system.dto.SystemUserResponse;
 import com.visitor.service.system.dto.SystemUserUpdateRequest;
+import com.visitor.service.user.UserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -46,6 +47,13 @@ public class SystemAdminController {
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ApiResponse<List<SystemUserResponse>> listUsers() {
         return ApiResponse.success(systemAdminService.listUsers());
+    }
+
+    @Operation(summary = "根据角色查询账号列表")
+    @GetMapping("/users/by-role")
+    @PreAuthorize("hasAuthority('USER_MANAGE') or hasAuthority('COMPLAINT_MANAGE')")
+    public ApiResponse<List<SystemUserResponse>> listUsersByRole(@RequestParam UserRole role) {
+        return ApiResponse.success(systemAdminService.listUsersByRole(role));
     }
 
     @Operation(summary = "系统管理员创建账号")

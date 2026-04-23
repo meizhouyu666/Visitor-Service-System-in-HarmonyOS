@@ -8,6 +8,7 @@ import com.visitor.service.complaint.dto.ComplaintQueryFilter;
 import com.visitor.service.complaint.dto.ComplaintRatingRequest;
 import com.visitor.service.complaint.dto.ComplaintResponse;
 import com.visitor.service.complaint.dto.ComplaintTimelineResponse;
+import com.visitor.service.system.dto.SystemUserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -99,6 +100,13 @@ public class ComplaintController {
                                                  @Valid @RequestBody ComplaintActionRequest request,
                                                  Authentication authentication) {
         return ApiResponse.success(complaintService.reject(authentication.getName(), id, request));
+    }
+
+    @Operation(summary = "获取投诉处理人列表")
+    @GetMapping("/handlers")
+    @PreAuthorize("hasAuthority('COMPLAINT_MANAGE')")
+    public ApiResponse<List<SystemUserResponse>> listHandlers() {
+        return ApiResponse.success(complaintService.listHandlers());
     }
 
     @Operation(summary = "分派投诉")
