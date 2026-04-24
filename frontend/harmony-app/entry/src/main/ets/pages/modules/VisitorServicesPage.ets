@@ -1186,7 +1186,7 @@ export struct VisitorServicesPage {
       }
       .height('100%')
       .width('100%')
-      .padding({ left: 12, right: 12, top: 12, bottom: 98 })
+      .padding({ left: 12, right: 12, top: 12 })
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Start)
       .backgroundColor(THEME_PAGE_BG)
