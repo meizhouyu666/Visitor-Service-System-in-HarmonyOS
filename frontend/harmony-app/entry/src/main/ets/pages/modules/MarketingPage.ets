@@ -33,7 +33,7 @@ export struct MarketingPage {
   @State private savingId: string = ''
   @State private errorMessage: string = ''
   @State private actionMessage: string = ''
-
+  @State private pageRefreshKey: number = 0
   async aboutToAppear(): Promise<void> {
     await this.loadDashboard()
   }
@@ -152,9 +152,7 @@ export struct MarketingPage {
     this.errorMessage = '';
 
     try {
-      // 新的推荐状态
       const newRecommended = !item.recommended;
-
       const payload: MarketingHotelUpdateRequest = {
         recommended: newRecommended,
         marketingTag: newRecommended ? this.defaultTag(item) : '',
@@ -163,15 +161,17 @@ export struct MarketingPage {
       };
 
       const url = `/api/marketing/hotels/${item.id}`;
-
+      // 显式泛型消除报错
       await apiClient.put<MarketingHotelUpdateRequest, MarketingHotelItemResponse>(url, payload);
 
-      // 提示
-      this.actionMessage = newRecommended
-        ? '已开启导流推荐'
-        : '已关闭导流推荐';
+      this.actionMessage = newRecommended ? '已开启导流推荐' : '已关闭导流推荐';
 
-      // 刷新数据
+      // ========== 核心：模拟重进页面 双保险强制刷新 ==========
+      // 1. 清空旧数据引用
+      this.dashboard.hotels = [];
+      // 2. 刷新key → ForEach 所有组件强制销毁重建
+      this.pageRefreshKey++;
+      // 3. 重新拉取完整后端数据
       await this.loadDashboard();
 
     } catch (error) {
@@ -587,9 +587,9 @@ export struct MarketingPage {
               '\u8bf7\u5148\u5728\u9152\u5e97\u7ba1\u7406\u7aef\u7ef4\u62a4\u57fa\u7840\u9152\u5e97\u8d44\u6599')
           } else {
             Column({ space: 14 }) {
-              ForEach(this.hotelItems(), (item: MarketingHotelItemResponse) => {
+              ForEach(this.hotelItems(), (item: MarketingHotelItemResponse, key: number) => {
                 this.HotelCard(item)
-              }, (item: MarketingHotelItemResponse) => item.id)
+              }, (item: MarketingHotelItemResponse) => item.id + this.pageRefreshKey)
             }
             .width('100%')
           }

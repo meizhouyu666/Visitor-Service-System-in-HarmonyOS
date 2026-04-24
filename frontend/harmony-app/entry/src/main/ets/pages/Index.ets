@@ -242,8 +242,8 @@ struct Index {
     this.runPageSwitch(() => {
       this.authStore.logout()
       this.authMode = 'login'
-      this.username = 'visitor'
-      this.password = 'visitor123'
+      this.username = ''
+      this.password = ''
       this.selectedTabKey = ''
       this.adminSection = 'home'
       this.marketingMessage = ''
