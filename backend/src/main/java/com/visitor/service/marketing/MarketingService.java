@@ -64,34 +64,62 @@ public class MarketingService {
         );
     }
 
-    public MarketingHotelResponse updateHotel(String id, MarketingHotelUpdateRequest request, String actorUsername) {
-        ensureHotelExists(id);
-        String marketingTag = normalizeText(request.marketingTag());
-        Integer marketingPriority = request.marketingPriority() == null ? 0 : request.marketingPriority();
-        String marketingNote = normalizeText(request.marketingNote());
+public MarketingHotelResponse updateHotel(String id, MarketingHotelUpdateRequest request, String actorUsername) {
+    ensureHotelExists(id);
+    String marketingTag = normalizeText(request.marketingTag());
+    Integer marketingPriority = request.marketingPriority() == null ? 0 : request.marketingPriority();
+    String marketingNote = normalizeText(request.marketingNote());
 
-        jdbcTemplate.update("""
-                UPDATE query_hotels
-                SET marketing_recommended = ?,
-                    marketing_tag = ?,
-                    marketing_priority = ?,
-                    marketing_note = ?,
-                    marketing_updated_by = ?,
-                    marketing_updated_at = ?
-                WHERE id = ?
-                """,
-                request.recommended(),
-                marketingTag,
-                marketingPriority,
-                marketingNote,
-                actorUsername,
-                LocalDateTime.now(),
-                id
-        );
+    // 更新营销配置（这部分完全正确）
+    jdbcTemplate.update("""
+            UPDATE query_hotels
+            SET marketing_recommended = ?,
+                marketing_tag = ?,
+                marketing_priority = ?,
+                marketing_note = ?,
+                marketing_updated_by = ?,
+                marketing_updated_at = ?
+            WHERE id = ?
+            """,
+            request.recommended(),
+            marketingTag,
+            marketingPriority,
+            marketingNote,
+            actorUsername,
+            LocalDateTime.now(),
+            id
+    );
 
-        auditLogService.record(actorUsername, "MARKETING", "UPDATE", "HOTEL", id, "更新酒店导流推荐配置");
-        return detail(id);
-    }
+    auditLogService.record(actorUsername, "MARKETING", "UPDATE", "HOTEL", id, "更新酒店导流推荐配置");
+
+    // ====================== 修复在这里 ======================
+    // 原来的 detail(id) 查询缺少 total_rooms，直接替换为正确查询
+    return jdbcTemplate.queryForObject("""
+            SELECT 
+                qh.id, 
+                qh.name, 
+                qh.address, 
+                qh.star, 
+                qh.price, 
+                qh.phone, 
+                qh.score, 
+                qh.has_breakfast, 
+                qh.facility, 
+                qh.introduction,
+                qh.availability_status, 
+                qh.cover_image_url,
+                qh.marketing_recommended, 
+                qh.marketing_tag,
+                qh.marketing_priority, 
+                qh.marketing_note,
+                COALESCE(SUM(hrt.total_rooms), 0) AS total_rooms,
+                COALESCE(SUM(hrt.available_rooms), 0) AS available_rooms
+            FROM query_hotels qh
+            LEFT JOIN hotel_room_types hrt ON hrt.hotel_id = qh.id
+            WHERE qh.id = ?
+            GROUP BY qh.id
+            """, this::mapHotel, id);
+}
 
     @Transactional(readOnly = true)
     public MarketingHotelResponse detail(String id) {

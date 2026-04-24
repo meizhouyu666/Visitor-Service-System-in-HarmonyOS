@@ -42,10 +42,12 @@ export struct MarketingPage {
     this.loading = true
     this.errorMessage = ''
     try {
-      const response: MarketingDashboardResponse = await apiClient.get<MarketingDashboardResponse>('/api/marketing/hotels')
+      const response: MarketingDashboardResponse =
+        await apiClient.get<MarketingDashboardResponse>('/api/marketing/hotels')
       this.dashboard = this.normalizeDashboard(response)
     } catch (_error) {
-      this.errorMessage = '\u52a0\u8f7d\u5bfc\u6d41\u8425\u9500\u6570\u636e\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5'
+      this.errorMessage =
+        '\u52a0\u8f7d\u5bfc\u6d41\u8425\u9500\u6570\u636e\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5'
     } finally {
       this.loading = false
     }
@@ -82,8 +84,10 @@ export struct MarketingPage {
       introduction: this.safeText(item.introduction, ''),
       availabilityStatus: this.safeText(item.availabilityStatus, 'AVAILABLE'),
       coverImageUrl: this.safeOptionalText(item.coverImageUrl),
-      totalRooms: item.totalRooms !== undefined && item.totalRooms !== null ? this.safeNumber(item.totalRooms, 0) : undefined,
-      availableRooms: item.availableRooms !== undefined && item.availableRooms !== null ? this.safeNumber(item.availableRooms, 0) : undefined,
+      totalRooms: item.totalRooms !== undefined && item.totalRooms !== null ? this.safeNumber(item.totalRooms, 0) :
+        undefined,
+      availableRooms: item.availableRooms !== undefined && item.availableRooms !== null ?
+        this.safeNumber(item.availableRooms, 0) : undefined,
       recommended: this.safeBoolean(item.recommended, false),
       marketingTag: this.safeOptionalText(item.marketingTag),
       marketingPriority: this.safeNumber(item.marketingPriority, 0),
@@ -143,23 +147,38 @@ export struct MarketingPage {
   }
 
   private async toggleRecommendation(item: MarketingHotelItemResponse): Promise<void> {
-    this.savingId = item.id
-    this.actionMessage = ''
-    this.errorMessage = ''
+    this.savingId = item.id;
+    this.actionMessage = '';
+    this.errorMessage = '';
+
     try {
+      // 新的推荐状态
+      const newRecommended = !item.recommended;
+
       const payload: MarketingHotelUpdateRequest = {
-        recommended: !item.recommended,
-        marketingTag: item.recommended ? '' : this.defaultTag(item),
-        marketingPriority: item.recommended ? 0 : this.defaultPriority(item),
-        marketingNote: item.recommended ? '' : this.defaultNote(item)
-      }
-      await apiClient.put<MarketingHotelUpdateRequest, MarketingHotelItemResponse>(`/api/marketing/hotels/${item.id}`, payload)
-      this.actionMessage = item.recommended ? '\u5df2\u5173\u95ed\u8be5\u9152\u5e97\u7684\u5bfc\u6d41\u63a8\u8350' : '\u5df2\u5f00\u542f\u8be5\u9152\u5e97\u7684\u5bfc\u6d41\u63a8\u8350'
-      await this.loadDashboard()
-    } catch (_error) {
-      this.errorMessage = '\u66f4\u65b0\u63a8\u8350\u72b6\u6001\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5'
+        recommended: newRecommended,
+        marketingTag: newRecommended ? this.defaultTag(item) : '',
+        marketingPriority: newRecommended ? this.defaultPriority(item) : 0,
+        marketingNote: newRecommended ? this.defaultNote(item) : ''
+      };
+
+      const url = `/api/marketing/hotels/${item.id}`;
+
+      await apiClient.put<MarketingHotelUpdateRequest, MarketingHotelItemResponse>(url, payload);
+
+      // 提示
+      this.actionMessage = newRecommended
+        ? '已开启导流推荐'
+        : '已关闭导流推荐';
+
+      // 刷新数据
+      await this.loadDashboard();
+
+    } catch (error) {
+      console.error('更新推荐状态失败', error);
+      this.errorMessage = '更新失败，请重试';
     } finally {
-      this.savingId = ''
+      this.savingId = '';
     }
   }
 
@@ -324,6 +343,7 @@ export struct MarketingPage {
           .borderRadius(RADIUS_PILL)
       }
       .layoutWeight(1)
+
       Text(this.progressWidth(value))
         .fontSize(11)
         .fontColor(color)
@@ -339,7 +359,12 @@ export struct MarketingPage {
       .fontSize(10)
       .fontColor(color)
       .backgroundColor(bg)
-      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+      .padding({
+        left: 8,
+        right: 8,
+        top: 4,
+        bottom: 4
+      })
       .borderRadius(RADIUS_PILL)
   }
 
@@ -384,6 +409,7 @@ export struct MarketingPage {
             }
           }
           .alignItems(HorizontalAlign.Start)
+
           Blank()
           this.HotelBadge(this.marketingTagText(item), '#FFF4E6', '#EA580C')
         }
@@ -411,7 +437,12 @@ export struct MarketingPage {
             .fontSize(11)
             .fontColor(this.availabilityColor(item))
             .backgroundColor('#FFF7ED')
-            .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+            .padding({
+              left: 10,
+              right: 10,
+              top: 5,
+              bottom: 5
+            })
             .borderRadius(RADIUS_PILL)
           Blank()
           Button(this.recommendationButtonText(item))
@@ -474,7 +505,12 @@ export struct MarketingPage {
             .fontSize(11)
             .fontColor(this.loadPillColor())
             .backgroundColor(this.loadPillBg())
-            .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+            .padding({
+              left: 10,
+              right: 10,
+              top: 6,
+              bottom: 6
+            })
             .borderRadius(RADIUS_PILL)
         }
         .width('100%')
@@ -488,8 +524,10 @@ export struct MarketingPage {
             .fontSize(28)
             .fontWeight(FontWeight.Bold)
             .fontColor(THEME_TEXT_PRIMARY)
-          this.HeatProgress('\u4e1c\u533a\uff08\u6e56\u7554\u666f\u70b9\uff09', this.dashboard.eastHeatPercent, '#F97373')
-          this.HeatProgress('\u897f\u533a\uff08\u4e61\u6751\u5468\u8fb9\uff09', this.dashboard.westHeatPercent, THEME_PRIMARY)
+          this.HeatProgress('\u4e1c\u533a\uff08\u6e56\u7554\u666f\u70b9\uff09', this.dashboard.eastHeatPercent,
+            '#F97373')
+          this.HeatProgress('\u897f\u533a\uff08\u4e61\u6751\u5468\u8fb9\uff09', this.dashboard.westHeatPercent,
+            THEME_PRIMARY)
           Text(this.dashboardSuggestionText())
             .fontSize(12)
             .fontColor(THEME_TEXT_PRIMARY)
@@ -542,9 +580,11 @@ export struct MarketingPage {
           }
 
           if (this.loading && this.hotelItems().length === 0) {
-            this.LoadingCard('\u6b63\u5728\u52a0\u8f7d\u5bfc\u6d41\u914d\u7f6e', '\u6b63\u5728\u540c\u6b65\u9152\u5e97\u63a8\u8350\u4e0e\u623f\u6001\u6570\u636e')
+            this.LoadingCard('\u6b63\u5728\u52a0\u8f7d\u5bfc\u6d41\u914d\u7f6e',
+              '\u6b63\u5728\u540c\u6b65\u9152\u5e97\u63a8\u8350\u4e0e\u623f\u6001\u6570\u636e')
           } else if (this.hotelItems().length === 0) {
-            this.LoadingCard('\u6682\u65e0\u9152\u5e97\u6570\u636e', '\u8bf7\u5148\u5728\u9152\u5e97\u7ba1\u7406\u7aef\u7ef4\u62a4\u57fa\u7840\u9152\u5e97\u8d44\u6599')
+            this.LoadingCard('\u6682\u65e0\u9152\u5e97\u6570\u636e',
+              '\u8bf7\u5148\u5728\u9152\u5e97\u7ba1\u7406\u7aef\u7ef4\u62a4\u57fa\u7840\u9152\u5e97\u8d44\u6599')
           } else {
             Column({ space: 14 }) {
               ForEach(this.hotelItems(), (item: MarketingHotelItemResponse) => {
