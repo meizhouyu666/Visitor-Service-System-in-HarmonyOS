@@ -91,7 +91,7 @@ public EmergencyResponse update(Long id, EmergencyRequest request, String userna
 
     public EmergencyResponse submitForApproval(Long id, String username) {
         EmergencyInfo info = findEmergency(id);
-        if (info.getStatus() != EmergencyStatus.DRAFT && info.getStatus() != EmergencyStatus.REJECTED) {
+        if (info.getStatus() != EmergencyStatus.DRAFT && info.getStatus() != EmergencyStatus.REJECTED && info.getStatus() != EmergencyStatus.PUBLISHED) {
             throw new BusinessException(ErrorCode.BUSINESS, "只有草稿或驳回状态的应急信息可以提交审批");
         }
         info.setStatus(EmergencyStatus.PENDING_APPROVAL);

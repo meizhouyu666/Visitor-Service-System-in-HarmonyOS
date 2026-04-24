@@ -122,8 +122,8 @@ struct Index {
   @State private pageOffsetY: number = 0
   @State private switching: boolean = false
 
-  @State private username: string = 'visitor'
-  @State private password: string = 'visitor123'
+  @State private username: string = ''
+  @State private password: string = ''
   @State private displayName: string = ''
   @State private resetCode: string = ''
   @State private newPassword: string = ''

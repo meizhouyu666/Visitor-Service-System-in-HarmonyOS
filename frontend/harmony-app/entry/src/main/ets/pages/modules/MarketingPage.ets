@@ -461,7 +461,8 @@ export struct MarketingPage {
   }
 
   build() {
-    Column({ space: 18 }) {
+    Column() {
+      // 非滚动部分：顶部客流卡片
       Column({ space: 14 }) {
         Row() {
           Text(this.loadTitle())
@@ -502,56 +503,64 @@ export struct MarketingPage {
         .shadow(SHADOW_CARD)
       }
       .width('100%')
+      .padding({ left: 20, right: 20, top: 18 })
 
-      Row() {
-        Text('\u63a8\u8350\u8425\u9500\u914d\u7f6e')
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(THEME_TEXT_PRIMARY)
-        Blank()
-        Button(this.refreshButtonText())
-          .height(32)
-          .padding({ left: 12, right: 12 })
-          .borderRadius(RADIUS_PILL)
-          .backgroundColor(THEME_PRIMARY_SOFT)
-          .fontColor(THEME_PRIMARY)
-          .fontSize(11)
-          .enabled(!this.loading)
-          .onClick(() => {
-            this.loadDashboard()
-          })
-      }
-      .width('100%')
-
-      if (this.errorMessage.length > 0) {
-        Text(this.errorMessage)
-          .fontSize(12)
-          .fontColor(THEME_DANGER)
+      // 可滚动部分：推荐营销配置和酒店列表
+      Scroll() {
+        Column({ space: 18 }) {
+          Row() {
+            Text('\u63a8\u8350\u8425\u9500\u914d\u7f6e')
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(THEME_TEXT_PRIMARY)
+            Blank()
+            Button(this.refreshButtonText())
+              .height(32)
+              .padding({ left: 12, right: 12 })
+              .borderRadius(RADIUS_PILL)
+              .backgroundColor(THEME_PRIMARY_SOFT)
+              .fontColor(THEME_PRIMARY)
+              .fontSize(11)
+              .enabled(!this.loading)
+              .onClick(() => {
+                this.loadDashboard()
+              })
+          }
           .width('100%')
-      }
-      if (this.actionMessage.length > 0) {
-        Text(this.actionMessage)
-          .fontSize(12)
-          .fontColor(THEME_SUCCESS)
-          .width('100%')
-      }
 
-      if (this.loading && this.hotelItems().length === 0) {
-        this.LoadingCard('\u6b63\u5728\u52a0\u8f7d\u5bfc\u6d41\u914d\u7f6e', '\u6b63\u5728\u540c\u6b65\u9152\u5e97\u63a8\u8350\u4e0e\u623f\u6001\u6570\u636e')
-      } else if (this.hotelItems().length === 0) {
-        this.LoadingCard('\u6682\u65e0\u9152\u5e97\u6570\u636e', '\u8bf7\u5148\u5728\u9152\u5e97\u7ba1\u7406\u7aef\u7ef4\u62a4\u57fa\u7840\u9152\u5e97\u8d44\u6599')
-      } else {
-        Column({ space: 14 }) {
-          ForEach(this.hotelItems(), (item: MarketingHotelItemResponse) => {
-            this.HotelCard(item)
-          }, (item: MarketingHotelItemResponse) => item.id)
+          if (this.errorMessage.length > 0) {
+            Text(this.errorMessage)
+              .fontSize(12)
+              .fontColor(THEME_DANGER)
+              .width('100%')
+          }
+          if (this.actionMessage.length > 0) {
+            Text(this.actionMessage)
+              .fontSize(12)
+              .fontColor(THEME_SUCCESS)
+              .width('100%')
+          }
+
+          if (this.loading && this.hotelItems().length === 0) {
+            this.LoadingCard('\u6b63\u5728\u52a0\u8f7d\u5bfc\u6d41\u914d\u7f6e', '\u6b63\u5728\u540c\u6b65\u9152\u5e97\u63a8\u8350\u4e0e\u623f\u6001\u6570\u636e')
+          } else if (this.hotelItems().length === 0) {
+            this.LoadingCard('\u6682\u65e0\u9152\u5e97\u6570\u636e', '\u8bf7\u5148\u5728\u9152\u5e97\u7ba1\u7406\u7aef\u7ef4\u62a4\u57fa\u7840\u9152\u5e97\u8d44\u6599')
+          } else {
+            Column({ space: 14 }) {
+              ForEach(this.hotelItems(), (item: MarketingHotelItemResponse) => {
+                this.HotelCard(item)
+              }, (item: MarketingHotelItemResponse) => item.id)
+            }
+            .width('100%')
+          }
         }
-        .width('100%')
+        .padding({ left: 20, right: 20, bottom: 28 })
       }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
     }
     .width('100%')
-    .padding({ left: 20, right: 20, bottom: 28 })
+    .height('100%')
     .backgroundColor(THEME_PAGE_BG)
   }
 }
-
